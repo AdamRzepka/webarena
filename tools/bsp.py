@@ -23,6 +23,18 @@ LUMPS_NUMBERS = {
     'Visdata' : 16
 }
 
+def get_files_for_bsp(bsp, baseoa):
+    deps = get_bsp_deps(baseoa + '/' + bsp)
+    deps[1].extend(deps[2])
+    shaders_deps = get_files_for_shaders(deps[1], baseoa)
+
+    files = [bsp]
+    files.extend(shaders_deps[0])
+    files.extend(shaders_deps[1])
+    files.extend(map(lambda t: t + '.tga', shaders_deps[2]))
+    return files
+    
+
 def get_bsp_deps(bsp_path):
     try:
         with open(bsp_path, 'rb') as bsp:
@@ -61,13 +73,14 @@ def parse_entities(bsp, lump):
     return entities
 
 def parse_textures(bsp, lump):
-    LUMP_SIZE = 68
+    LUMP_SIZE = 72
     bsp.seek(lump[0])
     textures = []
-    for i in range(1, lump[1] / LUMP_SIZE):
+    for i in range(0, lump[1] / LUMP_SIZE):
         textures.append(bsp.read(64).strip('\x00'))
         bsp.read(8) # skip flags
     return textures
+
 
 import os
 
@@ -85,7 +98,7 @@ def get_files_for_shaders(shaders, baseoa):
 #                print 'Shader', shader, 'found in script', script_path
                 shaders_found.add(shader)
                 if shaders_dep[shader] != []:
-                    scripts_dep.append(script_path)
+                    scripts_dep.append('scripts/' + script_path)
                     textures_dep.extend(shaders_dep[shader])
                     
     not_found = set(shaders).difference(shaders_found)    
@@ -146,7 +159,7 @@ def get_md3_deps(md3_path):
     except IOError:
         print 'Failed to open file', md3_path
 
-    return shaders            
+    return shaders
         
         
 def check_md3_header(md3):
@@ -173,4 +186,24 @@ def check_md3_surface(md3):
     return shaders
 
     
+    
+def check_model_skins(md3_dir):
+    try:
+        skin_files = filter(lambda n: n[-5:] == '.skin', os.listdir(md3_dir))
+        skins = []
+        for skin_path in skin_files:
+            shaders = []
+            with open(md3_dir + '/' + skin_path, 'r') as f:
+                line = f.readline().strip()
+                while (line.find(',') != -1):
+                    shaders.append(line[line.find(',') + 1:])
+                    line = f.readline().strip()
+                skins.append((skin_path, shaders))
+        return skins
+    except OSError:
+        print 'Directory', md3_dir, 'not found'
+    
+    
+def get_files_for_player(player_dir, baseoa):
+    models = ['lower', 'upper', 'head']
     
