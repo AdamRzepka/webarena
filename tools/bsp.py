@@ -219,19 +219,20 @@ def get_shaders_for_skin(skin_path):
     
 def get_files_for_player(player_dir, baseoa):
     baseoa = baseoa + '/'
-    plyer_dir = player_dir + '/'
+    player_dir = player_dir + '/'
     models = ['lower', 'upper', 'head']
     files = [player_dir + m + '.md3' for m in models]
+    files.append(player_dir + 'animation.cfg')
     
     skins = [player_dir + m + '_default.skin' for m in models]
     files.extend(skins)
     for skin in skins:
-        shaders_deps = get_files_for_shaders(get_shaders_for_skin(baseoa + player_dir + skin),
+        shaders_deps = get_files_for_shaders(get_shaders_for_skin(baseoa + skin),
                                              baseoa)
         files.extend(shaders_deps[0])
         files.extend(shaders_deps[1])
-        files.extend(t +'.tga' for t in shaders_dep[2])
-
+        files.extend(t if t[-4:] == '.tga' or t[-4:] == '.jpg' else t +'.tga'
+                     for t in shaders_deps[2])
     return files
     
     

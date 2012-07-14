@@ -66,5 +66,5 @@ def pack_bsp(bsp_file, baseoa, zipname):
     pack_files(bsp.get_files_for_bsp(bsp_file, baseoa), baseoa, zipname)
 
 def pack_player(player_dir, baseoa, zipname):
-    pass
+     pack_files(bsp.get_files_for_player(player_dir, baseoa), baseoa, zipname)
                 
