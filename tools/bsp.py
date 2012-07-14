@@ -202,8 +202,37 @@ def check_model_skins(md3_dir):
         return skins
     except OSError:
         print 'Directory', md3_dir, 'not found'
+
+def get_shaders_for_skin(skin_path):
+    try:
+        shaders = []
+        with open(skin_path, 'r') as f:
+            line = f.readline().strip()
+            while (line.find(',') != -1):
+                shaders.append(line[line.find(',') + 1:])
+                line = f.readline().strip()
+        return shaders
+    except IOError:
+        print 'File', skin_path, 'not found'
+        
     
     
 def get_files_for_player(player_dir, baseoa):
+    baseoa = baseoa + '/'
+    plyer_dir = player_dir + '/'
     models = ['lower', 'upper', 'head']
+    files = [player_dir + m + '.md3' for m in models]
+    
+    skins = [player_dir + m + '_default.skin' for m in models]
+    files.extend(skins)
+    for skin in skins:
+        shaders_deps = get_files_for_shaders(get_shaders_for_skin(baseoa + player_dir + skin),
+                                             baseoa)
+        files.extend(shaders_deps[0])
+        files.extend(shaders_deps[1])
+        files.extend(t +'.tga' for t in shaders_dep[2])
+
+    return files
+    
+    
     
