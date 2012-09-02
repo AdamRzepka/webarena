@@ -1,0 +1,3 @@
+function loadMap(level, players) {
+    
+}

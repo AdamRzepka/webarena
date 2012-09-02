@@ -40,7 +40,7 @@ def transform_image(path, out):
 
 def pack_files(files, baseoa, zipname):
     baseoa = baseoa + '/' #just in case
-    with zipfile.ZipFile(zipname, 'w', zipfile.ZIP_DEFLATED) as archive:
+    with zipfile.ZipFile(zipname, 'w') as archive:
         for f in files:
             base, ext = os.path.splitext(f)
             if ext == '.tga':

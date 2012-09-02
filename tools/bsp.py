@@ -2,6 +2,7 @@
 # TODO: sounds
 
 import struct
+import re
 
 LUMPS_NUMBERS = {
     'Entities' : 0,
@@ -116,7 +117,7 @@ def parse_shader_file(script_path):
         textures = []
         state = 'global'
         while line != '':
-            line = line.strip()
+            line = line.strip().lower()
             if line[:2] == '//' or line == '\n':
                 pass
             elif state == 'global':
@@ -132,8 +133,13 @@ def parse_shader_file(script_path):
                     textures = []
                     state = 'global'
             elif state == 'stage':
-                if line[:3] == 'map' and line.find('$lightmap') == -1:
-                    textures.append(line[4:])
+                if line.find('.tga') != -1 or line.find('.jpg') != -1:
+                    pattern = re.compile(r"([a-zA-Z0-9/_\.-]+\.(?:tga|jpg))")
+                    textures.append(pattern.search(line).group(1))
+                # if line[:3] == 'map' and line.find('$lightmap') == -1:
+                #     textures.append(line[4:])
+                # elif line[:8] == 'clampmap' and line.find('$lightmap') == -1:
+                #     textures.append(line[9:])
                 if line == '}':
                     state = 'shader'
 
