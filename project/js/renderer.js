@@ -34,7 +34,7 @@ renderer.Mesh = function() {
     /**
      * @type {number}
      */
-    this.elementsOffest = 0;
+    this.elementsOffset = 0;
     /**
      * @type {number}
      */
@@ -42,7 +42,7 @@ renderer.Mesh = function() {
     /**
      * @type {Array.<{arrayBuffer: number}>}
      */
-    this.frames = [{arrayBuffer: -1}];
+    this.frames = [{arrayBufferId: -1}];
     /**
      * @type {Array.<{shader: ?, defaultTexture: ?}>}
      */
@@ -181,18 +181,31 @@ renderer.Renderer = function(gl, resourceManager) {
     /**
      * @type {mat4}
      */
-    this.viewMtx = null;
+    this.viewMtx = mat4.identity();
     /**
      * @type {mat4}
      */
-    this.perspectiveMtx = null;
+    this.projectionMtx = mat4.perspective(90, 1.6, 0.1, 1000);
+
+    /**
+     * @type {mat4}
+     * Temp matrix used in rendering
+     */
+    this.modelViewMtx = mat4.create();
 
     Q3ShaderLoader.loadAll(resourceManager);
+    Q3GlShader.init(gl);
 };
 
 renderer.Renderer.prototype.render = function () {
     // iterate by meshInstances and draw
-    var i, meshInst, modelInst, meshBase;
+    var i, j, length,
+        meshInst, modelInst, meshBase,
+        skinNum,
+        shader, stage,
+        time = 0, // @todo
+        gl = this.gl;
+
     for (i = this.meshesInstances.length; i >= 0; --i) {
 	meshInst = this.meshesInstances[i];
 	modelInst = meshInst.modelInstance;
@@ -202,10 +215,63 @@ renderer.Renderer.prototype.render = function () {
 	    continue;
 	}
 
-	
+	skinNum = modelInst.skin;
+	shader = meshBase.materials[skinNum].shader;
+
+	Q3GlShader.setShader(gl, shader);
+	length = shader.stages.length;
+	for (j = 0; j < length; ++j) {
+	    stage = shader.stages[j];
+	    Q3GlShader.setShaderStage(gl, shader, stage, time);
+	    if (shader == Q3GlShader.defaultShader) {
+		// if it is default shader, use texture from meshBase
+		Q3GlShader.bindTexture(gl, meshBase.materials[skinNum].defaultTexture, stage.program);
+	    }
+
+	    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.elementArrayBuffers[meshBase.elementsArrayId]);
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.arrayBuffers[meshBase.frames[modelInst.frame].arrayBufferId]);
+
+	    mat4.multiply(this.modelViewMtx, this.viewMtx, modelInst.matrix);
+
+	    this.bindShaderAttribs(shader, this.modelViewMtx, this.projectionMtx);
+
+	    gl.drawElements(gl.TRIANGLES, meshBase.elementsCount, gl.UNSIGNED_SHORT, meshBase.elementsOffset);
+	}
 
     }
 
+};
+
+renderer.Renderer.bindShaderAttribs = function(shader, modelViewMat, projectionMat) {
+    var gl = this.gl;
+
+    // Set uniforms
+    gl.uniformMatrix4fv(shader.uniform.modelViewMat, false, modelViewMat);
+    gl.uniformMatrix4fv(shader.uniform.projectionMat, false, projectionMat);
+
+    // Setup vertex attributes
+    gl.enableVertexAttribArray(shader.attrib.position);
+    gl.vertexAttribPointer(shader.attrib.position, 3, gl.FLOAT, false, q3bsp_vertex_stride, 0);
+
+    if(shader.attrib.texCoord !== undefined) {
+        gl.enableVertexAttribArray(shader.attrib.texCoord);
+        gl.vertexAttribPointer(shader.attrib.texCoord, 2, gl.FLOAT, false, q3bsp_vertex_stride, 3*4);
+    }
+
+    if(shader.attrib.lightCoord !== undefined) {
+        gl.enableVertexAttribArray(shader.attrib.lightCoord);
+        gl.vertexAttribPointer(shader.attrib.lightCoord, 2, gl.FLOAT, false, q3bsp_vertex_stride, 5*4);
+    }
+
+    if(shader.attrib.normal !== undefined) {
+        gl.enableVertexAttribArray(shader.attrib.normal);
+        gl.vertexAttribPointer(shader.attrib.normal, 3, gl.FLOAT, false, q3bsp_vertex_stride, 7*4);
+    }
+
+    if(shader.attrib.color !== undefined) {
+        gl.enableVertexAttribArray(shader.attrib.color);
+        gl.vertexAttribPointer(shader.attrib.color, 4, gl.FLOAT, false, q3bsp_vertex_stride, 10*4);
+    }
 };
 
 /**
@@ -234,6 +300,7 @@ renderer.Renderer.prototype.registerMap = function (models, vertexData, lightmap
     this.elementArrayBuffers.push(indexBuffer);
 
     this.lightmap = lightmap;
+    Q3GlShader.lightmap = lightmap;
 
     for (i = 0; i < models.length; ++i) {
 	var model = models[i];
@@ -244,7 +311,7 @@ renderer.Renderer.prototype.registerMap = function (models, vertexData, lightmap
 	    var mesh = model.meshes[j];
 	    mesh.id = this.meshes.length;
 	    mesh.elementsArray = this.elementArrayBuffers[elementBufferSize];
-	    mesh.frames[0].arrayBuffer = this.arrayBuffers[arrayBufferSize];
+	    mesh.frames[0].arrayBufferId = this.arrayBuffers[arrayBufferSize];
 	    mesh.materials[0] = Q3GlShader.getMaterial(mesh.materials[0].shaderName, mesh.lightningType);
 	    this.meshes.push(mesh);
 	}
@@ -286,11 +353,11 @@ renderer.Renderer.prototype.registerMd3 = function (model, vertexData) {
 
 	this.meshes.push(mesh);
 	for (j = 0; j < model.framesNum; ++j) {
-	    mesh.frames[j].arrayBuffer = this.arrayBuffers[firstArrayIndex + j];
+	    mesh.frames[j].arrayBufferId = this.arrayBuffers[firstArrayIndex + j];
 	}
 
 	for (j = 0; j < mesh.materials.length; ++j) {
-	    mesh.materials[j] = Q3GlShader.getMaterial(mesh.materials[j].shaderName);
+	    mesh.materials[j] = Q3GlShader.getMaterial(mesh.materials[j].shaderName, renderer.LightningType.LIGHT_DYNAMIC);
 	}
     }
     return this.models.length - 1; // index of added model

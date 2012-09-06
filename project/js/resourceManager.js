@@ -21,9 +21,7 @@ resources.ResourceManager = function() {
 resources.ResourceManager.prototype.load = function (archives, callback) {
     var i;
     this.zipsToLoad = archives.length;
-    this.zipsLoaded = 0;
     this.filesToLoad = 0;
-    this.filesLoaded = 0;
     this.loadedCallback = callback;
     for (i = 0; i < archives.length; ++i)
 	this.loadArchive(archives[i]);

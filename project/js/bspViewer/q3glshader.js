@@ -25,8 +25,6 @@
  *    distribution.
  */
 
-'use strict';
-
 goog.provide('q3GlShader');
 
 //
@@ -94,6 +92,7 @@ function Stage() {
     this.blendSrc = null;
     this.blendDest = null;
     this.depthFunc = null;
+    this.program = null;
 }
 
 function Shader() {
@@ -115,12 +114,14 @@ var Q3GlShader = {
     defaultShader: null,
     defaultTexture: null,
     texMat: mat4Create(),
-    defaultProgram: null
+    defaultProgram: null,
+    resourceManager: null
 };
 
-Q3GlShader.init = function(gl, lightmap) {
+Q3GlShader.init = function(gl, resourceManager) {
     Q3GlShader.gl = gl;
-    Q3GlShader.lightmap = lightmap;
+    Q3GlShader.resourceManager = resourceManager;
+//    Q3GlShader.lightmap = lightmap;
     Q3GlShader.white = Q3GlShader.createSolidTexture(gl, [255,255,255,255]);
 
     Q3GlShader.defaultProgram = Q3GlShader.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_default_fragment);
@@ -138,7 +139,8 @@ Q3GlShader.getMaterial = function (name, lightningType) {
         shaderSrc,
         material = Q3GlShader.materials[name],
         defTexture,
-        gl = Q3GlShader.gl;
+        gl = Q3GlShader.gl,
+        i;
 
     if (!material) {
 	// create new material
@@ -153,6 +155,8 @@ Q3GlShader.getMaterial = function (name, lightningType) {
 		lightningType: lightningType
 	    };
 	    Q3GlShader.materials[name] = material;
+	    for (i = shader.stages.length; i >= 0; --i)
+		Q3GlShader.loadTexture(gl, lightningType, shader.stages[i]);
 	} else {
 	    // default shader
 	    defTexture = Q3GlShader.textures[name];
@@ -283,12 +287,12 @@ Q3GlShader.loadShaderMaps = function(gl, surface, shader) {
     }
 };
 
-Q3GlShader.loadTexture = function(gl, surface, stage) {
+Q3GlShader.loadTexture = function(gl, lightningType, stage) {
     if(!stage.map) {
         stage.texture = Q3GlShader.white;
         return;
     } else if(stage.map === '$lightmap') {
-        stage.texture = (surface.geomType != 3 ? Q3GlShader.lightmap : Q3GlShader.white);
+        stage.texture = (lightningType == renderer.LightningType.LIGHT_MAP ? Q3GlShader.lightmap : Q3GlShader.white);
         return;
     } else if(stage.map === '$whiteimage') {
         stage.texture = Q3GlShader.white;
@@ -330,11 +334,12 @@ Q3GlShader.loadTextureUrl = function(gl, url, clamp, onload) {
         }
         gl.generateMipmap(gl.TEXTURE_2D);
         onload(texture);
-    }
+    };
+
     // image.src = q3bsp_base_folder + '/' + url;
     if (url in rm.textures) {
         texture = gl.createTexture();
-	image.src = rm.textures[url];
+	image.src = this.resourceManager.getTexture(url);
 	Q3GlShader.textures[url] = texture;
     }
     else {
@@ -352,7 +357,7 @@ Q3GlShader.createSolidTexture = function(gl, color) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     return texture;
-}
+};
 
 //
 // Render state setup
@@ -426,6 +431,12 @@ Q3GlShader.setShaderStage = function(gl, shader, shaderStage, time) {
 
     return program;
 };
+
+Q3GlShader.bindTexture(gl, texture, program) {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(program.uniform.texture, 0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+}
 
 //
 // Shader program compilation
