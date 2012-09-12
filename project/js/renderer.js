@@ -242,7 +242,7 @@ renderer.Renderer.prototype.render = function () {
 
 };
 
-renderer.Renderer.bindShaderAttribs = function(shader, modelViewMat, projectionMat) {
+renderer.Renderer.prototype.bindShaderAttribs = function(shader, modelViewMat, projectionMat) {
     var gl = this.gl;
 
     // Set uniforms
@@ -274,13 +274,34 @@ renderer.Renderer.bindShaderAttribs = function(shader, modelViewMat, projectionM
     }
 };
 
+renderer.Renderer.prototype.buildLightmaps = function(size, lightmaps) {
+    var gl = this.gl;
+
+    this.lightmap = q3glshader.createSolidTexture(gl, [255,255,255,255]);
+    gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+    for(var i = 0; i < lightmaps.length; ++i) {
+        gl.texSubImage2D(
+            gl.TEXTURE_2D, 0, lightmaps[i].x, lightmaps[i].y, lightmaps[i].width, lightmaps[i].height,
+            gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(lightmaps[i].bytes)
+            );
+    }
+
+    gl.generateMipmap(gl.TEXTURE_2D);
+
+//    q3glshader.init(gl, this.lightmap);
+};
+
 /**
  * @param {Array.<renderer.Model>} models
  * @param {{vertices: Float32Array, indices: Uint16Array}} vertexData
  * @param {?}
  * @return {Array.<number>} ids of added models
  */
-renderer.Renderer.prototype.registerMap = function (models, vertexData, lightmap) {
+renderer.Renderer.prototype.registerMap = function (models, vertexData, lightmapData) {
 
     var i, j;
     var gl = this.gl;
@@ -299,7 +320,7 @@ renderer.Renderer.prototype.registerMap = function (models, vertexData, lightmap
     this.arrayBuffers.push(vertexBuffer);
     this.elementArrayBuffers.push(indexBuffer);
 
-    this.lightmap = lightmap;
+    this.buildLightmaps(lightMapData.size, lightmapData.lightmaps);
     Q3GlShader.lightmap = lightmap;
 
     for (i = 0; i < models.length; ++i) {
