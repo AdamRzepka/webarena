@@ -25,6 +25,8 @@
  *    distribution.
  */
 
+goog.require('gl-matrix');
+goog.require('common');
 goog.provide('q3GlShader');
 
 //
@@ -113,7 +115,7 @@ var Q3GlShader = {
     white: null,
     defaultShader: null,
     defaultTexture: null,
-    texMat: mat4Create(),
+    texMat: mat4.create(),
     defaultProgram: null,
     resourceManager: null
 };
@@ -155,7 +157,7 @@ Q3GlShader.getMaterial = function (name, lightningType) {
 		lightningType: lightningType
 	    };
 	    Q3GlShader.materials[name] = material;
-	    for (i = shader.stages.length; i >= 0; --i)
+	    for (i = shader.stages.length - 1; i >= 0; --i)
 		Q3GlShader.loadTexture(gl, lightningType, shader.stages[i]);
 	} else {
 	    // default shader
@@ -197,6 +199,12 @@ Q3GlShader.build = function(gl, shader) {
         glStage.blendSrc = Q3GlShader.translateBlend(gl, stage.blendSrc);
         glStage.blendDest = Q3GlShader.translateBlend(gl, stage.blendDest);
         glStage.depthFunc = Q3GlShader.translateDepthFunc(gl, stage.depthFunc);
+
+	if(glStage.shaderSrc && !glStage.program) {
+            glStage.program = Q3GlShader.compileShaderProgram(gl, glStage.shaderSrc.vertex,
+							      glStage.shaderSrc.fragment);
+        }
+
 
         glShader.stages.push(glStage);
     }
@@ -292,7 +300,7 @@ Q3GlShader.loadTexture = function(gl, lightningType, stage) {
         stage.texture = Q3GlShader.white;
         return;
     } else if(stage.map === '$lightmap') {
-        stage.texture = (lightningType == renderer.LightningType.LIGHT_MAP ? Q3GlShader.lightmap : Q3GlShader.white);
+        stage.texture = (lightningType == LightningType.LIGHT_MAP ? Q3GlShader.lightmap : Q3GlShader.white);
         return;
     } else if(stage.map === '$whiteimage') {
         stage.texture = Q3GlShader.white;
@@ -333,18 +341,20 @@ Q3GlShader.loadTextureUrl = function(gl, url, clamp, onload) {
             gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE );
         }
         gl.generateMipmap(gl.TEXTURE_2D);
-        onload(texture);
+	if (onload) {
+            onload(texture);
+	}
     };
 
-    // image.src = q3bsp_base_folder + '/' + url;
-    if (url in rm.textures) {
+    if (Q3GlShader.resourceManager.textures[url] !== undefined) {
         texture = gl.createTexture();
-	image.src = this.resourceManager.getTexture(url);
+	image.src = Q3GlShader.resourceManager.getTexture(url);
 	Q3GlShader.textures[url] = texture;
-    }
-    else {
+    } else {
 	console.log('Texture ', url, ' not found');
-	onload(texture);
+	if (onload) {
+	    onload(texture);
+	}
     }
     return texture;
 };
@@ -375,7 +385,7 @@ Q3GlShader.setShader = function(gl, shader) {
     }
 
     return true;
-}
+};
 
 Q3GlShader.setShaderStage = function(gl, shader, shaderStage, time) {
     var stage = shaderStage;
@@ -432,11 +442,11 @@ Q3GlShader.setShaderStage = function(gl, shader, shaderStage, time) {
     return program;
 };
 
-Q3GlShader.bindTexture(gl, texture, program) {
+Q3GlShader.bindTexture = function (gl, texture, program) {
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(program.uniform.texture, 0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
-}
+};
 
 //
 // Shader program compilation
@@ -498,4 +508,4 @@ Q3GlShader.compileShaderProgram = function(gl, vertexSrc, fragmentSrc) {
     }
 
     return shaderProgram;
-}
+};

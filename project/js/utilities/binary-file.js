@@ -1,8 +1,8 @@
-/* 
+/*
  * binFile.js - Binary Stream Reader
  * version 1.0
  */
- 
+
 /*
  * Copyright (c) 2011 Brandon Jones
  *
@@ -24,40 +24,47 @@
  *
  *    3. This notice may not be removed or altered from any source
  *    distribution.
+ * 
+ **********************************************************************************
+ * Modified by Adam Rzepka
  */
 
-BinaryFile = function(data) {
+goog.provide('binaryFile');
+
+var BinaryFile = function(data) {
     this.buffer = data;
     this.length = data.length;
     this.offset = 0;
+    this.data = data;
+    this.dataView = new DataView(data);
 };
 
 // This is the result of an interesting trick that Google does in their
-// GWT port of Quake 2. (For floats, anyway...) Rather than parse and 
+// GWT port of Quake 2. (For floats, anyway...) Rather than parse and
 // calculate the values manually they share the contents of a byte array
 // between several types of buffers, which allows you to push into one and
 // read out the other. The end result is, effectively, a typecast!
 
-var bf_byteBuff = new ArrayBuffer(4);
+// var bf_byteBuff = new ArrayBuffer(4);
 
-var bf_wba = new Int8Array(bf_byteBuff);
-var bf_wuba = new Uint8Array(bf_byteBuff);
+// var bf_wba = new Int8Array(bf_byteBuff);
+// var bf_wuba = new Uint8Array(bf_byteBuff);
 
-var bf_wsa = new Int16Array(bf_byteBuff);
-var bf_wusa = new Uint16Array(bf_byteBuff);
+// var bf_wsa = new Int16Array(bf_byteBuff);
+// var bf_wusa = new Uint16Array(bf_byteBuff);
 
-var bf_wia = new Int32Array(bf_byteBuff);
-var bf_wuia = new Uint32Array(bf_byteBuff);
+// var bf_wia = new Int32Array(bf_byteBuff);
+// var bf_wuia = new Uint32Array(bf_byteBuff);
 
-var bf_wfa = new Float32Array(bf_byteBuff);
+// var bf_wfa = new Float32Array(bf_byteBuff);
 
 BinaryFile.prototype.eof = function() {
-    this.offset >= this.length;
-}
+    return this.offset >= this.length;
+};
 
 // Seek to the given byt offset within the stream
-BinaryFile.prototype.seek = function(offest) {
-    this.offset = offest;
+BinaryFile.prototype.seek = function(offset) {
+    this.offset = offset;
 };
 
 // Seek to the given byt offset within the stream
@@ -67,97 +74,72 @@ BinaryFile.prototype.tell = function() {
 
 // Read a signed byte from the stream
 BinaryFile.prototype.readByte = function() {
-    var b0 = this.buffer.charCodeAt(this.offset) & 0xff;
-    this.offset += 1;
-    return b0 - (b0 & 0x80);
+    return this.dataView.getInt8(this.offset++);
 };
 
 // Read an unsigned byte from the stream
 BinaryFile.prototype.readUByte = function() {
-    var b0 = this.buffer.charCodeAt(this.offset) & 0xff;
-    this.offset += 1;
-    return b0;
+    return this.dataView.getUint8(this.offset++);
 };
 
 // Read a signed short (2 bytes) from the stream
 BinaryFile.prototype.readShort = function() {
-    var off = this.offset;
-    var buf = this.buffer;
-    bf_wuba[0] = buf.charCodeAt(off) & 0xff;
-    bf_wuba[1] = buf.charCodeAt(off+1) & 0xff;
+    var res = this.dataView.getInt16(this.offset, true);
     this.offset += 2;
-    return bf_wsa[0];
+    return res;
 };
 
 // Read an unsigned short (2 bytes) from the stream
 BinaryFile.prototype.readUShort = function() {
-    var off = this.offset;
-    var buf = this.buffer;
-    bf_wuba[0] = buf.charCodeAt(off) & 0xff;
-    bf_wuba[1] = buf.charCodeAt(off+1) & 0xff;
+    var res = this.dataView.getUint16(this.offset, true);
     this.offset += 2;
-    return bf_wusa[0];
+    return res;
 };
 
 // Read a signed long (4 bytes) from the stream
 BinaryFile.prototype.readLong = function() {
-    var off = this.offset;
-    var buf = this.buffer;
-    bf_wuba[0] = buf.charCodeAt(off) & 0xff;
-    bf_wuba[1] = buf.charCodeAt(off+1) & 0xff;
-    bf_wuba[2] = buf.charCodeAt(off+2) & 0xff;
-    bf_wuba[3] = buf.charCodeAt(off+3) & 0xff;
+    var res = this.dataView.getInt32(this.offset, true);
     this.offset += 4;
-    return bf_wia[0];
+    return res;
 };
 
 // Read an unsigned long (4 bytes) from the stream
 BinaryFile.prototype.readULong = function() {
-    var off = this.offset;
-    var buf = this.buffer;
-    bf_wuba[0] = buf.charCodeAt(off) & 0xff;
-    bf_wuba[1] = buf.charCodeAt(off+1) & 0xff;
-    bf_wuba[2] = buf.charCodeAt(off+2) & 0xff;
-    bf_wuba[3] = buf.charCodeAt(off+3) & 0xff;
+    var res = this.dataView.getUint32(this.offset, true);
     this.offset += 4;
-    return bf_wuia[0];
+    return res;
 };
 
 // Read a float (4 bytes) from the stream
 BinaryFile.prototype.readFloat = function() {
-    var off = this.offset;
-    var buf = this.buffer;
-    bf_wuba[0] = buf.charCodeAt(off) & 0xff;
-    bf_wuba[1] = buf.charCodeAt(off+1) & 0xff;
-    bf_wuba[2] = buf.charCodeAt(off+2) & 0xff;
-    bf_wuba[3] = buf.charCodeAt(off+3) & 0xff;
+    var res = this.dataView.getFloat32(this.offset, true);
     this.offset += 4;
-    return bf_wfa[0];
+    return res;
 };
 
 BinaryFile.prototype.expandHalf = function(h) {
     var s = (h & 0x8000) >> 15;
     var e = (h & 0x7C00) >> 10;
     var f = h & 0x03FF;
-    
+
     if(e == 0) {
         return (s?-1:1) * Math.pow(2,-14) * (f/Math.pow(2, 10));
     } else if (e == 0x1F) {
         return f?NaN:((s?-1:1)*Infinity);
     }
-    
+
     return (s?-1:1) * Math.pow(2, e-15) * (1+(f/Math.pow(2, 10)));
 };
 
 BinaryFile.prototype.readHalf = function() {
     var h = this.readUShort();
     return this.expandHalf(h);
-}
+};
 
 // Read an ASCII string of the given length from the stream
 BinaryFile.prototype.readString = function(length) {
-    var str = this.buffer.substr(this.offset, length).replace(/\0+$/,'');
+    var str = String.fromCharCode.apply(null, new Uint8Array(this.data, this.offset, length));
     this.offset += length;
     return str;
 };
-    
+

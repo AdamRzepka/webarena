@@ -2,6 +2,7 @@
 
 goog.require('renderer');
 goog.require('resources');
+goog.require('q3bsp');
 
 var DEFAULT_MAP = 'aggressor';
 
@@ -34,6 +35,14 @@ function initWebGL(canvas) {
     return gl;
 }
 
+(function() {
+  var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+                              window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+  window.requestAnimationFrame = requestAnimationFrame;
+})();
+
+var render;
+
 function main() {
     var canvas = document.getElementById('glcanvas');
 
@@ -45,10 +54,20 @@ function main() {
         map = DEFAULT_MAP;
 
     var rm = new resources.ResourceManager();
+
+    function update() {
+	render.render();
+	requestAnimationFrame(update);
+    }
+
     rm.load([map], function () {
-		var im = new Image();
-		im.src = rm.textures["textures/skies/dimclouds"];
-		window.document.body.appendChild(im);
+		// var im = new Image();
+		// im.src = rm.textures["textures/skies/dimclouds"];
+		// window.document.body.appendChild(im);
+		render = new renderer.Renderer(gl, rm);
+		q3bsp.load(rm.getMap(), 10);
+		render.updateCamera(mat4.identity());
+		requestAnimationFrame(update);
 	    });
-    var render = new renderer.Renderer(gl, rm);
 }
+

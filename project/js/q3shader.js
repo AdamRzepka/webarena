@@ -23,6 +23,8 @@
  *
  *    3. This notice may not be removed or altered from any source
  *    distribution.
+ **********************************************************************************
+ * Modified by Adam Rzepka
  */
 
 "use strict";
@@ -256,7 +258,7 @@ Q3ShaderLoader.parseStage = function(tokens) {
             case 'clampmap':
                 stage.clamp = true;
             case 'map':
-                stage.map = tokens.next().replace(/(\.jpg|\.tga)/, '.png');
+                stage.map = tokens.next().replace(/(\.jpg|\.tga)/, '');
                 break;
 
             case 'animmap':
@@ -408,7 +410,7 @@ Q3ShaderLoader.buildShaderSource = function(shader, stage) {
 };
 
 Q3ShaderLoader.buildVertexShader = function(stageShader, stage) {
-    var shader = new shaderBuilder();
+    var shader = new ShaderBuilder();
     var i;
 
     shader.addAttribs({
@@ -539,7 +541,7 @@ Q3ShaderLoader.buildVertexShader = function(stageShader, stage) {
 };
 
 Q3ShaderLoader.buildFragmentShader = function(stageShader, stage) {
-    var shader = new shaderBuilder();
+    var shader = new ShaderBuilder();
 
     shader.addVaryings({
         vTexCoord: 'vec2',
@@ -704,6 +706,7 @@ ShaderBuilder.prototype.addWaveform = function(name, wf, timeVar) {
         wf.phase = wf.phase.toFixed(4);
     }
 
+    var funcName = '';
     switch(wf.funcName) {
         case 'sin':
             this.statements.push('float ' + name + ' = ' + wf.base.toFixed(4) + ' + sin((' + wf.phase + ' + ' + timeVar + ' * ' + wf.freq.toFixed(4) + ') * 6.283) * ' + wf.amp.toFixed(4) + ';');

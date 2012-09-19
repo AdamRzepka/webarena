@@ -28,6 +28,11 @@
  * Modified by Adam Rzepka
  */
 
+goog.require('binaryFile');
+goog.require('gl-matrix');
+goog.require('common');
+goog.provide('q3bsp');
+
 /** @define {boolean} */
 var GAMEPLAY_WORKER = false;
 
@@ -110,7 +115,11 @@ q3bsp.parse = function(src, tesselationLevel) {
 			       vertices: compiledMap.vertices,
 			       indices: compiledMap.indices
 			   },
-			  )
+			   {
+			       lightmaps: lightmaps,
+			       size: lightmaps[0].textureSize
+			   }
+			  );
     }
 
     // Load bsp components
@@ -125,7 +134,7 @@ q3bsp.parse = function(src, tesselationLevel) {
     visBuffer = visData.buffer;
     visSize = visData.size;
 
-    q3bsp.buildMeshes(leaves, leafFaces, faces, verts, meshVerts, models);
+    //q3bsp.buildMeshes(leaves, leafFaces, faces, verts, meshVerts, models);
 
     if (GAMEPLAY_WORKER) {
 	postMessage({
@@ -227,7 +236,7 @@ q3bsp.readShaders = function(lump, src) {
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
         var shader = {
-            shaderName: src.readString(64),
+            shaderName: src.readString(64).replace(/[\0\s]*$/, ''),
             flags: src.readLong(),
             contents: src.readLong(),
             shader: null,
@@ -329,7 +338,7 @@ q3bsp.readLightmaps = function(lump, src) {
 		width: 128,
 		height: 128,
 		textureSize: textureSize,
-		bytes: elements,
+		bytes: elements
             });
 
         xOffset += 128;
@@ -565,10 +574,10 @@ q3bsp.readModels = function(lump, src) {
 		y: src.readFloat(),
 		z: src.readFloat()
 	    },
-	    faceOff: src.readInt(),
-	    faceCount: src.readInt(),
-	    brushOff: src.readInt(),
-	    brushCount: src.readInt(),
+	    faceOff: src.readLong(),
+	    faceCount: src.readLong(),
+	    brushOff: src.readLong(),
+	    brushCount: src.readLong(),
 	    meshes: []
 	};
     }
@@ -692,15 +701,15 @@ q3bsp.compileMap = function(verts, faces, meshVerts, lightmaps, shaders, tessela
             }
 
 	    var mesh = {
-		lightningType: render.LightningType.LIGHT_MAP,
+		lightningType: LightningType.LIGHT_MAP,
 		elementsArrayId: -1,
 		elementsOffset: shader.indexOffset,
-		elementCount: shader.elementCount,
+		elementsCount: shader.elementCount,
 		frames: [{arrayBufferId: -1}],
 		materials: [{shader: shader, defaultTexture: null}]
 	    };
 
-	    meshes.push(meshes);
+	    meshes.push(mesh);
 
         }
 //        shader.faces = null; // Don't need to send this to the render thread.
@@ -711,16 +720,16 @@ q3bsp.compileMap = function(verts, faces, meshVerts, lightmaps, shaders, tessela
 	id: -1,
 	meshes: meshes,
 	framesCount: 1,
-	skinIndices = {
-	    __default__: 0
+	skinsIndices: {
+	    '__default__': 0
 	},
 	skinsCount: 1
     };
 
     return {
 	vertices: vertices,
-	indices: indices
-	model: model;
+	indices: indices,
+	model: model
     };
 
     // Send the compiled vertex/index data back to the render thread
