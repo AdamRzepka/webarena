@@ -78,6 +78,8 @@ renderer.Renderer = function(gl, resourceManager) {
 
     gl.clearColor(0, 0, 0, 1);
     gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.enable(gl.CULL_FACE);
     Q3ShaderLoader.loadAll(resourceManager);
     Q3GlShader.init(gl, resourceManager);
 };
