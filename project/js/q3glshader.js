@@ -23,6 +23,8 @@
  *
  *    3. This notice may not be removed or altered from any source
  *    distribution.
+ **********************************************************************************
+ * Modified by Adam Rzepka
  */
 
 goog.require('gl-matrix');
@@ -114,9 +116,11 @@ var Q3GlShader = {
     lightmap: null,
     white: null,
     defaultShader: null,
+    modelShader: null,
     defaultTexture: null,
     texMat: mat4.create(),
     defaultProgram: null,
+    modelProgram: null,
     resourceManager: null
 };
 
@@ -133,7 +137,8 @@ Q3GlShader.init = function(gl, resourceManager) {
     Q3GlShader.defaultTexture = Q3GlShader.createSolidTexture(gl, [255, 0, 0, 255]);
 
     // Load default stage
-    Q3GlShader.defaultShader = Q3GlShader.buildDefault(gl);
+    Q3GlShader.defaultShader = Q3GlShader.buildDefault(gl, LightningType.LIGHT_MAP);
+    Q3GlShader.modelShader = Q3GlShader.buildDefault(gl, LightningType.LIGHT_DYNAMIC);
 };
 
 Q3GlShader.getMaterial = function (name, lightningType) {
@@ -167,7 +172,8 @@ Q3GlShader.getMaterial = function (name, lightningType) {
 		defTexture = Q3GlShader.loadTextureUrl(gl, name);
 	    }
 	    material = {
-		shader: Q3GlShader.defaultShader,
+		shader: (LightningType == LightningType.LIGHT_MAP) ?
+		    Q3GlShader.defaultShader : Q3GlShader.modelShader,
 		defaultTexture: defTexture,
 		lightningType: lightningType
 	    };
@@ -212,21 +218,23 @@ Q3GlShader.build = function(gl, shader) {
     return glShader;
 };
 
-Q3GlShader.buildDefault = function(gl, surface) {
+Q3GlShader.buildDefault = function(gl, lightningType) {
     var diffuseStage = {
-        map: (surface ? surface.shaderName + '.png' : null),
-        isLightmap: false,
+        map: null,
+        isLightmap: (lightningType == LightningType.LIGHT_MAP),
         blendSrc: gl.ONE,
         blendDest: gl.ZERO,
         depthFunc: gl.LEQUAL,
-        depthWrite: true
+        depthWrite: true,
+	program: (lightningType == LightningType.LIGHT_MAP) ?
+	    Q3GlShader.defaultProgram : Q3GlShader.modelProgram
     };
 
-    if(surface) {
-        Q3GlShader.loadTexture(gl, surface, diffuseStage);
-    } else {
-        diffuseStage.texture = Q3GlShader.defaultTexture;
-    }
+    // if(surface) {
+    //     Q3GlShader.loadTexture(gl, surface, diffuseStage);
+    // } else {
+    diffuseStage.texture = Q3GlShader.defaultTexture;
+    // }
 
     var glShader = {
         cull: gl.FRONT,
@@ -238,7 +246,7 @@ Q3GlShader.buildDefault = function(gl, surface) {
     };
 
     return glShader;
-}
+};
 
 Q3GlShader.translateDepthFunc = function(gl, depth) {
     if(!depth) { return gl.LEQUAL; }
