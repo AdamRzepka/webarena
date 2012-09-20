@@ -81,7 +81,7 @@ renderer.Renderer = function(gl, resourceManager) {
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.enable(gl.CULL_FACE);
-    
+
     Q3ShaderLoader.loadAll(resourceManager);
     Q3GlShader.init(gl, resourceManager);
 };
@@ -115,7 +115,7 @@ renderer.Renderer.prototype.render = function () {
 	for (j = 0; j < length; ++j) {
 	    stage = shader.stages[j];
 	    Q3GlShader.setShaderStage(gl, shader, stage, time);
-	    if (shader == Q3GlShader.defaultShader) {
+	    if (shader === Q3GlShader.defaultShader || shader === Q3GlShader.modelShader) {
 		// if it is default shader, use texture from meshBase
 		Q3GlShader.bindTexture(gl, meshBase.materials[skinNum].defaultTexture, stage.program);
 	    }

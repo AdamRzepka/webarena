@@ -6,7 +6,7 @@ goog.require('q3bsp');
 goog.require('input');
 goog.require('camera');
 
-var DEFAULT_MAP = 'aggressor';
+var DEFAULT_MAP = 'oa_rpg3dm2';
 
 function getQueryVariable(variable) {
     var query = window.location.search.substring(1);
