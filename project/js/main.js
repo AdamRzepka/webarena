@@ -3,6 +3,8 @@
 goog.require('renderer');
 goog.require('resources');
 goog.require('q3bsp');
+goog.require('input');
+goog.require('camera');
 
 var DEFAULT_MAP = 'aggressor';
 
@@ -54,9 +56,14 @@ function main() {
         map = DEFAULT_MAP;
 
     var rm = new resources.ResourceManager();
+    var input = new InputHandler();
+    var camera = new Camera(input, [0, 0, 0]);
 
     function update() {
+	camera.update();
+	render.updateCamera(camera.getCameraMatrix());
 	render.render();
+	input.update();
 	requestAnimationFrame(update);
     }
 

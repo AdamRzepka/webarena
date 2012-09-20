@@ -68,7 +68,7 @@ renderer.Renderer = function(gl, resourceManager) {
     /**
      * @type {mat4}
      */
-    this.projectionMtx = mat4.perspective(90, 1.6, 0.1, 1000);
+    this.projectionMtx = mat4.perspective(90, 1.6, 0.1, 4096);
 
     /**
      * @type {mat4}
