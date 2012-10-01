@@ -57,7 +57,7 @@ renderer.Renderer = function(gl, resourceManager) {
 
     /**
      * @type {Array.<MeshInstance>}
-     * Mesh instances sorted by shader, and model
+     * Mesh instances sorted by shader and model
      */
     this.meshesInstances = [];
 
@@ -87,7 +87,7 @@ renderer.Renderer = function(gl, resourceManager) {
 };
 
 renderer.Renderer.prototype.render = function () {
-    // iterate by meshInstances and draw
+    // TODO: sort meshes to limit state changes
     var i, j, length,
         meshInst, modelInst, meshBase,
         skinNum,

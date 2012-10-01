@@ -76,7 +76,7 @@ function InputHandler()
 	return (key < self.oldKeyMap.length && self.oldkeyMap[key]);
     };
 
-    self.update = function()
+    self.clearInput = function()
     {
 	self.mouseDeltaXY.x = 0;
 	self.mouseDeltaXY.y = 0;

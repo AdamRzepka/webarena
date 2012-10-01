@@ -59,11 +59,19 @@ function main() {
     var input = new InputHandler();
     var camera = new Camera(input, [0, 0, 0]);
 
+    var lastTime = Date.now();
+    var timeAcc = 0;
+
     function update() {
-	camera.update();
+	timeAcc += Date.now() - lastTime;
+	while (timeAcc > 15) {
+	    timeAcc -= 15;
+	    camera.update();
+	    input.clearInput();
+	}
+	lastTime = Date.now();
 	render.updateCamera(camera.getCameraMatrix());
 	render.render();
-	input.update();
 	requestAnimationFrame(update);
     }
 

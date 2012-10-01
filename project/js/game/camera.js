@@ -10,17 +10,12 @@ function Camera(input, startPosition)
     self.position = vec3.create(startPosition);
     self.rotation = mat4.identity();
     mat4.rotateX(self.rotation, (Math.PI / 2));
-    self.speed = 1.0;
+    self.speed = 4.0;
 
     self.camMtx = mat4.identity();
     mat4.rotateX(self.camMtx, Math.PI / 2.0);
     mat4.translate(self.camMtx, self.position);
 
-    // self.perspectiveMtx = mat4.create();
-    // mat4.perspective(45, 1.6, 0.5, 2048, self.perspectiveMtx);
-
-    // self.pVtx = mat4.create();
-    // mat4.multiply(self.perspectiveMtx, self.viewMtx, self.pVtx);
 }
 
 Camera.prototype.update = function()
