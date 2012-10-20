@@ -241,5 +241,12 @@ def get_files_for_player(player_dir, baseoa):
                      for t in shaders_deps[2])
     return files
     
-    
+def get_files_for_md3(md3, baseoa):
+    files = [md3]
+    shaders_deps = get_files_for_shaders([s[0] for s in get_md3_deps(baseoa + '/' + md3)], baseoa)
+    files.extend(shaders_deps[0])
+    files.extend(shaders_deps[1])
+    files.extend(t if t[-4:] == '.tga' or t[-4:] == '.jpg' else t +'.tga'
+                 for t in shaders_deps[2])
+    return files
     

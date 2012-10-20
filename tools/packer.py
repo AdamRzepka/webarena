@@ -68,3 +68,5 @@ def pack_bsp(bsp_file, baseoa, zipname):
 def pack_player(player_dir, baseoa, zipname):
      pack_files(bsp.get_files_for_player(player_dir, baseoa), baseoa, zipname)
                 
+def pack_md3(md3_file, baseoa, zipname):
+     pack_files(bsp.get_files_for_md3(md3_file, baseoa), baseoa, zipname)
