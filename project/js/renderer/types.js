@@ -38,7 +38,7 @@ var Mesh = function() {
     /**
      * @type {Array.<{shader: ?, defaultTexture: ?}>}
      */
-    this.materials = [{shader: null, defaultTexture: null}]; // defaultTexture is used with default shader
+    this.materials = [{shaderName: "", shader: null, defaultTexture: null}]; // defaultTexture is used with default shader
 };
 
 /**

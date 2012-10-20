@@ -124,13 +124,13 @@ BinaryFile.prototype.readFloat = function() {
 };
 
 BinaryFile.prototype.readFloatArray = function(count) {
-    var res = return new Float32Array(this.data, this.offset, count);
+    var res = new Float32Array(this.data, this.offset, count);
     this.offset += 4 * count;
     return res;
 };
 
 BinaryFile.prototype.readLongArray = function(count) {
-    var res = return new Int32Array(this.data, this.offset, count);
+    var res = new Int32Array(this.data, this.offset, count);
     this.offset += 4 * count;
     return res;
 };

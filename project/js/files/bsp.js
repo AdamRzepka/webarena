@@ -706,7 +706,7 @@ q3bsp.compileMap = function(verts, faces, meshVerts, lightmaps, shaders, tessela
 		elementsOffset: shader.indexOffset,
 		elementsCount: shader.elementCount,
 		frames: [{arrayBufferId: -1}],
-		materials: [{shader: shader, defaultTexture: null}]
+		materials: [{shaderName: shader.shaderName, defaultTexture: null}]
 	    };
 
 	    meshes.push(mesh);

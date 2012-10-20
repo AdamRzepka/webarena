@@ -1,4 +1,6 @@
 goog.require('binaryFile');
+goog.require('goog.asserts');
+
 goog.provide('resources.Md3');
 
 resources.Md3.load = function(arrayBuffer, skins) {
@@ -58,7 +60,7 @@ resources.Md3.load = function(arrayBuffer, skins) {
 	    indices: []
 	};
 
-	goog.assert(surface.framesCount === header.framesCount);
+	goog.asserts.assert(surface.framesCount === header.framesCount);
 
 	binaryFile.seek(surfaceOffset + surface.shadersOffset);
 	for (i = surface.shadersCount; i > 0; --i) {
@@ -67,7 +69,7 @@ resources.Md3.load = function(arrayBuffer, skins) {
 
 	binaryFile.seek(surfaceOffset + surface.verticesOffset);
 	for (i = surface.verticesCount * surface.framesCount; i > 0; --i) {
-	    surface.verices.push(parseVertex_());
+	    surface.vertices.push(parseVertex_());
 	}
 
 	binaryFile.seek(surfaceOffset + surface.indicesOffset);
@@ -82,7 +84,7 @@ resources.Md3.load = function(arrayBuffer, skins) {
 
     function parseShader_() {
 	return {
-	    name: binaryFile.readString(64),
+	    name: binaryFile.readString(64).replace(/[\0\s]*$/, ''),
 	    index: binaryFile.readLong()
 	};
     }
@@ -105,7 +107,7 @@ resources.Md3.load = function(arrayBuffer, skins) {
 	];
     }
 
-    function buildModel() {
+    function buildModel_() {
 	var i = 0,
 	    j = 0,
 	    k = 0,
@@ -124,14 +126,14 @@ resources.Md3.load = function(arrayBuffer, skins) {
 
 	model = new Model();
 	model.framesCount = header.framesCount;
+	model.skinsIndices = {'__default__': 0};
 
 	for (i = 0; i < model.framesCount; ++i) {
 	    frames[i] = {vertices: []};
 	}
-
 	
 	surfCount = surfaces.length;
-	for (i = 0; i < count; ++i) {
+	for (i = 0; i < surfCount; ++i) {
 	    surface = surfaces[i];
 	    indicesOffset = indices.length;
 	    
@@ -146,20 +148,20 @@ resources.Md3.load = function(arrayBuffer, skins) {
 		frame = frames[j];
 		for (k = 0; k < surface.verticesCount; ++k) {
 		    // TODO: get rid of lightmap coords and color
-		    frame.vertices.push(surface.vertices[v++]); //x
-		    frame.vertices.push(surface.vertices[v++]); //y
-		    frame.vertices.push(surface.vertices[v++]); //z
+		    frame.vertices.push(surface.vertices[k][0]); //x
+		    frame.vertices.push(surface.vertices[k][1]); //y
+		    frame.vertices.push(surface.vertices[k][2]); //z
 		    frame.vertices.push(surface.uv[2 * k]); // u
 		    frame.vertices.push(surface.uv[2 * k + 1]); // v
 		    frame.vertices.push(0.0); // lightmapU
 		    frame.vertices.push(0.0); // lightmapV
-		    frame.vertices.push(1.0); //r
-		    frame.vertices.push(1.0); //g
-		    frame.vertices.push(1.0); //b
+		    frame.vertices.push(0.0); //r
+		    frame.vertices.push(0.0); //g
+		    frame.vertices.push(0.0); //b
 		    frame.vertices.push(1.0); //a
-		    frame.vertices.push(surface.vertices[v++]); //nx
-		    frame.vertices.push(surface.vertices[v++]); //ny
-		    frame.vertices.push(surface.vertices[v++]);	//nz		    
+		    frame.vertices.push(surface.vertices[k][3]); //nx
+		    frame.vertices.push(surface.vertices[k][4]); //ny
+		    frame.vertices.push(surface.vertices[k][5]); //nz		    
 		}
 	    }
 	    
@@ -168,14 +170,21 @@ resources.Md3.load = function(arrayBuffer, skins) {
 	    mesh.elementsArrayId = 0;
 	    mesh.elementsOffset = indicesOffset;
 	    mesh.elementsCount = surface.indices.length;
+	    
 	    for (j = 0; j < header.framesCount; ++j) {
-		mesh.frames.push({arrayBufferId: j});
+		mesh.frames[j] = {arrayBufferId: j};
 	    }
+	    
 	    mesh.materials[0].shaderName = surface.shaders[0].name;
+	    model.meshes.push(mesh);
+	}
+
+	for (i = 0; i < frames.length; ++i) {
+	    frames[i].vertices = new Float32Array(frames[i].vertices);
 	}
 
 	vertexData = {
-	    indices: indices,
+	    indices: new Uint16Array(indices),
 	    frames: frames
 	};
     }
@@ -183,7 +192,7 @@ resources.Md3.load = function(arrayBuffer, skins) {
     header = parseHeader_();
 
     binaryFile.seek(header.surfacesOffset);
-    for (i = header.surfacesCount; i > 0; ++i) {
+    for (i = header.surfacesCount; i > 0; --i) {
 	surfaces.push(parseSurface_());
     }
 
@@ -197,6 +206,7 @@ resources.Md3.load = function(arrayBuffer, skins) {
 	frames.push(parseTag_());
     }
 
+    buildModel_();
 
     return {
 	model: model,

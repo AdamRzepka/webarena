@@ -227,7 +227,7 @@ renderer.Renderer.prototype.registerMap = function (models, vertexData, lightmap
 	    mesh.id = this.meshes.length;
 	    mesh.elementsArrayId = elementBufferSize;
 	    mesh.frames[0].arrayBufferId = arrayBufferSize;
-	    mesh.materials[0] = Q3GlShader.getMaterial(mesh.materials[0].shader.shaderName, mesh.lightningType);
+	    mesh.materials[0] = Q3GlShader.getMaterial(mesh.materials[0].shaderName, mesh.lightningType);
 	    this.meshes.push(mesh);
 	}
 
@@ -258,6 +258,8 @@ renderer.Renderer.prototype.registerMd3 = function (model, vertexData) {
 	var vertexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 	gl.bufferData(gl.ARRAY_BUFFER, vertexData.frames[i].vertices, gl.STATIC_DRAW);
+
+	this.arrayBuffers.push(vertexBuffer);
     }
 
     this.models.push(model);
@@ -267,12 +269,12 @@ renderer.Renderer.prototype.registerMd3 = function (model, vertexData) {
 	mesh.elementArrayId = this.elementArrayBuffers.length - 1;
 
 	this.meshes.push(mesh);
-	for (j = 0; j < model.framesNum; ++j) {
+	for (j = 0; j < model.framesCount; ++j) {
 	    mesh.frames[j].arrayBufferId = firstArrayIndex + j;
 	}
 
 	for (j = 0; j < mesh.materials.length; ++j) {
-	    mesh.materials[j] = Q3GlShader.getMaterial(mesh.materials[j].shaderName, renderer.LightningType.LIGHT_DYNAMIC);
+	    mesh.materials[j] = Q3GlShader.getMaterial(mesh.materials[j].shaderName, LightningType.LIGHT_DYNAMIC);
 	}
     }
     return this.models.length - 1; // index of added model
