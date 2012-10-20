@@ -1,282 +1,205 @@
-goog.provide('md3');
+goog.require('binaryFile');
+goog.provide('resources.Md3');
 
-function Md3()
-{
-    var self = this;
+resources.Md3.load = function(arrayBuffer, skins) {
 
-    self.mPath = null;
+    var header,
+	surfaces = [],
+	frames = [],
+	tags = [],
+	model,
+	vertexData,
+	i = 0,
+	binaryFile = new BinaryFile(arrayBuffer);
 
-    self.mName = null;
-    self.mFramesCount = 0;
-    self.mSurfaces = null;
-    self.mTags = null;
-    self.mLoaded = false;
+    // local functions
+    function parseHeader_() {
+	if (binaryFile.readString(4) != 'IDP3')
+	    throw "Invalid md3 file";
 
-    self.renderModel = null;
+	binaryFile.skip(72); // skipping version (4), name(64) and flags (4)
+	return {
+	    framesCount: binaryFile.readLong(),
+	    tagsCount: binaryFile.readLong(),
+	    surfacesCount: binaryFile.readLong(),
+	    framesOffset: binaryFile.skip(4).readLong(), // skipping skins number
+	    tagsOffset: binaryFile.readLong(),
+	    surfacesOffset: binaryFile.readLong()
+	};
+    }
 
-    self.parseMD3 = function(binaryArray, onLoad) {
-	var header = new Int32Array(binaryArray, 0, 27);
+    function parseTag_() {
+	return null;
+    }
 
-	if (header[0] != 860898377) // magic number
-	{
-	    alert("Incorrect MD3 file (Magic number = " + header[0] + ")");
-	    return null;
-	}
+    function parseFrame_() {
+	return null;
+    }
 
-	var nameBytes = new Uint8Array(binaryArray, 8, 64);
-	self.mName = createString(nameBytes, 0, 64);
+    function parseSurface_() {
+	var surface;
+	var i, count;
+	var surfaceOffset = binaryFile.tell();
 
-	var surfacesCount = header[21];
-	var surfacesOffset = header[25];
-
-	self.mFramesCount = header[19];
-	var tagsCount = header[20];
-	var tagsOffset = header[24];
-
-	self.mTags = self.parseTags(binaryArray, tagsOffset, tagsCount, self.mFramesCount);
-
-	self.mSurfaces = new Array(surfacesCount);
-
-	var readBytes = 0;
-	for (var i = 0; i < surfacesCount; ++i)
-	{
-	    var result = self.parseSurface(binaryArray, surfacesOffset + readBytes);
-	    readBytes += result.mSize;
-	    self.mSurfaces[i] = result.mSurface;
-	}
-
-	self.loadSkin(self.mPath + ".skin");
-    };
-
-    self.parseTags = function(binaryArray, tagsOffset, tagsCount, framesCount) {
-	var tags = new Array(tagsCount);
-	for (var i = 0; i < tagsCount; ++i)
-	{
-	    var nameBytes = new Uint8Array(binaryArray, tagsOffset + i * 112, 64);
-	    var name = createString(nameBytes, 0, 64);
-
-	    tags[i] = { mName: name, mMatrices: new Array(framesCount) };
-	    for (var j = 0; j < framesCount; ++j)
-	    {
-		var origin = new Float32Array(binaryArray, tagsOffset + 64 + (i + j * tagsCount) * 112, 3);
-		var rotation = new Float32Array(binaryArray, tagsOffset + 76 + (i + j * tagsCount) * 112, 9);
-		var mtx = mat3.toMat4(mat3.create(rotation));
-		mtx[12] = origin[0];
-		mtx[13] = origin[1];
-		mtx[14] = origin[2];
-
-		tags[i].mMatrices[j] = mtx;
-	    }
-	}
-
-	return tags;
-    };
-
-    self.parseSurface = function(binaryArray, surfaceOffset) {
-	var surfaceHeader = new Int32Array(binaryArray, surfaceOffset, 27);
-	if (surfaceHeader[0] != 860898377) // magic number
-	{
-	    alert("Incorrect MD3 file (Magic number = " + magicNumber[0] + ")");
-	    return null;
-	}
-
-	var nameBytes = new Uint8Array(binaryArray, surfaceOffset + 4, 64);
-	var name = createString(nameBytes, 0, 64);
-
-	var framesCount = surfaceHeader[18];
-	if (framesCount != self.mFramesCount)
-	    alert("Frames count from surface does not match global model frames count");
-
-	var shadersCount = surfaceHeader[19];
-	var verticesCount = surfaceHeader[20];
-	var trianglesCount = surfaceHeader[21];
-
-	var shadersOffset = surfaceHeader[23];
-	var verticesOffset = surfaceHeader[25];
-	var trianglesOffset = surfaceHeader[22];
-	var texCoordOffset = surfaceHeader[24];
-
-	var shaders = self.parseShaders(binaryArray, surfaceOffset + shadersOffset, shadersCount);
-	var indices = self.parseTriangles(binaryArray, surfaceOffset + trianglesOffset,
-					  trianglesCount);
-
-	var frames = Array(self.mFramesCount);
-	for (var i = 0; i < framesCount; ++i)
-	{
-	    frames[i] = new Object();
-	    frames[i].mVertices = self.parseVertices(binaryArray, surfaceOffset
-						     + verticesOffset + i * 8 * verticesCount,
-						     verticesCount);
-	}
-
-	var texCoords = self.parseST(binaryArray, surfaceOffset + texCoordOffset, verticesCount);
-
-	var surface = {
-	    mName: name,
-	    mShaders: shaders,
-	    mIndices: indices,
-	    mFrames: frames,
-	    mTexCoords: texCoords
+	binaryFile.skip(72);
+	surface = {
+	    framesCount: binaryFile.readLong(),
+	    shadersCount: binaryFile.readLong(),
+	    verticesCount: binaryFile.readLong(),
+	    indicesCount: binaryFile.readLong(),
+	    indicesOffset: binaryFile.readLong(),
+	    shadersOffset: binaryFile.readLong(),
+	    uvOffset: binaryFile.readLong(),
+	    verticesOffset: binaryFile.readLong(),
+	    endOffset: binaryFile.readLong(),
+	    shaders: [],
+	    vertices: [],
+	    uv: [],
+	    indices: []
 	};
 
-	return { mSurface: surface, mSize: surfaceHeader[26]};
-    };
+	goog.assert(surface.framesCount === header.framesCount);
 
-    self.parseShaders = function(binaryArray, shadersOffset, shadersCount) {
-	var asChars = new Uint8Array(binaryArray, shadersOffset, shadersCount * 68);
-	var asInts = new Int32Array(binaryArray, shadersOffset, shadersCount * 17);
-
-	var shaders = Array(shadersCount);
-	for (var i = 0; i < shadersCount; ++i)
-	{
-	    shaders[i] = { mPath: createString(asChars, i * 68, 64), mIndex: asInts[16 + i * 68]};
+	binaryFile.seek(surfaceOffset + surface.shadersOffset);
+	for (i = surface.shadersCount; i > 0; --i) {
+	    surface.shaders.push(parseShader_());
 	}
 
-	return shaders;
-    };
-
-    self.parseTriangles = function(binaryArray, trianglesOffset, trianglesCount) {
-	var indices = new Uint16Array(new Int32Array(binaryArray, trianglesOffset,
-                                                     3 * trianglesCount));
-	indices.mBuffer = gGl.createBuffer();
-	gGl.bindBuffer(gGl.ELEMENT_ARRAY_BUFFER, indices.mBuffer);
-	gGl.bufferData(gGl.ELEMENT_ARRAY_BUFFER, indices, gGl.STATIC_DRAW);
-	gGl.bindBuffer(gGl.ELEMENT_ARRAY_BUFFER, null);
-	return indices;
-    };
-
-    self.parseVertices = function(binaryArray, verticesOffset, verticesCount) {
-	// These arrays are pointing to the same data. We need them both,
-	// because coordinates are saved as int16, while normals are
-	// stored as uint8.
-	var asShort = new Int16Array(binaryArray, verticesOffset, 4 * verticesCount);
-	var asByte = new Uint8Array(binaryArray, verticesOffset, 8 * verticesCount);
-
-	var vertices = new Array(verticesCount * 6);
-
-	for (var i = 0; i < verticesCount; ++i)
-	{
-	    // coordinates
-	    vertices[6 * i] = asShort[4 * i] * 1.0 / 64.0;
-	    vertices[6 * i + 1] = asShort[4 * i + 1] * 1.0 / 64.0;
-	    vertices[6 * i + 2] = asShort[4 * i + 2] * 1.0 / 64.0;
-	    // skipping next int16, which is actually normal vector
-
-	    // normals from spherical coordinates
-	    var lat = asByte[8 * i + 6] * 2.0 * Math.PI / 255.0;
-	    var lng = asByte[8 * i + 7] * 2.0 * Math.PI / 255.0;
-	    vertices[6 * i + 3] = Math.cos(lng) * Math.sin(lat);
-	    vertices[6 * i + 4] = Math.sin(lng) * Math.cos(lat);
-	    vertices[6 * i + 5] = Math.cos(lat);
+	binaryFile.seek(surfaceOffset + surface.verticesOffset);
+	for (i = surface.verticesCount * surface.framesCount; i > 0; --i) {
+	    surface.verices.push(parseVertex_());
 	}
 
-	vertices = new Float32Array(vertices);
-	vertices.mBuffer = gGl.createBuffer();
-	gGl.bindBuffer(gGl.ARRAY_BUFFER, vertices.mBuffer);
-	gGl.bufferData(gGl.ARRAY_BUFFER, vertices, gGl.STATIC_DRAW);
-	gGl.bindBuffer(gGl.ARRAY_BUFFER, null);
+	binaryFile.seek(surfaceOffset + surface.indicesOffset);
+	surface.indices = binaryFile.readLongArray(surface.indicesCount * 3);
 
-	return vertices;
-    };
+	binaryFile.seek(surfaceOffset + surface.uvOffset);
+	surface.uv = binaryFile.readFloatArray(surface.verticesCount * 2);
 
-    self.parseST = function(binaryArray, texCoordOffset, texCoordCount) {
-	var texCoords = new Float32Array(binaryArray, texCoordOffset, texCoordCount * 2);
-	texCoords.mBuffer = gGl.createBuffer();
-	gGl.bindBuffer(gGl.ARRAY_BUFFER, texCoords.mBuffer);
-	gGl.bufferData(gGl.ARRAY_BUFFER, texCoords, gGl.STATIC_DRAW);
-	gGl.bindBuffer(gGl.ARRAY_BUFFER, null);
+	binaryFile.seek(surfaceOffset + surface.endOffset);
+	return surface;
+    }
 
-	return texCoords;
-    };
+    function parseShader_() {
+	return {
+	    name: binaryFile.readString(64),
+	    index: binaryFile.readLong()
+	};
+    }
 
-    self.loadSkin = function(path) {
-	loadFile(path, true, false, self.parseSkin);
-    };
+    function parseVertex_() {
+	// decoding position and normal: http://en.wikipedia.org/wiki/MD3_(file_format)#Vertex
+	var x = binaryFile.readShort();
+	var y = binaryFile.readShort();
+	var z = binaryFile.readShort();
+	var lat = binaryFile.readByte() * 2 * Math.PI / 255;
+	var lng = binaryFile.readByte() * 2 * Math.PI / 255;
 
-    self.parseSkin = function(skinDesc) {
-	var lines = skinDesc.split("\n");
+	return [
+	    x / 64,
+	    y / 64,
+	    z / 64,
+	    Math.cos(lng) * Math.sin(lat),
+	    Math.sin(lng) * Math.cos(lat),
+	    Math.cos(lat)
+	];
+    }
 
-	for (var i = 0; i < lines.length - 1; ++i)
-	{
-	    if (lines[i].length == 0)
-		continue;
-	    var tokens = lines[i].split(",");
-	    if (tokens.length == 2 && tokens[0].length > 0 && tokens[1].length > 0)
-	    {
-		// changing file extension from tga to png
-		var textureFile = self.mPath.slice(0, self.mPath.lastIndexOf("/")) +
-		    tokens[1].slice(tokens[1].lastIndexOf("/"), -4) + "png";
-		// finding surface with given name
-		for (var j = 0; j < self.mSurfaces.length; ++j)
-		{
-		    if (self.mSurfaces[j].mName == tokens[0])
-			self.loadTexture(j, textureFile);
+    function buildModel() {
+	var i = 0,
+	    j = 0,
+	    k = 0,
+	    v = 0,
+	    surfCount = 0,
+	    count = 0,
+	    mesh,
+	    surface,
+	    indicesOffset = 0,
+	    verticesOffset = 0,
+	    indices = [],
+	    vertices = [],
+	    frames = [],
+	    vertex,
+	    frame;
+
+	model = new Model();
+	model.framesCount = header.framesCount;
+
+	for (i = 0; i < model.framesCount; ++i) {
+	    frames[i] = {vertices: []};
+	}
+
+	
+	surfCount = surfaces.length;
+	for (i = 0; i < count; ++i) {
+	    surface = surfaces[i];
+	    indicesOffset = indices.length;
+	    
+	    count = surface.indices.length;
+	    verticesOffset = frames[0].vertices.length;
+	    for (j = 0; j < count; ++j) {
+		indices.push(surface.indices[j] + verticesOffset);
+	    }
+
+	    v = 0;
+	    for (j = 0; j < header.framesCount; ++j) {
+		frame = frames[j];
+		for (k = 0; k < surface.verticesCount; ++k) {
+		    // TODO: get rid of lightmap coords and color
+		    frame.vertices.push(surface.vertices[v++]); //x
+		    frame.vertices.push(surface.vertices[v++]); //y
+		    frame.vertices.push(surface.vertices[v++]); //z
+		    frame.vertices.push(surface.uv[2 * k]); // u
+		    frame.vertices.push(surface.uv[2 * k + 1]); // v
+		    frame.vertices.push(0.0); // lightmapU
+		    frame.vertices.push(0.0); // lightmapV
+		    frame.vertices.push(1.0); //r
+		    frame.vertices.push(1.0); //g
+		    frame.vertices.push(1.0); //b
+		    frame.vertices.push(1.0); //a
+		    frame.vertices.push(surface.vertices[v++]); //nx
+		    frame.vertices.push(surface.vertices[v++]); //ny
+		    frame.vertices.push(surface.vertices[v++]);	//nz		    
 		}
 	    }
+	    
+	    mesh = new Mesh();
+	    mesh.lightningType = LightningType.LIGHT_DYNAMIC;
+	    mesh.elementsArrayId = 0;
+	    mesh.elementsOffset = indicesOffset;
+	    mesh.elementsCount = surface.indices.length;
+	    for (j = 0; j < header.framesCount; ++j) {
+		mesh.frames.push({arrayBufferId: j});
+	    }
+	    mesh.materials[0].shaderName = surface.shaders[0].name;
 	}
-    };
 
-    self.loadTexture = function(surfaceIndex, path) {
-	self.mSurfaces[surfaceIndex].mTexture = gGl.createTexture();
-	var image = new Image();
-	self.mSurfaces[surfaceIndex].mTexture.mImage = image;
-
-	image.onload = function()
-	{
-	    var texture = self.mSurfaces[surfaceIndex].mTexture;
-	    gGl.bindTexture(gGl.TEXTURE_2D, texture);
-	    // gGl.pixelStorei(gGl.UNPACK_FLIP_Y_WEBGL, true);
-	    gGl.texImage2D(gGl.TEXTURE_2D, 0, gGl.RGBA, gGl.RGBA, gGl.UNSIGNED_BYTE,
-			   texture.mImage);
-	    gGl.texParameteri(gGl.TEXTURE_2D, gGl.TEXTURE_MAG_FILTER, gGl.LINEAR);
-	    gGl.texParameteri(gGl.TEXTURE_2D, gGl.TEXTURE_MIN_FILTER, gGl.LINEAR_MIPMAP_NEAREST);
-	    gGl.generateMipmap(gGl.TEXTURE_2D);
-
-	    gGl.bindTexture(gGl.TEXTURE_2D, null);
-
-	    self.mLoaded = true;
+	vertexData = {
+	    indices: indices,
+	    frames: frames
 	};
+    }
 
-	image.src = path;
+    header = parseHeader_();
+
+    binaryFile.seek(header.surfacesOffset);
+    for (i = header.surfacesCount; i > 0; ++i) {
+	surfaces.push(parseSurface_());
+    }
+
+    binaryFile.seek(header.framesOffset);
+    for (i = header.framesCount; i > 0; --i) {
+	frames.push(parseFrame_());
+    }
+
+    binaryFile.seek(header.tagsOffset);
+    for (i = header.tagsCount; i > 0; --i) {
+	frames.push(parseTag_());
+    }
+
+
+    return {
+	model: model,
+	vertexData: vertexData
     };
-
-
-    self.render = function(matrix, frame) {
-	gGl.useProgram(gShaderProgram);
-	var intFrame = Math.floor(frame);
-	var intNextFrame = intFrame + 1;
-	var interpolScale = intFrame - frame;
-	if (intNextFrame == self.mFramesCount)
-	{
-	    intNextFrame = intFrame;
-	    interpolScale = 0.0;
-	}
-
-	var mvp = mat4.create();
-	mat4.multiply(gCamera.pVtx, matrix, mvp);
-
-	for (var i = 0; i < self.mSurfaces.length; ++i)
-	{
-	    gGl.bindBuffer(gGl.ELEMENT_ARRAY_BUFFER, self.mSurfaces[i].mIndices.mBuffer);
-
-	    gGl.bindBuffer(gGl.ARRAY_BUFFER,
-			   self.mSurfaces[i].mFrames[intFrame].mVertices.mBuffer);
-	    gGl.vertexAttribPointer(gShaderProgram.mVertexLocation, 3, gGl.FLOAT, false, 24, 0);
-
-	    gGl.bindBuffer(gGl.ARRAY_BUFFER,
-			   self.mSurfaces[i].mFrames[intNextFrame].mVertices.mBuffer);
-	    gGl.vertexAttribPointer(gShaderProgram.mVertexNextLocation, 3, gGl.FLOAT, false, 24, 0);
-
-	    gGl.bindBuffer(gGl.ARRAY_BUFFER, self.mSurfaces[i].mTexCoords.mBuffer);
-	    gGl.vertexAttribPointer(gShaderProgram.mTexCoordsLocation, 2, gGl.FLOAT, false, 0, 0);
-
-	    gGl.activeTexture(gGl.TEXTURE0);
-	    gGl.bindTexture(gGl.TEXTURE_2D, self.mSurfaces[i].mTexture);
-	    gGl.uniform1i(gShaderProgram.mSamlerLocation, 0);
-
-	    gGl.uniformMatrix4fv(gShaderProgram.mMvpLocation, false, mvp);
-
-	    gGl.drawElements(gGl.TRIANGLES, self.mSurfaces[i].mIndices.length, gGl.UNSIGNED_SHORT, 0);
-	}
-    };
-}
+};

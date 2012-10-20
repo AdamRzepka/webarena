@@ -18,7 +18,7 @@ var Mesh = function() {
     /**
      * @type {renderer.LightningType}
      */
-    this.lightningType = LIGHT_2D;
+    this.lightningType = LightningType.LIGHT_2D;
     /**
      * @type {number}
      */

@@ -24,7 +24,7 @@
  *
  *    3. This notice may not be removed or altered from any source
  *    distribution.
- * 
+ *
  **********************************************************************************
  * Modified by Adam Rzepka
  */
@@ -65,7 +65,13 @@ BinaryFile.prototype.eof = function() {
 // Seek to the given byt offset within the stream
 BinaryFile.prototype.seek = function(offset) {
     this.offset = offset;
+    return this; // to allow chaining
 };
+
+BinaryFile.prototype.skip = function(bytesToSkip) {
+    this.offset += bytesToSkip;
+    return this; // to allow chaining
+}
 
 // Seek to the given byt offset within the stream
 BinaryFile.prototype.tell = function() {
@@ -116,6 +122,19 @@ BinaryFile.prototype.readFloat = function() {
     this.offset += 4;
     return res;
 };
+
+BinaryFile.prototype.readFloatArray = function(count) {
+    var res = return new Float32Array(this.data, this.offset, count);
+    this.offset += 4 * count;
+    return res;
+};
+
+BinaryFile.prototype.readLongArray = function(count) {
+    var res = return new Int32Array(this.data, this.offset, count);
+    this.offset += 4 * count;
+    return res;
+};
+
 
 BinaryFile.prototype.expandHalf = function(h) {
     var s = (h & 0x8000) >> 15;
