@@ -155,13 +155,13 @@ resources.Md3.load = function(arrayBuffer, skins) {
 		    frame.vertices.push(surface.uv[2 * k + 1]); // v
 		    frame.vertices.push(0.0); // lightmapU
 		    frame.vertices.push(0.0); // lightmapV
-		    frame.vertices.push(0.0); //r
-		    frame.vertices.push(0.0); //g
-		    frame.vertices.push(0.0); //b
-		    frame.vertices.push(1.0); //a
 		    frame.vertices.push(surface.vertices[k][3]); //nx
 		    frame.vertices.push(surface.vertices[k][4]); //ny
 		    frame.vertices.push(surface.vertices[k][5]); //nz		    
+		    frame.vertices.push(1.0); //r
+		    frame.vertices.push(1.0); //g
+		    frame.vertices.push(1.0); //b
+		    frame.vertices.push(1.0); //a
 		}
 	    }
 	    
