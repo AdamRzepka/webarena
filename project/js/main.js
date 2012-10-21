@@ -81,7 +81,7 @@ function main() {
 	// im.src = rm.textures["textures/skies/dimclouds"];
 	// window.document.body.appendChild(im);
 	render = new renderer.Renderer(gl, rm);
-//	q3bsp.load(rm.getMap(), 10);
+	q3bsp.load(rm.getMap(), 10);
 	var md3 = resources.Md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
 	var id = render.registerMd3(md3.model, md3.vertexData);
 	render.makeModelInstance(id, mat4.identity());

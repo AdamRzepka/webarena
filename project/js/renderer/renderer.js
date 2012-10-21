@@ -266,7 +266,7 @@ renderer.Renderer.prototype.registerMd3 = function (model, vertexData) {
     for (i = 0; i < model.meshes.length; ++i) {
 	var mesh = model.meshes[i];
 	mesh.id = this.meshes.length;
-	mesh.elementArrayId = this.elementArrayBuffers.length - 1;
+	mesh.elementsArrayId = this.elementArrayBuffers.length - 1;
 
 	this.meshes.push(mesh);
 	for (j = 0; j < model.framesCount; ++j) {
