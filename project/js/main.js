@@ -63,6 +63,14 @@ function main() {
     var lastTime = Date.now();
     var timeAcc = 0;
 
+    var weaponMtx = mat4.identity();
+    var weaponOff = [10, -10, -4];
+    var weaponId = -1;
+    var weaponRot = [0, 0, -1, 0,
+		     -1, 0, 0, 0,
+		     0, 1, 0, 0,
+		     0, 0, 0, 1];
+    
     function update() {
 	timeAcc += Date.now() - lastTime;
 	while (timeAcc > 15) {
@@ -72,6 +80,9 @@ function main() {
 	}
 	lastTime = Date.now();
 	render.updateCamera(camera.getCameraMatrix());
+	mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
+	mat4.multiply(weaponMtx, weaponRot, weaponMtx);
+	render.updateModel(weaponId, weaponMtx, 0);
 	render.render();
 	requestAnimationFrame(update);
     }
@@ -84,7 +95,7 @@ function main() {
 	q3bsp.load(rm.getMap(), 10);
 	var md3 = resources.Md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
 	var id = render.registerMd3(md3.model, md3.vertexData);
-	render.makeModelInstance(id, mat4.identity());
+	weaponId = render.makeModelInstance(id, weaponMtx);
 	render.updateCamera(mat4.identity());
 	requestAnimationFrame(update);
     });

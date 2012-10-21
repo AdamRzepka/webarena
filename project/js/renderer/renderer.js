@@ -123,7 +123,7 @@ renderer.Renderer.prototype.render = function () {
 	    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.elementArrayBuffers[meshBase.elementsArrayId]);
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.arrayBuffers[meshBase.frames[modelInst.frame].arrayBufferId]);
 
-	    mat4.multiply(modelInst.matrix, this.viewMtx, this.modelViewMtx);
+	    mat4.multiply(this.viewMtx, modelInst.matrix, this.modelViewMtx);
 
 	    this.bindShaderAttribs(stage.program, this.modelViewMtx, this.projectionMtx);
 
@@ -348,15 +348,24 @@ renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrice
 	throw "Arrays passed to updateModels must have the same length";
     }
 
-    for (i = 0; i < objectsIds.length; ++i) {
-	model = this.modelsInstances[objectsIds[i]];
+    for (i = 0; i < modelsInstancesIds.length; ++i) {
+	model = this.modelsInstances[modelsInstancesIds[i]];
 	if (model === undefined) {
-	    console.log("Invalid model instance id passed to updateModels: " + objectsIds[i]);
+	    console.log("Invalid model instance id passed to updateModels: " + modelsInstancesIds[i]);
 	    continue;
 	}
 	model.matrix = matrices[i];
 	model.frame = frames[i];
     }
+};
+
+renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, frame) {
+    var model = this.modelsInstances[modelInstanceId];
+    if (model === undefined) {
+	console.log("Invalid model instance id passed to updateModels: " + modelInstanceId);
+    }
+    model.matrix = matrix;
+    model.frame = frame;
 };
 
 /**
