@@ -1,7 +1,10 @@
 *#
+.#*
 *~
 *.pyc
 TAGS
+.emacs.desktop
+.emacs.desktop.lock
 
-resources/
+/resources
 scratch/
