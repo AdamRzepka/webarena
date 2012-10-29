@@ -29,7 +29,7 @@
 
 "use strict";
 
-goog.provide('gl-matrix');
+goog.provide('glmatrix');
 
 // Type declarations
 (function(_global) {

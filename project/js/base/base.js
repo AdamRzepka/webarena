@@ -20,7 +20,13 @@
  * @fileoverview Base type for game models and auxiliary classes.
  * Used by renderer and game.
  * They are extended in renderer module.
+ *
+ * The encapsulation is ensured only by jsdoc annotation (+ google closure).
+ * I know it's not the best way, but it's significantly more efficient than
+ * private-as-constructor-local-variable approach.
  */
+
+goog.require('goog.asserts');
 
 goog.provide('base.Model');
 goog.provide('base.ModelInstance');
@@ -33,65 +39,191 @@ goog.provide('base.Material');
  * Base class for game models. It represents both md3 models (one model per file)
  * and bsp models (many models in one bsp).
  * @constructor
+ * @param {Array<base.Mesh>} meshes
+ * @param {number} framesCount
+ * @param {Array<string>} skins
  */
-base.Model = function() {
+base.Model = function (meshes, framesCount, skins) {
+    goog.asserts.assert(meshes.length > 0);
+    goog.asserts.assert(framesCount > 0);
+
+    // If skins are not defined explicitly, we create default skin
+    if (skins === null) {
+	skins = ['__default__'];
+    }
+    else if (!skins[0]) { // if is undefined/null/empty string
+	skins[0] = '__default__';
+    }
+    
     /**
+     * @private
+     * @type {Array<base.Mesh>}
+     */
+    this.meshes_ = meshes;
+    /**
+     * @private
      * @type {number}
      */
-    this.id = -1;
-    /**
-     * @type {Array.<base.Mesh>}
-     */
-    this.meshes = [];
-    /**
-     * @type {number}
-     */
-    this.framesCount = 1;
+    this.framesCount_ = framesCount;
     /**
      * One model can be displayed with different materials, when they have .skin
      * files specified.
-     * @type {Object.<string,number>}
+     * @private
+     * @type {Array<string>}
      */
-    this.skinsIndices = {}; // { NAME: materialIndexInMesh }
-    /**
-     * @type {number}
-     */
-    this.skinsCount = 1;
+    this.skins_ = skins;
+};
+
+/**
+ * @public
+ * @return {Array<base.Mesh>}
+ */
+base.Model.prototype.getMeshes = function () {
+    return this.meshes_;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+base.Model.prototype.getFramesCount = function () {
+    return this.framesCount_;
+};
+
+/**
+ * @public
+ * @return {Array<string>}
+ */
+base.Model.prototype.getSkins = function () {
+    return this.skins_;
 };
 
 /**
  * Model instances share geometric data to display many identical enitities.
  * @constructor
+ * @param {number} id
+ * @param {base.Model} baseModel
+ * @param {number} skinId
  */
 base.ModelInstance = function(id, baseModel, skinId) {
+    goog.asserts.assert(id >= 0);
+    goog.asserts.assert(goog.isDefAndNotNull(baseModel));
+    goog.asserts.assert(skinId >= 0 && skinId < baseModel.getSkins().length);
+    
     /**
+     * @private
      * @type {number}
      */
-    this.id = id;
+    this.id_ = id;
     /**
+     * @private
      * @type {base.Model}
      */
-    this.baseModel = baseModel;
+    this.baseModel_ = baseModel;
     /**
      * Skin for this particular instance.
+     * @private
      * @type {number}
      */
-    this.skinId = skinId;
+    this.skinId_ = skinId;
     /**
      * Model matrix
+     * @private
      * @type {glmatrix.mat4}
      */
-    this.matrix = null;
+    this.matrix_ = null;
     /**
      * Current frame
+     * @private
      * @type {number}
      */
-    this.frame = 0;
+    this.frame_ = 0;
     /**
+     * @private
      * @type {boolean}
      */
-    this.visible = false;
+    this.visibility_ = false;
 };
+
+/**
+ * @public
+ * @return {number}
+ */
+base.ModelInstance.prototype.getId = function () {
+    return this.id_;
+};
+
+/**
+ * @public
+ * @return {base.Model}
+ */
+base.ModelInstance.prototype.getBaseModel = function () {
+    return this.baseModel_;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+base.ModelInstance.prototype.getSkinId = function () {
+    return this.skinId_;
+};
+
+/**
+ * @public
+ * @return {glmatrix.mat4}
+ */
+base.ModelInstance.prototype.getMatrix = function () {
+    return this.matrix_;
+};
+
+/**
+ * @public
+ * @param {glmatrix.mat4} matrix
+ */
+base.ModelInstance.prototype.setMatrix = function (matrix) {
+    var det = 0;
+    if (goog.DEBUG) {
+	// Checks if matrix looks OK.
+	det = mat4.determinant(mat);
+	goog.asserts.assert(det !== 0 && det < 10e9); 
+    }
+    this.matrix_ = matrix;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+base.ModelInstance.prototype.getFrame = function () {
+    return this.frame_;
+};
+
+/**
+ * @public
+ * @param {number} frame
+ */
+base.ModelInstance.prototype.setFrame = function (frame) {
+    goog.asserts.assert(frame >= 0 && frame < this.baseModel_.getFramesCount());
+    this.frame_ = frame;
+};
+
+/**
+ * @public
+ * @return {boolean}
+ */
+base.ModelInstance.prototype.getVisibility = function () {
+    return this.visibility_;
+};
+
+/**
+ * @public
+ * @param {boolean} visibility
+ */
+base.ModelInstance.prototype.setVisibility = function (visibility) {
+    this.visibility_ = visibility;
+};
+
 
 /**
  * This class corresponds to model surface. Note that we don't declare here
