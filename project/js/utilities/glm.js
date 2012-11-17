@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2011 Brandon Jones
+ * Copyright (c) 2011 Brandon Jones, modified by Adam Rzepka
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -29,65 +29,30 @@
 
 "use strict";
 
-goog.provide('glmatrix');
-
-// Type declarations
-(function(_global) {
-    // account for CommonJS environments
-    _global.glMatrixArrayType = _global.MatrixArray = null;
-
-    /**
-     * @class 3 Dimensional Vector
-     * @name vec3
-     */
-    _global.vec3 = {};
-
-    /**
-     * @class 3x3 Matrix
-     * @name mat3
-     */
-    _global.mat3 = {};
-
-    /**
-     * @class 4x4 Matrix
-     * @name mat4
-     */
-    _global.mat4 = {};
-
-    /**
-     * @class Quaternion
-     * @name quat4
-     */
-    _global.quat4 = {};
-
-    // explicitly sets and returns the type of array to use within glMatrix
-    _global.setMatrixArrayType = function(type) {
-        return glMatrixArrayType = MatrixArray = type;
-    };
-
-    // auto-detects and returns the best type of array to use within glMatrix, falling
-    // back to Array if typed arrays are unsupported
-    _global.determineMatrixArrayType = function() {
-        return setMatrixArrayType((typeof Float32Array !== 'undefined') ? Float32Array : Array);
-    };
-
-    determineMatrixArrayType();
-})((typeof(exports) != 'undefined') ? global : this);
+goog.provide('glm');
+goog.provide('glm.vec3');
+goog.provide('glm.mat3');
+goog.provide('glm.mat4');
+goog.provide('glm.quat4');
 
 /*
- * vec3
+ * glm.vec3
  */
 
+glm.MatrixArray = Float32Array;
+
+/** @typedef Float32Array*/ glm.vec3 = {};
+
 /**
- * Creates a new instance of a vec3 using the default array type
- * Any javascript array-like objects containing at least 3 numeric elements can serve as a vec3
+ * Creates a new instance of a glm.vec3 using the default array type
+ * Any javascript array-like objects containing at least 3 numeric elements can serve as a glm.vec3
  *
- * @param {vec3} [vec] vec3 containing values to initialize with
+ * @param {glm.vec3|Array.<number>} [vec] glm.vec3 containing values to initialize with
  *
- * @returns {vec3} New vec3
+ * @returns {glm.vec3} New glm.vec3
  */
-vec3.create = function (vec) {
-    var dest = new MatrixArray(3);
+glm.vec3.create = function (vec) {
+    var dest = new glm.MatrixArray(3);
 
     if (vec) {
         dest[0] = vec[0];
@@ -101,14 +66,14 @@ vec3.create = function (vec) {
 };
 
 /**
- * Copies the values of one vec3 to another
+ * Copies the values of one glm.vec3 to another
  *
- * @param {vec3} vec vec3 containing values to copy
- * @param {vec3} dest vec3 receiving copied values
+ * @param {glm.vec3|Array.<number>} vec glm.vec3 containing values to copy
+ * @param {glm.vec3} dest glm.vec3 receiving copied values
  *
- * @returns {vec3} dest
+ * @returns {glm.vec3} dest
  */
-vec3.set = function (vec, dest) {
+glm.vec3.set = function (vec, dest) {
     dest[0] = vec[0];
     dest[1] = vec[1];
     dest[2] = vec[2];
@@ -119,13 +84,13 @@ vec3.set = function (vec, dest) {
 /**
  * Performs a vector addition
  *
- * @param {vec3} vec First operand
- * @param {vec3} vec2 Second operand
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} vec First operand
+ * @param {glm.vec3} vec2 Second operand
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.add = function (vec, vec2, dest) {
+glm.vec3.add = function (vec, vec2, dest) {
     if (!dest || vec === dest) {
         vec[0] += vec2[0];
         vec[1] += vec2[1];
@@ -142,13 +107,13 @@ vec3.add = function (vec, vec2, dest) {
 /**
  * Performs a vector subtraction
  *
- * @param {vec3} vec First operand
- * @param {vec3} vec2 Second operand
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} vec First operand
+ * @param {glm.vec3} vec2 Second operand
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.subtract = function (vec, vec2, dest) {
+glm.vec3.subtract = function (vec, vec2, dest) {
     if (!dest || vec === dest) {
         vec[0] -= vec2[0];
         vec[1] -= vec2[1];
@@ -165,13 +130,13 @@ vec3.subtract = function (vec, vec2, dest) {
 /**
  * Performs a vector multiplication
  *
- * @param {vec3} vec First operand
- * @param {vec3} vec2 Second operand
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} vec First operand
+ * @param {glm.vec3} vec2 Second operand
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.multiply = function (vec, vec2, dest) {
+glm.vec3.multiply = function (vec, vec2, dest) {
     if (!dest || vec === dest) {
         vec[0] *= vec2[0];
         vec[1] *= vec2[1];
@@ -186,14 +151,14 @@ vec3.multiply = function (vec, vec2, dest) {
 };
 
 /**
- * Negates the components of a vec3
+ * Negates the components of a glm.vec3
  *
- * @param {vec3} vec vec3 to negate
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} vec glm.vec3 to negate
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.negate = function (vec, dest) {
+glm.vec3.negate = function (vec, dest) {
     if (!dest) { dest = vec; }
 
     dest[0] = -vec[0];
@@ -203,15 +168,15 @@ vec3.negate = function (vec, dest) {
 };
 
 /**
- * Multiplies the components of a vec3 by a scalar value
+ * Multiplies the components of a glm.vec3 by a scalar value
  *
- * @param {vec3} vec vec3 to scale
+ * @param {glm.vec3} vec glm.vec3 to scale
  * @param {number} val Value to scale by
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.scale = function (vec, val, dest) {
+glm.vec3.scale = function (vec, val, dest) {
     if (!dest || vec === dest) {
         vec[0] *= val;
         vec[1] *= val;
@@ -226,15 +191,15 @@ vec3.scale = function (vec, val, dest) {
 };
 
 /**
- * Generates a unit vector of the same direction as the provided vec3
+ * Generates a unit vector of the same direction as the provided glm.vec3
  * If vector length is 0, returns [0, 0, 0]
  *
- * @param {vec3} vec vec3 to normalize
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} vec glm.vec3 to normalize
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.normalize = function (vec, dest) {
+glm.vec3.normalize = function (vec, dest) {
     if (!dest) { dest = vec; }
 
     var x = vec[0], y = vec[1], z = vec[2],
@@ -260,15 +225,15 @@ vec3.normalize = function (vec, dest) {
 };
 
 /**
- * Generates the cross product of two vec3s
+ * Generates the cross product of two glm.vec3s
  *
- * @param {vec3} vec First operand
- * @param {vec3} vec2 Second operand
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} vec First operand
+ * @param {glm.vec3} vec2 Second operand
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.cross = function (vec, vec2, dest) {
+glm.vec3.cross = function (vec, vec2, dest) {
     if (!dest) { dest = vec; }
 
     var x = vec[0], y = vec[1], z = vec[2],
@@ -281,39 +246,39 @@ vec3.cross = function (vec, vec2, dest) {
 };
 
 /**
- * Caclulates the length of a vec3
+ * Caclulates the length of a glm.vec3
  *
- * @param {vec3} vec vec3 to calculate length of
+ * @param {glm.vec3} vec glm.vec3 to calculate length of
  *
  * @returns {number} Length of vec
  */
-vec3.length = function (vec) {
+glm.vec3.length = function (vec) {
     var x = vec[0], y = vec[1], z = vec[2];
     return Math.sqrt(x * x + y * y + z * z);
 };
 
 /**
- * Caclulates the dot product of two vec3s
+ * Caclulates the dot product of two glm.vec3s
  *
- * @param {vec3} vec First operand
- * @param {vec3} vec2 Second operand
+ * @param {glm.vec3} vec First operand
+ * @param {glm.vec3} vec2 Second operand
  *
  * @returns {number} Dot product of vec and vec2
  */
-vec3.dot = function (vec, vec2) {
+glm.vec3.dot = function (vec, vec2) {
     return vec[0] * vec2[0] + vec[1] * vec2[1] + vec[2] * vec2[2];
 };
 
 /**
  * Generates a unit vector pointing from one vector to another
  *
- * @param {vec3} vec Origin vec3
- * @param {vec3} vec2 vec3 to point to
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} vec Origin glm.vec3
+ * @param {glm.vec3} vec2 glm.vec3 to point to
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.direction = function (vec, vec2, dest) {
+glm.vec3.direction = function (vec, vec2, dest) {
     if (!dest) { dest = vec; }
 
     var x = vec[0] - vec2[0],
@@ -336,16 +301,16 @@ vec3.direction = function (vec, vec2, dest) {
 };
 
 /**
- * Performs a linear interpolation between two vec3
+ * Performs a linear interpolation between two glm.vec3
  *
- * @param {vec3} vec First vector
- * @param {vec3} vec2 Second vector
+ * @param {glm.vec3} vec First vector
+ * @param {glm.vec3} vec2 Second vector
  * @param {number} lerp Interpolation amount between the two inputs
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.lerp = function (vec, vec2, lerp, dest) {
+glm.vec3.lerp = function (vec, vec2, lerp, dest) {
     if (!dest) { dest = vec; }
 
     dest[0] = vec[0] + lerp * (vec2[0] - vec[0]);
@@ -356,15 +321,15 @@ vec3.lerp = function (vec, vec2, lerp, dest) {
 };
 
 /**
- * Calculates the euclidian distance between two vec3
+ * Calculates the euclidian distance between two glm.vec3
  *
  * Params:
- * @param {vec3} vec First vector
- * @param {vec3} vec2 Second vector
+ * @param {glm.vec3} vec First vector
+ * @param {glm.vec3} vec2 Second vector
  *
  * @returns {number} Distance between vec and vec2
  */
-vec3.dist = function (vec, vec2) {
+glm.vec3.dist = function (vec, vec2) {
     var x = vec2[0] - vec[0],
         y = vec2[1] - vec[1],
         z = vec2[2] - vec[2];
@@ -373,32 +338,32 @@ vec3.dist = function (vec, vec2) {
 };
 
 /**
- * Projects the specified vec3 from screen space into object space
+ * Projects the specified glm.vec3 from screen space into object space
  * Based on the <a href="http://webcvs.freedesktop.org/mesa/Mesa/src/glu/mesa/project.c?revision=1.4&view=markup">Mesa gluUnProject implementation</a>
  *
- * @param {vec3} vec Screen-space vector to project
- * @param {mat4} view View matrix
- * @param {mat4} proj Projection matrix
+ * @param {glm.vec3} vec Screen-space vector to project
+ * @param {glm.mat4} view View matrix
+ * @param {glm.mat4} proj Projection matrix
  * @param {vec4} viewport Viewport as given to gl.viewport [x, y, width, height]
- * @param {vec3} [dest] vec3 receiving unprojected result. If not specified result is written to vec
+ * @param {glm.vec3} [dest] glm.vec3 receiving unprojected result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-vec3.unproject = function (vec, view, proj, viewport, dest) {
+glm.vec3.unproject = function (vec, view, proj, viewport, dest) {
     if (!dest) { dest = vec; }
 
-    var m = mat4.create();
-    var v = new MatrixArray(4);
+    var m = glm.mat4.create();
+    var v = new glm.MatrixArray(4);
 
     v[0] = (vec[0] - viewport[0]) * 2.0 / viewport[2] - 1.0;
     v[1] = (vec[1] - viewport[1]) * 2.0 / viewport[3] - 1.0;
     v[2] = 2.0 * vec[2] - 1.0;
     v[3] = 1.0;
 
-    mat4.multiply(proj, view, m);
-    if(!mat4.inverse(m)) { return null; }
+    glm.mat4.multiply(proj, view, m);
+    if(!glm.mat4.inverse(m)) { return null; }
 
-    mat4.multiplyVec4(m, v);
+    glm.mat4.multiplyVec4(m, v);
     if(v[3] === 0.0) { return null; }
 
     dest[0] = v[0] / v[3];
@@ -411,28 +376,30 @@ vec3.unproject = function (vec, view, proj, viewport, dest) {
 /**
  * Returns a string representation of a vector
  *
- * @param {vec3} vec Vector to represent as a string
+ * @param {glm.vec3} vec Vector to represent as a string
  *
  * @returns {string} String representation of vec
  */
-vec3.str = function (vec) {
+glm.vec3.str = function (vec) {
     return '[' + vec[0] + ', ' + vec[1] + ', ' + vec[2] + ']';
 };
 
 /*
- * mat3
+ * glm.mat3
  */
 
+/** @typedef {Float32Array}*/ glm.mat3 = {};
+
 /**
- * Creates a new instance of a mat3 using the default array type
- * Any javascript array-like object containing at least 9 numeric elements can serve as a mat3
+ * Creates a new instance of a glm.mat3 using the default array type
+ * Any javascript array-like object containing at least 9 numeric elements can serve as a glm.mat3
  *
- * @param {mat3} [mat] mat3 containing values to initialize with
+ * @param {glm.mat3} [mat] glm.mat3 containing values to initialize with
  *
- * @returns {mat3} New mat3
+ * @returns {glm.mat3} New glm.mat3
  */
-mat3.create = function (mat) {
-    var dest = new MatrixArray(9);
+glm.mat3.create = function (mat) {
+    var dest = new glm.MatrixArray(9);
 
     if (mat) {
         dest[0] = mat[0];
@@ -450,14 +417,14 @@ mat3.create = function (mat) {
 };
 
 /**
- * Copies the values of one mat3 to another
+ * Copies the values of one glm.mat3 to another
  *
- * @param {mat3} mat mat3 containing values to copy
- * @param {mat3} dest mat3 receiving copied values
+ * @param {glm.mat3} mat glm.mat3 containing values to copy
+ * @param {glm.mat3} dest glm.mat3 receiving copied values
  *
- * @returns {mat3} dest
+ * @returns {glm.mat3} dest
  */
-mat3.set = function (mat, dest) {
+glm.mat3.set = function (mat, dest) {
     dest[0] = mat[0];
     dest[1] = mat[1];
     dest[2] = mat[2];
@@ -471,14 +438,14 @@ mat3.set = function (mat, dest) {
 };
 
 /**
- * Sets a mat3 to an identity matrix
+ * Sets a glm.mat3 to an identity matrix
  *
- * @param {mat3} dest mat3 to set
+ * @param {glm.mat3} dest glm.mat3 to set
  *
- * @returns dest if specified, otherwise a new mat3
+ * @returns dest if specified, otherwise a new glm.mat3
  */
-mat3.identity = function (dest) {
-    if (!dest) { dest = mat3.create(); }
+glm.mat3.identity = function (dest) {
+    if (!dest) { dest = glm.mat3.create(); }
     dest[0] = 1;
     dest[1] = 0;
     dest[2] = 0;
@@ -492,15 +459,15 @@ mat3.identity = function (dest) {
 };
 
 /**
- * Transposes a mat3 (flips the values over the diagonal)
+ * Transposes a glm.mat3 (flips the values over the diagonal)
  *
  * Params:
- * @param {mat3} mat mat3 to transpose
- * @param {mat3} [dest] mat3 receiving transposed values. If not specified result is written to mat
+ * @param {glm.mat3} mat glm.mat3 to transpose
+ * @param {glm.mat3} [dest] glm.mat3 receiving transposed values. If not specified result is written to mat
  *
- * @returns {mat3} dest is specified, mat otherwise
+ * @returns {glm.mat3} dest is specified, mat otherwise
  */
-mat3.transpose = function (mat, dest) {
+glm.mat3.transpose = function (mat, dest) {
     // If we are transposing ourselves we can skip a few steps but have to cache some values
     if (!dest || mat === dest) {
         var a01 = mat[1], a02 = mat[2],
@@ -528,15 +495,15 @@ mat3.transpose = function (mat, dest) {
 };
 
 /**
- * Copies the elements of a mat3 into the upper 3x3 elements of a mat4
+ * Copies the elements of a glm.mat3 into the upper 3x3 elements of a glm.mat4
  *
- * @param {mat3} mat mat3 containing values to copy
- * @param {mat4} [dest] mat4 receiving copied values
+ * @param {glm.mat3} mat glm.mat3 containing values to copy
+ * @param {glm.mat4} [dest] glm.mat4 receiving copied values
  *
- * @returns {mat4} dest if specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest if specified, a new glm.mat4 otherwise
  */
-mat3.toMat4 = function (mat, dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.mat3.toMat4 = function (mat, dest) {
+    if (!dest) { dest = glm.mat4.create(); }
 
     dest[15] = 1;
     dest[14] = 0;
@@ -562,32 +529,34 @@ mat3.toMat4 = function (mat, dest) {
 };
 
 /**
- * Returns a string representation of a mat3
+ * Returns a string representation of a glm.mat3
  *
- * @param {mat3} mat mat3 to represent as a string
+ * @param {glm.mat3} mat glm.mat3 to represent as a string
  *
  * @param {string} String representation of mat
  */
-mat3.str = function (mat) {
+glm.mat3.str = function (mat) {
     return '[' + mat[0] + ', ' + mat[1] + ', ' + mat[2] +
         ', ' + mat[3] + ', ' + mat[4] + ', ' + mat[5] +
         ', ' + mat[6] + ', ' + mat[7] + ', ' + mat[8] + ']';
 };
 
 /*
- * mat4
+ * glm.mat4
  */
 
+/** @typedef {Float32Array}*/ glm.mat4 = {};
+
 /**
- * Creates a new instance of a mat4 using the default array type
- * Any javascript array-like object containing at least 16 numeric elements can serve as a mat4
+ * Creates a new instance of a glm.mat4 using the default array type
+ * Any javascript array-like object containing at least 16 numeric elements can serve as a glm.mat4
  *
- * @param {mat4} [mat] mat4 containing values to initialize with
+ * @param {glm.mat4} [mat] glm.mat4 containing values to initialize with
  *
- * @returns {mat4} New mat4
+ * @returns {glm.mat4} New glm.mat4
  */
-mat4.create = function (mat) {
-    var dest = new MatrixArray(16);
+glm.mat4.create = function (mat) {
+    var dest = new glm.MatrixArray(16);
 
     if (mat) {
         dest[0] = mat[0];
@@ -612,14 +581,14 @@ mat4.create = function (mat) {
 };
 
 /**
- * Copies the values of one mat4 to another
+ * Copies the values of one glm.mat4 to another
  *
- * @param {mat4} mat mat4 containing values to copy
- * @param {mat4} dest mat4 receiving copied values
+ * @param {glm.mat4} mat glm.mat4 containing values to copy
+ * @param {glm.mat4} dest glm.mat4 receiving copied values
  *
- * @returns {mat4} dest
+ * @returns {glm.mat4} dest
  */
-mat4.set = function (mat, dest) {
+glm.mat4.set = function (mat, dest) {
     dest[0] = mat[0];
     dest[1] = mat[1];
     dest[2] = mat[2];
@@ -640,14 +609,14 @@ mat4.set = function (mat, dest) {
 };
 
 /**
- * Sets a mat4 to an identity matrix
+ * Sets a glm.mat4 to an identity matrix
  *
- * @param {mat4} dest mat4 to set
+ * @param {glm.mat4} dest glm.mat4 to set
  *
- * @returns {mat4} dest
+ * @returns {glm.mat4} dest
  */
-mat4.identity = function (dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.mat4.identity = function (dest) {
+    if (!dest) { dest = glm.mat4.create(); }
     dest[0] = 1;
     dest[1] = 0;
     dest[2] = 0;
@@ -668,14 +637,14 @@ mat4.identity = function (dest) {
 };
 
 /**
- * Transposes a mat4 (flips the values over the diagonal)
+ * Transposes a glm.mat4 (flips the values over the diagonal)
  *
- * @param {mat4} mat mat4 to transpose
- * @param {mat4} [dest] mat4 receiving transposed values. If not specified result is written to mat
+ * @param {glm.mat4} mat glm.mat4 to transpose
+ * @param {glm.mat4} [dest] glm.mat4 receiving transposed values. If not specified result is written to mat
  *
- * @param {mat4} dest is specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.transpose = function (mat, dest) {
+glm.mat4.transpose = function (mat, dest) {
     // If we are transposing ourselves we can skip a few steps but have to cache some values
     if (!dest || mat === dest) {
         var a01 = mat[1], a02 = mat[2], a03 = mat[3],
@@ -717,13 +686,13 @@ mat4.transpose = function (mat, dest) {
 };
 
 /**
- * Calculates the determinant of a mat4
+ * Calculates the determinant of a glm.mat4
  *
- * @param {mat4} mat mat4 to calculate determinant of
+ * @param {glm.mat4} mat glm.mat4 to calculate determinant of
  *
  * @returns {number} determinant of mat
  */
-mat4.determinant = function (mat) {
+glm.mat4.determinant = function (mat) {
     // Cache the matrix values (makes for huge speed increases!)
     var a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3],
         a10 = mat[4], a11 = mat[5], a12 = mat[6], a13 = mat[7],
@@ -739,14 +708,14 @@ mat4.determinant = function (mat) {
 };
 
 /**
- * Calculates the inverse matrix of a mat4
+ * Calculates the inverse matrix of a glm.mat4
  *
- * @param {mat4} mat mat4 to calculate inverse of
- * @param {mat4} [dest] mat4 receiving inverse matrix. If not specified result is written to mat
+ * @param {glm.mat4} mat glm.mat4 to calculate inverse of
+ * @param {glm.mat4} [dest] glm.mat4 receiving inverse matrix. If not specified result is written to mat
  *
- * @param {mat4} dest is specified, mat otherwise, null if matrix cannot be inverted
+ * @returns {glm.mat4} dest if specified, mat otherwise, null if matrix cannot be inverted
  */
-mat4.inverse = function (mat, dest) {
+glm.mat4.inverse = function (mat, dest) {
     if (!dest) { dest = mat; }
 
     // Cache the matrix values (makes for huge speed increases!)
@@ -796,15 +765,15 @@ mat4.inverse = function (mat, dest) {
 };
 
 /**
- * Copies the upper 3x3 elements of a mat4 into another mat4
+ * Copies the upper 3x3 elements of a glm.mat4 into another glm.mat4
  *
- * @param {mat4} mat mat4 containing values to copy
- * @param {mat4} [dest] mat4 receiving copied values
+ * @param {glm.mat4} mat glm.mat4 containing values to copy
+ * @param {glm.mat4} [dest] glm.mat4 receiving copied values
  *
- * @returns {mat4} dest is specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest is specified, a new glm.mat4 otherwise
  */
-mat4.toRotationMat = function (mat, dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.mat4.toRotationMat = function (mat, dest) {
+    if (!dest) { dest = glm.mat4.create(); }
 
     dest[0] = mat[0];
     dest[1] = mat[1];
@@ -827,15 +796,15 @@ mat4.toRotationMat = function (mat, dest) {
 };
 
 /**
- * Copies the upper 3x3 elements of a mat4 into a mat3
+ * Copies the upper 3x3 elements of a glm.mat4 into a glm.mat3
  *
- * @param {mat4} mat mat4 containing values to copy
- * @param {mat3} [dest] mat3 receiving copied values
+ * @param {glm.mat4} mat glm.mat4 containing values to copy
+ * @param {glm.mat3} [dest] glm.mat3 receiving copied values
  *
- * @returns {mat3} dest is specified, a new mat3 otherwise
+ * @returns {glm.mat3} dest is specified, a new glm.mat3 otherwise
  */
-mat4.toMat3 = function (mat, dest) {
-    if (!dest) { dest = mat3.create(); }
+glm.mat4.toMat3 = function (mat, dest) {
+    if (!dest) { dest = glm.mat3.create(); }
 
     dest[0] = mat[0];
     dest[1] = mat[1];
@@ -851,16 +820,16 @@ mat4.toMat3 = function (mat, dest) {
 };
 
 /**
- * Calculates the inverse of the upper 3x3 elements of a mat4 and copies the result into a mat3
+ * Calculates the inverse of the upper 3x3 elements of a glm.mat4 and copies the result into a glm.mat3
  * The resulting matrix is useful for calculating transformed normals
  *
  * Params:
- * @param {mat4} mat mat4 containing values to invert and copy
- * @param {mat3} [dest] mat3 receiving values
+ * @param {glm.mat4} mat glm.mat4 containing values to invert and copy
+ * @param {glm.mat3} [dest] glm.mat3 receiving values
  *
- * @returns {mat3} dest is specified, a new mat3 otherwise, null if the matrix cannot be inverted
+ * @returns {glm.mat3} dest is specified, a new glm.mat3 otherwise, null if the matrix cannot be inverted
  */
-mat4.toInverseMat3 = function (mat, dest) {
+glm.mat4.toInverseMat3 = function (mat, dest) {
     // Cache the matrix values (makes for huge speed increases!)
     var a00 = mat[0], a01 = mat[1], a02 = mat[2],
         a10 = mat[4], a11 = mat[5], a12 = mat[6],
@@ -876,7 +845,7 @@ mat4.toInverseMat3 = function (mat, dest) {
     if (!d) { return null; }
     id = 1 / d;
 
-    if (!dest) { dest = mat3.create(); }
+    if (!dest) { dest = glm.mat3.create(); }
 
     dest[0] = b01 * id;
     dest[1] = (-a22 * a01 + a02 * a21) * id;
@@ -894,13 +863,13 @@ mat4.toInverseMat3 = function (mat, dest) {
 /**
  * Performs a matrix multiplication
  *
- * @param {mat4} mat First operand
- * @param {mat4} mat2 Second operand
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ * @param {glm.mat4} mat First operand
+ * @param {glm.mat4} mat2 Second operand
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to mat
  *
- * @returns {mat4} dest if specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.multiply = function (mat, mat2, dest) {
+glm.mat4.multiply = function (mat, mat2, dest) {
     if (!dest) { dest = mat; }
 
     // Cache the matrix values (makes for huge speed increases!)
@@ -935,16 +904,16 @@ mat4.multiply = function (mat, mat2, dest) {
 };
 
 /**
- * Transforms a vec3 with the given matrix
+ * Transforms a glm.vec3 with the given matrix
  * 4th vector component is implicitly '1'
  *
- * @param {mat4} mat mat4 to transform the vector with
- * @param {vec3} vec vec3 to transform
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.mat4} mat glm.mat4 to transform the vector with
+ * @param {glm.vec3} vec glm.vec3 to transform
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {vec3} dest if specified, vec otherwise
+ * @returns {glm.vec3} dest if specified, vec otherwise
  */
-mat4.multiplyVec3 = function (mat, vec, dest) {
+glm.mat4.multiplyVec3 = function (mat, vec, dest) {
     if (!dest) { dest = vec; }
 
     var x = vec[0], y = vec[1], z = vec[2];
@@ -959,13 +928,13 @@ mat4.multiplyVec3 = function (mat, vec, dest) {
 /**
  * Transforms a vec4 with the given matrix
  *
- * @param {mat4} mat mat4 to transform the vector with
+ * @param {glm.mat4} mat glm.mat4 to transform the vector with
  * @param {vec4} vec vec4 to transform
  * @param {vec4} [dest] vec4 receiving operation result. If not specified result is written to vec
  *
  * @returns {vec4} dest if specified, vec otherwise
  */
-mat4.multiplyVec4 = function (mat, vec, dest) {
+glm.mat4.multiplyVec4 = function (mat, vec, dest) {
     if (!dest) { dest = vec; }
 
     var x = vec[0], y = vec[1], z = vec[2], w = vec[3];
@@ -981,13 +950,13 @@ mat4.multiplyVec4 = function (mat, vec, dest) {
 /**
  * Translates a matrix by the given vector
  *
- * @param {mat4} mat mat4 to translate
- * @param {vec3} vec vec3 specifying the translation
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ * @param {glm.mat4} mat glm.mat4 to translate
+ * @param {glm.vec3} vec glm.vec3 specifying the translation
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to mat
  *
- * @returns {mat4} dest if specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.translate = function (mat, vec, dest) {
+glm.mat4.translate = function (mat, vec, dest) {
     var x = vec[0], y = vec[1], z = vec[2],
         a00, a01, a02, a03,
         a10, a11, a12, a13,
@@ -1019,13 +988,13 @@ mat4.translate = function (mat, vec, dest) {
 /**
  * Scales a matrix by the given vector
  *
- * @param {mat4} mat mat4 to scale
- * @param {vec3} vec vec3 specifying the scale for each axis
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ * @param {glm.mat4} mat glm.mat4 to scale
+ * @param {glm.vec3} vec glm.vec3 specifying the scale for each axis
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to mat
  *
- * @param {mat4} dest if specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.scale = function (mat, vec, dest) {
+glm.mat4.scale = function (mat, vec, dest) {
     var x = vec[0], y = vec[1], z = vec[2];
 
     if (!dest || mat === dest) {
@@ -1067,14 +1036,14 @@ mat4.scale = function (mat, vec, dest) {
  * Rotates a matrix by the given angle around the specified axis
  * If rotating around a primary axis (X,Y,Z) one of the specialized rotation functions should be used instead for performance
  *
- * @param {mat4} mat mat4 to rotate
+ * @param {glm.mat4} mat glm.mat4 to rotate
  * @param {number} angle Angle (in radians) to rotate
- * @param {vec3} axis vec3 representing the axis to rotate around
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ * @param {glm.vec3} axis glm.vec3 representing the axis to rotate around
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to mat
  *
- * @returns {mat4} dest if specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.rotate = function (mat, angle, axis, dest) {
+glm.mat4.rotate = function (mat, angle, axis, dest) {
     var x = axis[0], y = axis[1], z = axis[2],
         len = Math.sqrt(x * x + y * y + z * z),
         s, c, t,
@@ -1136,13 +1105,13 @@ mat4.rotate = function (mat, angle, axis, dest) {
 /**
  * Rotates a matrix by the given angle around the X axis
  *
- * @param {mat4} mat mat4 to rotate
+ * @param {glm.mat4} mat glm.mat4 to rotate
  * @param {number} angle Angle (in radians) to rotate
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to mat
  *
- * @returns {mat4} dest if specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.rotateX = function (mat, angle, dest) {
+glm.mat4.rotateX = function (mat, angle, dest) {
     var s = Math.sin(angle),
         c = Math.cos(angle),
         a10 = mat[4],
@@ -1184,13 +1153,13 @@ mat4.rotateX = function (mat, angle, dest) {
 /**
  * Rotates a matrix by the given angle around the Y axis
  *
- * @param {mat4} mat mat4 to rotate
+ * @param {glm.mat4} mat glm.mat4 to rotate
  * @param {number} angle Angle (in radians) to rotate
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to mat
  *
- * @returns {mat4} dest if specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.rotateY = function (mat, angle, dest) {
+glm.mat4.rotateY = function (mat, angle, dest) {
     var s = Math.sin(angle),
         c = Math.cos(angle),
         a00 = mat[0],
@@ -1232,13 +1201,13 @@ mat4.rotateY = function (mat, angle, dest) {
 /**
  * Rotates a matrix by the given angle around the Z axis
  *
- * @param {mat4} mat mat4 to rotate
+ * @param {glm.mat4} mat glm.mat4 to rotate
  * @param {number} angle Angle (in radians) to rotate
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to mat
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to mat
  *
- * @returns {mat4} dest if specified, mat otherwise
+ * @returns {glm.mat4} dest if specified, mat otherwise
  */
-mat4.rotateZ = function (mat, angle, dest) {
+glm.mat4.rotateZ = function (mat, angle, dest) {
     var s = Math.sin(angle),
         c = Math.cos(angle),
         a00 = mat[0],
@@ -1287,12 +1256,12 @@ mat4.rotateZ = function (mat, angle, dest) {
  * @param {number} top Top bound of the frustum
  * @param {number} near Near bound of the frustum
  * @param {number} far Far bound of the frustum
- * @param {mat4} [dest] mat4 frustum matrix will be written into
+ * @param {glm.mat4} [dest] glm.mat4 frustum matrix will be written into
  *
- * @returns {mat4} dest if specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest if specified, a new glm.mat4 otherwise
  */
-mat4.frustum = function (left, right, bottom, top, near, far, dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.mat4.frustum = function (left, right, bottom, top, near, far, dest) {
+    if (!dest) { dest = glm.mat4.create(); }
     var rl = (right - left),
         tb = (top - bottom),
         fn = (far - near);
@@ -1322,14 +1291,14 @@ mat4.frustum = function (left, right, bottom, top, near, far, dest) {
  * @param {number} aspect Aspect ratio. typically viewport width/height
  * @param {number} near Near bound of the frustum
  * @param {number} far Far bound of the frustum
- * @param {mat4} [dest] mat4 frustum matrix will be written into
+ * @param {glm.mat4} [dest] glm.mat4 frustum matrix will be written into
  *
- * @returns {mat4} dest if specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest if specified, a new glm.mat4 otherwise
  */
-mat4.perspective = function (fovy, aspect, near, far, dest) {
+glm.mat4.perspective = function (fovy, aspect, near, far, dest) {
     var top = near * Math.tan(fovy * Math.PI / 360.0),
         right = top * aspect;
-    return mat4.frustum(-right, right, -top, top, near, far, dest);
+    return glm.mat4.frustum(-right, right, -top, top, near, far, dest);
 };
 
 /**
@@ -1341,12 +1310,12 @@ mat4.perspective = function (fovy, aspect, near, far, dest) {
  * @param {number} top Top bound of the frustum
  * @param {number} near Near bound of the frustum
  * @param {number} far Far bound of the frustum
- * @param {mat4} [dest] mat4 frustum matrix will be written into
+ * @param {glm.mat4} [dest] glm.mat4 frustum matrix will be written into
  *
- * @returns {mat4} dest if specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest if specified, a new glm.mat4 otherwise
  */
-mat4.ortho = function (left, right, bottom, top, near, far, dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.mat4.ortho = function (left, right, bottom, top, near, far, dest) {
+    if (!dest) { dest = glm.mat4.create(); }
     var rl = (right - left),
         tb = (top - bottom),
         fn = (far - near);
@@ -1372,15 +1341,15 @@ mat4.ortho = function (left, right, bottom, top, near, far, dest) {
 /**
  * Generates a look-at matrix with the given eye position, focal point, and up axis
  *
- * @param {vec3} eye Position of the viewer
- * @param {vec3} center Point the viewer is looking at
- * @param {vec3} up vec3 pointing "up"
- * @param {mat4} [dest] mat4 frustum matrix will be written into
+ * @param {glm.vec3} eye Position of the viewer
+ * @param {glm.vec3} center Point the viewer is looking at
+ * @param {glm.vec3} up glm.vec3 pointing "up"
+ * @param {glm.mat4} [dest] glm.mat4 frustum matrix will be written into
  *
- * @returns {mat4} dest if specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest if specified, a new glm.mat4 otherwise
  */
-mat4.lookAt = function (eye, center, up, dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.mat4.lookAt = function (eye, center, up, dest) {
+    if (!dest) { dest = glm.mat4.create(); }
 
     var x0, x1, x2, y0, y1, y2, z0, z1, z2, len,
         eyex = eye[0],
@@ -1394,10 +1363,10 @@ mat4.lookAt = function (eye, center, up, dest) {
         centerz = center[2];
 
     if (eyex === centerx && eyey === centery && eyez === centerz) {
-        return mat4.identity(dest);
+        return glm.mat4.identity(dest);
     }
 
-    //vec3.direction(eye, center, z);
+    //glm.vec3.direction(eye, center, z);
     z0 = eyex - centerx;
     z1 = eyey - centery;
     z2 = eyez - centerz;
@@ -1408,7 +1377,7 @@ mat4.lookAt = function (eye, center, up, dest) {
     z1 *= len;
     z2 *= len;
 
-    //vec3.normalize(vec3.cross(up, z, x));
+    //glm.vec3.normalize(glm.vec3.cross(up, z, x));
     x0 = upy * z2 - upz * z1;
     x1 = upz * z0 - upx * z2;
     x2 = upx * z1 - upy * z0;
@@ -1424,7 +1393,7 @@ mat4.lookAt = function (eye, center, up, dest) {
         x2 *= len;
     }
 
-    //vec3.normalize(vec3.cross(z, x, y));
+    //glm.vec3.normalize(glm.vec3.cross(z, x, y));
     y0 = z1 * x2 - z2 * x1;
     y1 = z2 * x0 - z0 * x2;
     y2 = z0 * x1 - z1 * x0;
@@ -1465,20 +1434,20 @@ mat4.lookAt = function (eye, center, up, dest) {
  * Creates a matrix from a quaternion rotation and vector translation
  * This is equivalent to (but much faster than):
  *
- *     mat4.identity(dest);
- *     mat4.translate(dest, vec);
- *     var quatMat = mat4.create();
- *     quat4.toMat4(quat, quatMat);
- *     mat4.multiply(dest, quatMat);
+ *     glm.mat4.identity(dest);
+ *     glm.mat4.translate(dest, vec);
+ *     var quatMat = glm.mat4.create();
+ *     glm.quat4.toMat4(quat, quatMat);
+ *     glm.mat4.multiply(dest, quatMat);
  *
- * @param {quat4} quat Rotation quaternion
- * @param {vec3} vec Translation vector
- * @param {mat4} [dest] mat4 receiving operation result. If not specified result is written to a new mat4
+ * @param {glm.quat4} quat Rotation quaternion
+ * @param {glm.vec3} vec Translation vector
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result. If not specified result is written to a new glm.mat4
  *
- * @returns {mat4} dest if specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest if specified, a new glm.mat4 otherwise
  */
-mat4.fromRotationTranslation = function (quat, vec, dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.mat4.fromRotationTranslation = function (quat, vec, dest) {
+    if (!dest) { dest = glm.mat4.create(); }
 
     // Quaternion math
     var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
@@ -1517,13 +1486,13 @@ mat4.fromRotationTranslation = function (quat, vec, dest) {
 };
 
 /**
- * Returns a string representation of a mat4
+ * Returns a string representation of a glm.mat4
  *
- * @param {mat4} mat mat4 to represent as a string
+ * @param {glm.mat4} mat glm.mat4 to represent as a string
  *
  * @returns {string} String representation of mat
  */
-mat4.str = function (mat) {
+glm.mat4.str = function (mat) {
     return '[' + mat[0] + ', ' + mat[1] + ', ' + mat[2] + ', ' + mat[3] +
         ', ' + mat[4] + ', ' + mat[5] + ', ' + mat[6] + ', ' + mat[7] +
         ', ' + mat[8] + ', ' + mat[9] + ', ' + mat[10] + ', ' + mat[11] +
@@ -1531,19 +1500,21 @@ mat4.str = function (mat) {
 };
 
 /*
- * quat4
+ * glm.quat4
  */
 
+/** @typedef {Float32Array}*/ glm.quat4 = {};
+
 /**
- * Creates a new instance of a quat4 using the default array type
- * Any javascript array containing at least 4 numeric elements can serve as a quat4
+ * Creates a new instance of a glm.quat4 using the default array type
+ * Any javascript array containing at least 4 numeric elements can serve as a glm.quat4
  *
- * @param {quat4} [quat] quat4 containing values to initialize with
+ * @param {glm.quat4} [quat] glm.quat4 containing values to initialize with
  *
- * @returns {quat4} New quat4
+ * @returns {glm.quat4} New glm.quat4
  */
-quat4.create = function (quat) {
-    var dest = new MatrixArray(4);
+glm.quat4.create = function (quat) {
+    var dest = new glm.MatrixArray(4);
 
     if (quat) {
         dest[0] = quat[0];
@@ -1556,14 +1527,14 @@ quat4.create = function (quat) {
 };
 
 /**
- * Copies the values of one quat4 to another
+ * Copies the values of one glm.quat4 to another
  *
- * @param {quat4} quat quat4 containing values to copy
- * @param {quat4} dest quat4 receiving copied values
+ * @param {glm.quat4} quat glm.quat4 containing values to copy
+ * @param {glm.quat4} dest glm.quat4 receiving copied values
  *
- * @returns {quat4} dest
+ * @returns {glm.quat4} dest
  */
-quat4.set = function (quat, dest) {
+glm.quat4.set = function (quat, dest) {
     dest[0] = quat[0];
     dest[1] = quat[1];
     dest[2] = quat[2];
@@ -1573,16 +1544,16 @@ quat4.set = function (quat, dest) {
 };
 
 /**
- * Calculates the W component of a quat4 from the X, Y, and Z components.
+ * Calculates the W component of a glm.quat4 from the X, Y, and Z components.
  * Assumes that quaternion is 1 unit in length.
  * Any existing W component will be ignored.
  *
- * @param {quat4} quat quat4 to calculate W component of
- * @param {quat4} [dest] quat4 receiving calculated values. If not specified result is written to quat
+ * @param {glm.quat4} quat glm.quat4 to calculate W component of
+ * @param {glm.quat4} [dest] glm.quat4 receiving calculated values. If not specified result is written to quat
  *
- * @returns {quat4} dest if specified, quat otherwise
+ * @returns {glm.quat4} dest if specified, quat otherwise
  */
-quat4.calculateW = function (quat, dest) {
+glm.quat4.calculateW = function (quat, dest) {
     var x = quat[0], y = quat[1], z = quat[2];
 
     if (!dest || quat === dest) {
@@ -1599,24 +1570,24 @@ quat4.calculateW = function (quat, dest) {
 /**
  * Calculates the dot product of two quaternions
  *
- * @param {quat4} quat First operand
- * @param {quat4} quat2 Second operand
+ * @param {glm.quat4} quat First operand
+ * @param {glm.quat4} quat2 Second operand
  *
  * @return {number} Dot product of quat and quat2
  */
-quat4.dot = function(quat, quat2){
+glm.quat4.dot = function(quat, quat2){
     return quat[0]*quat2[0] + quat[1]*quat2[1] + quat[2]*quat2[2] + quat[3]*quat2[3];
 };
 
 /**
- * Calculates the inverse of a quat4
+ * Calculates the inverse of a glm.quat4
  *
- * @param {quat4} quat quat4 to calculate inverse of
- * @param {quat4} [dest] quat4 receiving inverse values. If not specified result is written to quat
+ * @param {glm.quat4} quat glm.quat4 to calculate inverse of
+ * @param {glm.quat4} [dest] glm.quat4 receiving inverse values. If not specified result is written to quat
  *
- * @returns {quat4} dest if specified, quat otherwise
+ * @returns {glm.quat4} dest if specified, quat otherwise
  */
-quat4.inverse = function(quat, dest) {
+glm.quat4.inverse = function(quat, dest) {
     var q0 = quat[0], q1 = quat[1], q2 = quat[2], q3 = quat[3],
         dot = q0*q0 + q1*q1 + q2*q2 + q3*q3,
         invDot = dot ? 1.0/dot : 0;
@@ -1639,15 +1610,15 @@ quat4.inverse = function(quat, dest) {
 
 
 /**
- * Calculates the conjugate of a quat4
- * If the quaternion is normalized, this function is faster than quat4.inverse and produces the same result.
+ * Calculates the conjugate of a glm.quat4
+ * If the quaternion is normalized, this function is faster than glm.quat4.inverse and produces the same result.
  *
- * @param {quat4} quat quat4 to calculate conjugate of
- * @param {quat4} [dest] quat4 receiving conjugate values. If not specified result is written to quat
+ * @param {glm.quat4} quat glm.quat4 to calculate conjugate of
+ * @param {glm.quat4} [dest] glm.quat4 receiving conjugate values. If not specified result is written to quat
  *
- * @returns {quat4} dest if specified, quat otherwise
+ * @returns {glm.quat4} dest if specified, quat otherwise
  */
-quat4.conjugate = function (quat, dest) {
+glm.quat4.conjugate = function (quat, dest) {
     if (!dest || quat === dest) {
         quat[0] *= -1;
         quat[1] *= -1;
@@ -1662,28 +1633,28 @@ quat4.conjugate = function (quat, dest) {
 };
 
 /**
- * Calculates the length of a quat4
+ * Calculates the length of a glm.quat4
  *
  * Params:
- * @param {quat4} quat quat4 to calculate length of
+ * @param {glm.quat4} quat glm.quat4 to calculate length of
  *
  * @returns Length of quat
  */
-quat4.length = function (quat) {
+glm.quat4.length = function (quat) {
     var x = quat[0], y = quat[1], z = quat[2], w = quat[3];
     return Math.sqrt(x * x + y * y + z * z + w * w);
 };
 
 /**
- * Generates a unit quaternion of the same direction as the provided quat4
+ * Generates a unit quaternion of the same direction as the provided glm.quat4
  * If quaternion length is 0, returns [0, 0, 0, 0]
  *
- * @param {quat4} quat quat4 to normalize
- * @param {quat4} [dest] quat4 receiving operation result. If not specified result is written to quat
+ * @param {glm.quat4} quat glm.quat4 to normalize
+ * @param {glm.quat4} [dest] glm.quat4 receiving operation result. If not specified result is written to quat
  *
- * @returns {quat4} dest if specified, quat otherwise
+ * @returns {glm.quat4} dest if specified, quat otherwise
  */
-quat4.normalize = function (quat, dest) {
+glm.quat4.normalize = function (quat, dest) {
     if (!dest) { dest = quat; }
 
     var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
@@ -1707,13 +1678,13 @@ quat4.normalize = function (quat, dest) {
 /**
  * Performs a quaternion multiplication
  *
- * @param {quat4} quat First operand
- * @param {quat4} quat2 Second operand
- * @param {quat4} [dest] quat4 receiving operation result. If not specified result is written to quat
+ * @param {glm.quat4} quat First operand
+ * @param {glm.quat4} quat2 Second operand
+ * @param {glm.quat4} [dest] glm.quat4 receiving operation result. If not specified result is written to quat
  *
- * @returns {quat4} dest if specified, quat otherwise
+ * @returns {glm.quat4} dest if specified, quat otherwise
  */
-quat4.multiply = function (quat, quat2, dest) {
+glm.quat4.multiply = function (quat, quat2, dest) {
     if (!dest) { dest = quat; }
 
     var qax = quat[0], qay = quat[1], qaz = quat[2], qaw = quat[3],
@@ -1728,15 +1699,15 @@ quat4.multiply = function (quat, quat2, dest) {
 };
 
 /**
- * Transforms a vec3 with the given quaternion
+ * Transforms a glm.vec3 with the given quaternion
  *
- * @param {quat4} quat quat4 to transform the vector with
- * @param {vec3} vec vec3 to transform
- * @param {vec3} [dest] vec3 receiving operation result. If not specified result is written to vec
+ * @param {glm.quat4} quat glm.quat4 to transform the vector with
+ * @param {glm.vec3} vec glm.vec3 to transform
+ * @param {glm.vec3} [dest] glm.vec3 receiving operation result. If not specified result is written to vec
  *
  * @returns dest if specified, vec otherwise
  */
-quat4.multiplyVec3 = function (quat, vec, dest) {
+glm.quat4.multiplyVec3 = function (quat, vec, dest) {
     if (!dest) { dest = vec; }
 
     var x = vec[0], y = vec[1], z = vec[2],
@@ -1757,15 +1728,15 @@ quat4.multiplyVec3 = function (quat, vec, dest) {
 };
 
 /**
- * Calculates a 3x3 matrix from the given quat4
+ * Calculates a 3x3 matrix from the given glm.quat4
  *
- * @param {quat4} quat quat4 to create matrix from
- * @param {mat3} [dest] mat3 receiving operation result
+ * @param {glm.quat4} quat glm.quat4 to create matrix from
+ * @param {glm.mat3} [dest] glm.mat3 receiving operation result
  *
- * @returns {mat3} dest if specified, a new mat3 otherwise
+ * @returns {glm.mat3} dest if specified, a new glm.mat3 otherwise
  */
-quat4.toMat3 = function (quat, dest) {
-    if (!dest) { dest = mat3.create(); }
+glm.quat4.toMat3 = function (quat, dest) {
+    if (!dest) { dest = glm.mat3.create(); }
 
     var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
         x2 = x + x,
@@ -1798,15 +1769,15 @@ quat4.toMat3 = function (quat, dest) {
 };
 
 /**
- * Calculates a 4x4 matrix from the given quat4
+ * Calculates a 4x4 matrix from the given glm.quat4
  *
- * @param {quat4} quat quat4 to create matrix from
- * @param {mat4} [dest] mat4 receiving operation result
+ * @param {glm.quat4} quat glm.quat4 to create matrix from
+ * @param {glm.mat4} [dest] glm.mat4 receiving operation result
  *
- * @returns {mat4} dest if specified, a new mat4 otherwise
+ * @returns {glm.mat4} dest if specified, a new glm.mat4 otherwise
  */
-quat4.toMat4 = function (quat, dest) {
-    if (!dest) { dest = mat4.create(); }
+glm.quat4.toMat4 = function (quat, dest) {
+    if (!dest) { dest = glm.mat4.create(); }
 
     var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
         x2 = x + x,
@@ -1847,16 +1818,16 @@ quat4.toMat4 = function (quat, dest) {
 };
 
 /**
- * Performs a spherical linear interpolation between two quat4
+ * Performs a spherical linear interpolation between two glm.quat4
  *
- * @param {quat4} quat First quaternion
- * @param {quat4} quat2 Second quaternion
+ * @param {glm.quat4} quat First quaternion
+ * @param {glm.quat4} quat2 Second quaternion
  * @param {number} slerp Interpolation amount between the two inputs
- * @param {quat4} [dest] quat4 receiving operation result. If not specified result is written to quat
+ * @param {glm.quat4} [dest] glm.quat4 receiving operation result. If not specified result is written to quat
  *
- * @returns {quat4} dest if specified, quat otherwise
+ * @returns {glm.quat4} dest if specified, quat otherwise
  */
-quat4.slerp = function (quat, quat2, slerp, dest) {
+glm.quat4.slerp = function (quat, quat2, slerp, dest) {
     if (!dest) { dest = quat; }
 
     var cosHalfTheta = quat[0] * quat2[0] + quat[1] * quat2[1] + quat[2] * quat2[2] + quat[3] * quat2[3],
@@ -1900,11 +1871,11 @@ quat4.slerp = function (quat, quat2, slerp, dest) {
 /**
  * Returns a string representation of a quaternion
  *
- * @param {quat4} quat quat4 to represent as a string
+ * @param {glm.quat4} quat glm.quat4 to represent as a string
  *
  * @returns {string} String representation of quat
  */
-quat4.str = function (quat) {
+glm.quat4.str = function (quat) {
     return '[' + quat[0] + ', ' + quat[1] + ', ' + quat[2] + ', ' + quat[3] + ']';
 };
 

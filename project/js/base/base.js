@@ -27,7 +27,7 @@
  */
 
 goog.require('goog.asserts');
-goog.require('glmatrix');
+goog.require('glm');
 
 goog.provide('base.Model');
 goog.provide('base.ModelInstance');
@@ -83,9 +83,9 @@ base.Model = function (meshes, framesCount, framesData, tags, skins) {
 /**
  * @constructor
  * @param {Float32Array} aabb
- * @param {glmatrix.vec3} origin
+ * @param {glm.vec3} origin
  * @param {number} radius
- * @param {Array.<glmatrix.mat4>} [tags]
+ * @param {Array.<glm.mat4>} [tags]
  */
 base.Model.FrameData = function(aabb, origin, radius, tags) {
     /*
@@ -95,7 +95,7 @@ base.Model.FrameData = function(aabb, origin, radius, tags) {
     this.aabb = aabb;
     /*
      * @const
-     * @type {glmatrix.vec3}
+     * @type {glm.vec3}
      */
     this.origin = origin;
     /*
@@ -105,7 +105,7 @@ base.Model.FrameData = function(aabb, origin, radius, tags) {
     this.radius = radius;
     /*
      * @const
-     * @type {Array.<glmatrix.mat4>}
+     * @type {Array.<glm.mat4>}
      */
     this.tags = tags || [];
 };
@@ -141,9 +141,9 @@ base.ModelInstance = function(id, baseModel, skinId) {
     /**
      * Model matrix. This shouldn't be modified directly by game worker.
      * @private
-     * @type {glmatrix.mat4}
+     * @type {glm.mat4}
      */
-    this.matrix_ = glmatrix.mat4.identity();
+    this.matrix_ = glm.mat4.identity();
     /**
      * Current frame. This shouldn't be modified directly by game worker.
      * @private
@@ -164,7 +164,7 @@ base.ModelInstance = function(id, baseModel, skinId) {
 /**
  * @public
  * @param {base.ModelInstance} self
- * @return {glmatrix.mat4}
+ * @return {glm.mat4}
  */
 base.ModelInstance.getMatrix = function (self) {
     return self.matrix_;
@@ -173,7 +173,7 @@ base.ModelInstance.getMatrix = function (self) {
 /**
  * @public
  * @param {base.ModelInstance} self
- * @param {glmatrix.mat4} matrix
+ * @param {glm.mat4} matrix
  * This function shouldn't be called directly by game worker.
  */
 base.ModelInstance.setMatrix = function (self, matrix) {
