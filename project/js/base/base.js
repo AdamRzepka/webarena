@@ -27,75 +27,87 @@
  */
 
 goog.require('goog.asserts');
+goog.require('glmatrix');
 
 goog.provide('base.Model');
 goog.provide('base.ModelInstance');
 goog.provide('base.Mesh');
-goog.provide('base.MeshInstance');
 goog.provide('base.GeometryData');
 goog.provide('base.Material');
+goog.provide('base.Model.Frame');
 
 /**
  * Base class for game models. It represents both md3 models (one model per file)
  * and bsp models (many models in one bsp).
  * @constructor
- * @param {Array<base.Mesh>} meshes
+ * @param {Array.<base.Mesh>} meshes
  * @param {number} framesCount
- * @param {Array<string>} skins
+ * @param {Array.<base.Model.FrameData>} framesData
+ * @param {Array.<string>} [tags]
+ * @param {Array.<string>} [skins]
  */
-base.Model = function (meshes, framesCount, skins) {
+base.Model = function (meshes, framesCount, framesData, tags, skins) {
     goog.asserts.assert(meshes.length > 0);
     goog.asserts.assert(framesCount > 0);
 
-    // If skins are not defined explicitly, we create default skin
-    if (skins === null) {
-	skins = ['__default__'];
-    }
-    else if (!skins[0]) { // if is undefined/null/empty string
-	skins[0] = '__default__';
-    }
-    
     /**
-     * @private
+     * @const
      * @type {Array<base.Mesh>}
      */
-    this.meshes_ = meshes;
+    this.meshes = meshes;
     /**
-     * @private
+     * @const
      * @type {number}
      */
-    this.framesCount_ = framesCount;
+    this.framesCount = framesCount;
+    /**
+     * @const
+     * @type {Array<base.Model.Frame>}
+     */
+    this.framesData_ = {};
+    /**
+     * @const
+     * @type {Array.<string>}
+     */
+    this.tags = tags || [];
     /**
      * One model can be displayed with different materials, when they have .skin
      * files specified.
-     * @private
+     * @const
      * @type {Array<string>}
      */
-    this.skins_ = skins;
+    this.skins = (skins && skins[0]) ? skins : ['__default__'];  // If skins are not defined explicitly, we create default skin
+
 };
 
 /**
- * @public
- * @return {Array<base.Mesh>}
+ * @constructor
+ * @param {Float32Array} aabb
+ * @param {glmatrix.vec3} origin
+ * @param {number} radius
+ * @param {Array.<glmatrix.mat4>} [tags]
  */
-base.Model.prototype.getMeshes = function () {
-    return this.meshes_;
-};
-
-/**
- * @public
- * @return {number}
- */
-base.Model.prototype.getFramesCount = function () {
-    return this.framesCount_;
-};
-
-/**
- * @public
- * @return {Array<string>}
- */
-base.Model.prototype.getSkins = function () {
-    return this.skins_;
+base.Model.FrameData = function(aabb, origin, radius, tags) {
+    /*
+     * @const
+     * @type {Float32Array}
+     */
+    this.aabb = aabb;
+    /*
+     * @const
+     * @type {glmatrix.vec3}
+     */
+    this.origin = origin;
+    /*
+     * @const
+     * @type {number}
+     */
+    this.radius = radius;
+    /*
+     * @const
+     * @type {Array.<glmatrix.mat4>}
+     */
+    this.tags = tags || [];
 };
 
 /**
@@ -111,117 +123,106 @@ base.ModelInstance = function(id, baseModel, skinId) {
     goog.asserts.assert(skinId >= 0 && skinId < baseModel.getSkins().length);
     
     /**
-     * @private
+     * @const
      * @type {number}
      */
-    this.id_ = id;
+    this.id = id;
     /**
-     * @private
+     * @const
      * @type {base.Model}
      */
-    this.baseModel_ = baseModel;
+    this.baseModel = baseModel;
     /**
      * Skin for this particular instance.
-     * @private
+     * @const
      * @type {number}
      */
-    this.skinId_ = skinId;
+    this.skinId = skinId;
     /**
-     * Model matrix
+     * Model matrix. This shouldn't be modified directly by game worker.
      * @private
      * @type {glmatrix.mat4}
      */
-    this.matrix_ = null;
+    this.matrix_ = glmatrix.mat4.identity();
     /**
-     * Current frame
+     * Current frame. This shouldn't be modified directly by game worker.
      * @private
      * @type {number}
      */
     this.frame_ = 0;
     /**
+     * This shouldn't be modified directly by game worker.
      * @private
      * @type {boolean}
      */
     this.visibility_ = false;
 };
 
-/**
- * @public
- * @return {number}
- */
-base.ModelInstance.prototype.getId = function () {
-    return this.id_;
-};
 
+// These functions could be non-static methods, but it would create problem after sending
+// to different worker, since structural copy algorythm breaks prototype chain.
 /**
  * @public
- * @return {base.Model}
- */
-base.ModelInstance.prototype.getBaseModel = function () {
-    return this.baseModel_;
-};
-
-/**
- * @public
- * @return {number}
- */
-base.ModelInstance.prototype.getSkinId = function () {
-    return this.skinId_;
-};
-
-/**
- * @public
+ * @param {base.ModelInstance} self
  * @return {glmatrix.mat4}
  */
-base.ModelInstance.prototype.getMatrix = function () {
-    return this.matrix_;
+base.ModelInstance.getMatrix = function (self) {
+    return self.matrix_;
 };
 
 /**
  * @public
+ * @param {base.ModelInstance} self
  * @param {glmatrix.mat4} matrix
+ * This function shouldn't be called directly by game worker.
  */
-base.ModelInstance.prototype.setMatrix = function (matrix) {
+base.ModelInstance.setMatrix = function (self, matrix) {
     var det = 0;
     if (goog.DEBUG) {
 	// Checks if matrix looks OK.
 	det = mat4.determinant(mat);
 	goog.asserts.assert(det !== 0 && det < 10e9); 
     }
-    this.matrix_ = matrix;
+    self.matrix_ = matrix;
 };
 
 /**
  * @public
+ * @param {base.ModelInstance} self
  * @return {number}
  */
-base.ModelInstance.prototype.getFrame = function () {
-    return this.frame_;
+base.ModelInstance.getFrame = function (self) {
+    return self.frame_;
 };
 
 /**
  * @public
+ * @param {base.ModelInstance} self
  * @param {number} frame
+ * This function shouldn't be called directly by game worker.
  */
-base.ModelInstance.prototype.setFrame = function (frame) {
-    goog.asserts.assert(frame >= 0 && frame < this.baseModel_.getFramesCount());
-    this.frame_ = frame;
+base.ModelInstance.setFrame = function (self, frame) {
+    goog.asserts.assert(frame >= 0 && frame < self.baseModel_.getFramesCount());
+    self.frame_ = frame;
 };
 
 /**
  * @public
+ * @param {base.ModelInstance} self
  * @return {boolean}
  */
-base.ModelInstance.prototype.getVisibility = function () {
-    return this.visibility_;
+base.ModelInstance.getVisibility = function (self) {
+    return self.visibility_;
 };
 
 /**
  * @public
+ * @param {base.ModelInstance} self
  * @param {boolean} visibility
+ * This function shouldn't be called directly by game worker.
  */
-base.ModelInstance.prototype.setVisibility = function (visibility) {
-    this.visibility_ = visibility;
+base.ModelInstance.setVisibility = function (self, visibility) {
+    self.visibility_ = visibility;
 };
 
 
@@ -230,26 +231,34 @@ base.ModelInstance.prototype.setVisibility = function (visibility) {
  * the MeshInstance class, since the game code doesn't need it. The renderer
  * however will create it, when making new ModelInstance.
  * @constructor
+ * @param {base.GeometryData} geometry
+ * @param {number} indicesOffset
+ * @param {number} indicesCount
+ * @param {Array.<base.Materials>} materials
  */
-base.Mesh = function() {
+base.Mesh = function(geometry, indicesOffset, indicesCount, materials) {
     /**
+     * @const
      * @type {base.GeometryData}
      */
-    this.geometry = null;
+    this.geometry = geometry;
     /**
+     * @const
      * Offset in geometry buffer
      * @type {number}
      */
-    this.indicesOffset = 0;
+    this.indicesOffset = indicesOffset;
     /**
+     * @const
      * @type {number}
      */
-    this.indicesCount = 0;
+    this.indicesCount = indicesCount;
     /**
      * List of all materials, the instances of the mesh can have.
+     * @const
      * @type {Array.<base.Material>}
      */
-    this.materials = [];
+    this.materials = materials;
 };
 
 /**
@@ -262,6 +271,10 @@ base.Mesh = function() {
  * trailing zeros
  */
 base.Material = function (name) {
+    /**
+     * @const
+     * @type {string}
+     */
     this.name = name;
 };
 
@@ -273,6 +286,12 @@ base.Material = function (name) {
  * corresponds to one frame.
  */
 base.GeometryData = function(indices, vertices) {
+    /**
+     * @type {Uint16Array}
+     */
     this.indices = indices;
+    /**
+     * @type {Array<Float32Array>}
+     */
     this.vertices = vertices;
 };
