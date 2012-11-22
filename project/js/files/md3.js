@@ -1,9 +1,9 @@
 goog.require('binaryFile');
 goog.require('goog.asserts');
 
-goog.provide('resources.Md3');
+goog.provide('files.md3');
 
-resources.Md3.load = function(arrayBuffer, skins) {
+files.md3.load = function(arrayBuffer, skins) {
 
     var header,
 	surfaces = [],

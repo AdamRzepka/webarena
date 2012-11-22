@@ -28,137 +28,75 @@
  * Modified by Adam Rzepka
  */
 
-goog.require('binaryFile');
-goog.require('gl-matrix');
-goog.require('common');
-goog.provide('q3bsp');
+goog.require('files.binaryfile');
+goog.require('base');
+goog.require('base.vec3');
+goog.require('base.mat4');
 
-/** @define {boolean} */
-var GAMEPLAY_WORKER = false;
+goog.provide('files.files.q3bsp');
 
-if (GAMEPLAY_WORKER) {
-    importScripts('./util/binary-file.js');
-    importScripts('./util/gl-matrix-min.js');
-}
 
-var onmessage = function(msg) {
-    switch(msg.data.type) {
-        case 'load':
-            q3bsp.load(msg.data.map, msg.data.tesselationLevel, function() {
-                // Fallback to account for Opera handling URLs in a worker
-                // differently than other browsers.
-                q3bsp.load(msg.data.map, msg.data.tesselationLevel);
-            });
-            break;
-        case 'loadShaders':
-            q3shader.loadList(msg.data.sources);
-            break;
-        case 'trace':
-            q3bsp.trace(msg.data.traceId, msg.data.start, msg.data.end, msg.data.radius, msg.data.slide);
-            break;
-        case 'visibility':
-            q3bsp.buildVisibleList(q3bsp.getLeaf(msg.data.pos));
-            break;
-        default:
-            throw 'Unexpected message type: ' + msg.data;
-    }
+/** @define {number}*/
+files.q3bsp.TESSELATION_LEVEL = 10;
+
+
+files.q3bsp.load = function(map) {
+    files.q3bsp.parse_(new files.BinaryFile(map));
 };
 
-// BSP Elements
-var planes, nodes, leaves, faces;
-var brushes, brushSides;
-var leafFaces, leafBrushes;
-var visBuffer, visSize;
-var shaders; // This needs to be kept here for collision detection (indicates non-solid surfaces)
-
-var q3bsp = {};
-
-q3bsp.load = function(map, tesselationLevel, errorCallback) {
-    q3bsp.parse(new BinaryFile(map), tesselationLevel);
-};
-
+/** @private*/
 // Parses the BSP file
-q3bsp.parse = function(src, tesselationLevel) {
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'status',
-			message: 'Map downloaded, parsing level geometry...'
-		    });
-    }
+files.q3bsp.parse_ = function(src) {
 
-    var header = q3bsp.readHeader(src);
+    var header = files.q3bsp.readHeader_(src);
 
     if(header.tag != 'IBSP' && header.version != 46) { return; } // Check for appropriate format
 
     // Read map entities
-    q3bsp.readEntities(header.lumps[0], src);
+    files.q3bsp.readEntities_(header.lumps[0], src);
 
     // Load visual map components
-    shaders = q3bsp.readShaders(header.lumps[1], src);
-    var lightmaps = q3bsp.readLightmaps(header.lumps[14], src);
-    var verts = q3bsp.readVerts(header.lumps[10], src);
-    var meshVerts = q3bsp.readMeshVerts(header.lumps[11], src);
-    faces = q3bsp.readFaces(header.lumps[13], src);
-    var models = q3bsp.readModels(header.lumps[7], src);
+    var shaders = files.q3bsp.readShaders_(header.lumps[1], src);
+    var lightmaps = files.q3bsp.readLightmaps_(header.lumps[14], src);
+    var verts = files.q3bsp.readVerts_(header.lumps[10], src);
+    var meshVerts = files.q3bsp.readMeshVerts_(header.lumps[11], src);
+    var faces = files.q3bsp.readFaces_(header.lumps[13], src);
+    var models = files.q3bsp.readModels_(header.lumps[7], src);
 
-    var compiledMap = q3bsp.compileMap(verts, faces, meshVerts, lightmaps, shaders, tesselationLevel);
+    var compiledMap = files.q3bsp.compileMap_(verts, faces, meshVerts, lightmaps, shaders);
 
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'status',
-			message: 'Geometry compiled, parsing collision tree...'
-		    });
-    }
-    else {
-	render.registerMap([compiledMap.model],
-			   {
-			       vertices: compiledMap.vertices,
-			       indices: compiledMap.indices
-			   },
-			   {
-			       lightmaps: lightmaps,
-			       size: lightmaps[0].textureSize
-			   }
-			  );
-    }
+    render.registerMap([compiledMap.model],
+		       {
+			   vertices: compiledMap.vertices,
+			   indices: compiledMap.indices
+		       },
+		       {
+			   lightmaps: lightmaps,
+			   size: lightmaps[0].textureSize
+		       }
+		      );
+
 
     // Load bsp components
-    planes = q3bsp.readPlanes(header.lumps[2], src);
-    nodes = q3bsp.readNodes(header.lumps[3], src);
-    leaves = q3bsp.readLeaves(header.lumps[4], src);
-    leafFaces = q3bsp.readLeafFaces(header.lumps[5], src);
-    leafBrushes = q3bsp.readLeafBrushes(header.lumps[6], src);
-    brushes = q3bsp.readBrushes(header.lumps[8], src);
-    brushSides = q3bsp.readBrushSides(header.lumps[9], src);
-    var visData = q3bsp.readVisData(header.lumps[16], src);
-    visBuffer = visData.buffer;
-    visSize = visData.size;
+    // not needed for now
+    // var planes = files.q3bsp.readPlanes_(header.lumps[2], src);
+    // var nodes = files.q3bsp.readNodes_(header.lumps[3], src);
+    // var leaves = files.q3bsp.readLeaves_(header.lumps[4], src);
+    // var leafFaces = files.q3bsp.readLeafFaces_(header.lumps[5], src);
+    // var leafBrushes = files.q3bsp.readLeafBrushes_(header.lumps[6], src);
+    // var brushes = files.q3bsp.readBrushes_(header.lumps[8], src);
+    // var brushSides = files.q3bsp.readBrushSides_(header.lumps[9], src);
+    // var visData = files.q3bsp.readVisData_(header.lumps[16], src);
+    // var visBuffer = visData.buffer;
+    // var visSize = visData.size;
 
-    //q3bsp.buildMeshes(leaves, leafFaces, faces, verts, meshVerts, models);
-
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'bsp',
-			bsp: {
-			    planes: planes,
-			    nodes: nodes,
-			    leaves: leaves,
-			    leafFaces: leafFaces,
-			    leafBrushes: leafBrushes,
-			    brushes: brushes,
-			    brushSides: brushSides,
-			    surfaces: shaders,
-			    visBuffer: visBuffer,
-			    visSize: visSize
-			}
-		    });
-    }
-
+    //files.q3bsp.buildMeshes(leaves, leafFaces, faces, verts, meshVerts, models);
 
 };
 
 // Read all lump headers
-q3bsp.readHeader = function(src) {
+/** @private*/
+files.q3bsp.readHeader_ = function(src) {
     // Read the magic number and the version
     var header = {
         tag: src.readString(4),
@@ -179,7 +117,8 @@ q3bsp.readHeader = function(src) {
 };
 
 // Read all entity structures
-q3bsp.readEntities = function(lump, src) {
+/** @private*/
+files.q3bsp.readEntities_ = function(lump, src) {
     src.seek(lump.offset);
     var entities = src.readString(lump.length);
 
@@ -219,17 +158,11 @@ q3bsp.readEntities = function(lump, src) {
         elements[entity.classname].push(entity);
     });
 
-    // Send the compiled vertex/index data back to the render thread
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'entities',
-			entities: elements
-		    });
-    }
 };
 
 // Read all shader structures
-q3bsp.readShaders = function(lump, src) {
+/** @private*/
+files.q3bsp.readShaders_ = function(lump, src) {
     var count = lump.length / 72;
     var elements = [];
 
@@ -253,7 +186,8 @@ q3bsp.readShaders = function(lump, src) {
 };
 
 // Scale up an RGB color
-q3bsp.brightnessAdjust = function(color, factor) {
+/** @private*/
+files.q3bsp.brightnessAdjust_ = function(color, factor) {
     var scale = 1.0, temp = 0.0;
 
     color[0] *= factor;
@@ -271,7 +205,8 @@ q3bsp.brightnessAdjust = function(color, factor) {
     return color;
 };
 
-q3bsp.brightnessAdjustVertex = function(color, factor) {
+/** @private*/
+files.q3bsp.brightnessAdjustVertex_ = function(color, factor) {
     var scale = 1.0, temp = 0.0;
 
     color[0] *= factor;
@@ -290,7 +225,8 @@ q3bsp.brightnessAdjustVertex = function(color, factor) {
 };
 
 // Read all lightmaps
-q3bsp.readLightmaps = function(lump, src) {
+/** @private*/
+files.q3bsp.readLightmaps_ = function(lump, src) {
     var lightmapSize = 128 * 128;
     var count = lump.length / (lightmapSize*3);
 
@@ -318,7 +254,7 @@ q3bsp.readLightmaps = function(lump, src) {
             rgb[1] = src.readUByte();
             rgb[2] = src.readUByte();
 
-            q3bsp.brightnessAdjust(rgb, 4.0);
+            files.q3bsp.brightnessAdjust_(rgb, 4.0);
 
             elements[j] = rgb[0];
             elements[j+1] = rgb[1];
@@ -348,19 +284,11 @@ q3bsp.readLightmaps = function(lump, src) {
         }
     }
 
-    // Send the lightmap data back to the render thread
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'lightmap',
-			size: textureSize,
-			lightmaps: lightmaps
-		    });
-    }
-
     return lightmapRects;
 };
 
-q3bsp.readVerts = function(lump, src) {
+/** @private*/
+files.q3bsp.readVerts_ = function(lump, src) {
     var count = lump.length/44;
     var elements = [];
 
@@ -372,14 +300,15 @@ q3bsp.readVerts = function(lump, src) {
             lmCoord: [ src.readFloat(), src.readFloat() ],
             lmNewCoord: [ 0, 0 ],
             normal: [ src.readFloat(), src.readFloat(), src.readFloat() ],
-            color: q3bsp.brightnessAdjustVertex(q3bsp.colorToVec(src.readULong()), 4.0)
+            color: files.q3bsp.brightnessAdjustVertex_(files.q3bsp.colorToVec_(src.readULong()), 4.0)
         });
     }
 
     return elements;
 };
 
-q3bsp.readMeshVerts = function(lump, src) {
+/** @private*/
+files.q3bsp.readMeshVerts_ = function(lump, src) {
     var count = lump.length/4;
     var meshVerts = [];
 
@@ -392,7 +321,8 @@ q3bsp.readMeshVerts = function(lump, src) {
 };
 
 // Read all face structures
-q3bsp.readFaces = function(lump, src) {
+/** @private*/
+files.q3bsp.readFaces_ = function(lump, src) {
     var faceCount = lump.length / 104;
     var faces = [];
 
@@ -424,7 +354,8 @@ q3bsp.readFaces = function(lump, src) {
 };
 
 // Read all Plane structures
-q3bsp.readPlanes = function(lump, src) {
+/** @private*/
+files.q3bsp.readPlanes_ = function(lump, src) {
     var count = lump.length / 16;
     var elements = [];
 
@@ -440,7 +371,8 @@ q3bsp.readPlanes = function(lump, src) {
 };
 
 // Read all Node structures
-q3bsp.readNodes = function(lump, src) {
+/** @private*/
+files.q3bsp.readNodes_ = function(lump, src) {
     var count = lump.length / 36;
     var elements = [];
 
@@ -458,7 +390,8 @@ q3bsp.readNodes = function(lump, src) {
 };
 
 // Read all Leaf structures
-q3bsp.readLeaves = function(lump, src) {
+/** @private*/
+files.q3bsp.readLeaves_ = function(lump, src) {
     var count = lump.length / 48;
     var elements = [];
 
@@ -480,7 +413,8 @@ q3bsp.readLeaves = function(lump, src) {
 };
 
 // Read all Leaf Faces
-q3bsp.readLeafFaces = function(lump, src) {
+/** @private*/
+files.q3bsp.readLeafFaces_ = function(lump, src) {
     var count = lump.length / 4;
     var elements = [];
 
@@ -493,7 +427,8 @@ q3bsp.readLeafFaces = function(lump, src) {
 };
 
 // Read all Brushes
-q3bsp.readBrushes = function(lump, src) {
+/** @private*/
+files.q3bsp.readBrushes_ = function(lump, src) {
     var count = lump.length / 12;
     var elements = [];
 
@@ -510,7 +445,8 @@ q3bsp.readBrushes = function(lump, src) {
 };
 
 // Read all Leaf Brushes
-q3bsp.readLeafBrushes = function(lump, src) {
+/** @private*/
+files.q3bsp.readLeafBrushes_ = function(lump, src) {
     var count = lump.length / 4;
     var elements = [];
 
@@ -523,7 +459,8 @@ q3bsp.readLeafBrushes = function(lump, src) {
 };
 
 // Read all Brush Sides
-q3bsp.readBrushSides = function(lump, src) {
+/** @private*/
+files.q3bsp.readBrushSides_ = function(lump, src) {
     var count = lump.length / 8;
     var elements = [];
 
@@ -539,7 +476,8 @@ q3bsp.readBrushSides = function(lump, src) {
 };
 
 // Read all Vis Data
-q3bsp.readVisData = function(lump, src) {
+/** @private*/
+files.q3bsp.readVisData_ = function(lump, src) {
     src.seek(lump.offset);
     var vecCount = src.readLong();
     var size = src.readLong();
@@ -557,7 +495,8 @@ q3bsp.readVisData = function(lump, src) {
     };
 };
 
-q3bsp.readModels = function(lump, src) {
+/** @private*/
+files.q3bsp.readModels_ = function(lump, src) {
     var count = lump.length / 40;
     var models = new Array(count);
 
@@ -584,7 +523,8 @@ q3bsp.readModels = function(lump, src) {
     return models;
 };
 
-q3bsp.colorToVec = function(color) {
+/** @private*/
+files.q3bsp.colorToVec_ = function(color) {
     return[
         (color & 0xFF) / 0xFF,
         ((color & 0xFF00) >> 8) / 0xFF,
@@ -598,14 +538,8 @@ q3bsp.colorToVec = function(color) {
 // Compile the map into a stream of WebGL-compatible data
 //
 
-q3bsp.compileMap = function(verts, faces, meshVerts, lightmaps, shaders, tesselationLevel) {
-
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'status',
-			message: 'Map geometry parsed, compiling...'
-		    });
-    }
+/** @private*/
+files.q3bsp.compileMap_ = function(verts, faces, meshVerts, lightmaps, shaders) {
 
     // Find associated shaders for all clusters
 
@@ -636,14 +570,8 @@ q3bsp.compileMap = function(verts, faces, meshVerts, lightmaps, shaders, tessela
 			+ lightmap.y / texSize;
                 }
             } else {
-		if (GAMEPLAY_WORKER) {
-                    postMessage({
-				    type: 'status',
-				    message: 'Tesselating face ' + i + " of " + faces.length
-				});
-		}
                 // Build Bezier curve
-                q3bsp.tesselate(face, verts, meshVerts, tesselationLevel);
+                files.q3bsp.tesselate_(face, verts, meshVerts);
                 for(var j = 0; j < face.vertCount; ++j) {
                     var vert = verts[face.vertex + j];
 
@@ -732,17 +660,11 @@ q3bsp.compileMap = function(verts, faces, meshVerts, lightmaps, shaders, tessela
 	model: model
     };
 
-    // Send the compiled vertex/index data back to the render thread
-    // postMessage({
-    //     type: 'geometry',
-    //     vertices: vertices,
-    //     indices: indices,
-    //     surfaces: shaders
-    // });
 };
 
 
-q3bsp.buildModels = function(leaves, leafFaces, faces, verts, meshVerts, models) {
+/** @private*/
+files.q3bsp.buildModels_ = function(leaves, leafFaces, faces, verts, meshVerts, models) {
     var i;
 
     for (i = 0; i < leaves.length; ++i) {
@@ -757,7 +679,8 @@ q3bsp.buildModels = function(leaves, leafFaces, faces, verts, meshVerts, models)
 // Curve Tesselation
 //
 
-q3bsp.getCurvePoint3 = function(c0, c1, c2, dist) {
+/** @private*/
+files.q3bsp.getCurvePoint3_ = function(c0, c1, c2, dist) {
     var b = 1.0 - dist;
 
     return vec3.add(
@@ -770,7 +693,8 @@ q3bsp.getCurvePoint3 = function(c0, c1, c2, dist) {
 };
 
 // This is kinda ugly. Clean it up at some point?
-q3bsp.getCurvePoint2 = function(c0, c1, c2, dist) {
+/** @private*/
+files.q3bsp.getCurvePoint2_ = function(c0, c1, c2, dist) {
     var b = 1.0 - dist;
 
     c30 = [c0[0], c0[1], 0];
@@ -788,9 +712,12 @@ q3bsp.getCurvePoint2 = function(c0, c1, c2, dist) {
     return [res[0], res[1]];
 };
 
-q3bsp.tesselate = function(face, verts, meshVerts, level) {
+/** @private*/
+files.q3bsp.tesselate_ = function(face, verts, meshVerts) {
     var off = face.vertex;
     var count = face.vertCount;
+
+    var level = files.q3bsp.TESSELATION_LEVEL;
 
     var L1 = level + 1;
 
@@ -819,10 +746,10 @@ q3bsp.tesselate = function(face, verts, meshVerts, level) {
             for(var i = 0; i < L1; ++i) {
                 var a = i / level;
 
-                var pos = q3bsp.getCurvePoint3(c0.pos, c3.pos, c6.pos, a);
-                var lmCoord = q3bsp.getCurvePoint2(c0.lmCoord, c3.lmCoord, c6.lmCoord, a);
-                var texCoord = q3bsp.getCurvePoint2(c0.texCoord, c3.texCoord, c6.texCoord, a);
-                var color = q3bsp.getCurvePoint3(c0.color, c3.color, c6.color, a);
+                var pos = files.q3bsp.getCurvePoint3_(c0.pos, c3.pos, c6.pos, a);
+                var lmCoord = files.q3bsp.getCurvePoint2_(c0.lmCoord, c3.lmCoord, c6.lmCoord, a);
+                var texCoord = files.q3bsp.getCurvePoint2_(c0.texCoord, c3.texCoord, c6.texCoord, a);
+                var color = files.q3bsp.getCurvePoint3_(c0.color, c3.color, c6.color, a);
 
                 var vert = {
                     pos: pos,
@@ -839,30 +766,30 @@ q3bsp.tesselate = function(face, verts, meshVerts, level) {
             for(var i = 1; i < L1; i++) {
                 var a = i / level;
 
-                var pc0 = q3bsp.getCurvePoint3(c0.pos, c1.pos, c2.pos, a);
-                var pc1 = q3bsp.getCurvePoint3(c3.pos, c4.pos, c5.pos, a);
-                var pc2 = q3bsp.getCurvePoint3(c6.pos, c7.pos, c8.pos, a);
+                var pc0 = files.q3bsp.getCurvePoint3_(c0.pos, c1.pos, c2.pos, a);
+                var pc1 = files.q3bsp.getCurvePoint3_(c3.pos, c4.pos, c5.pos, a);
+                var pc2 = files.q3bsp.getCurvePoint3_(c6.pos, c7.pos, c8.pos, a);
 
-                var tc0 = q3bsp.getCurvePoint3(c0.texCoord, c1.texCoord, c2.texCoord, a);
-                var tc1 = q3bsp.getCurvePoint3(c3.texCoord, c4.texCoord, c5.texCoord, a);
-                var tc2 = q3bsp.getCurvePoint3(c6.texCoord, c7.texCoord, c8.texCoord, a);
+                var tc0 = files.q3bsp.getCurvePoint3_(c0.texCoord, c1.texCoord, c2.texCoord, a);
+                var tc1 = files.q3bsp.getCurvePoint3_(c3.texCoord, c4.texCoord, c5.texCoord, a);
+                var tc2 = files.q3bsp.getCurvePoint3_(c6.texCoord, c7.texCoord, c8.texCoord, a);
 
-                var lc0 = q3bsp.getCurvePoint3(c0.lmCoord, c1.lmCoord, c2.lmCoord, a);
-                var lc1 = q3bsp.getCurvePoint3(c3.lmCoord, c4.lmCoord, c5.lmCoord, a);
-                var lc2 = q3bsp.getCurvePoint3(c6.lmCoord, c7.lmCoord, c8.lmCoord, a);
+                var lc0 = files.q3bsp.getCurvePoint3_(c0.lmCoord, c1.lmCoord, c2.lmCoord, a);
+                var lc1 = files.q3bsp.getCurvePoint3_(c3.lmCoord, c4.lmCoord, c5.lmCoord, a);
+                var lc2 = files.q3bsp.getCurvePoint3_(c6.lmCoord, c7.lmCoord, c8.lmCoord, a);
 
-                var cc0 = q3bsp.getCurvePoint3(c0.color, c1.color, c2.color, a);
-                var cc1 = q3bsp.getCurvePoint3(c3.color, c4.color, c5.color, a);
-                var cc2 = q3bsp.getCurvePoint3(c6.color, c7.color, c8.color, a);
+                var cc0 = files.q3bsp.getCurvePoint3_(c0.color, c1.color, c2.color, a);
+                var cc1 = files.q3bsp.getCurvePoint3_(c3.color, c4.color, c5.color, a);
+                var cc2 = files.q3bsp.getCurvePoint3_(c6.color, c7.color, c8.color, a);
 
                 for(var j = 0; j < L1; j++)
                 {
                     var b = j / level;
 
-                    var pos = q3bsp.getCurvePoint3(pc0, pc1, pc2, b);
-                    var texCoord = q3bsp.getCurvePoint2(tc0, tc1, tc2, b);
-                    var lmCoord = q3bsp.getCurvePoint2(lc0, lc1, lc2, b);
-                    var color = q3bsp.getCurvePoint3(cc0, cc1, cc2, a);
+                    var pos = files.q3bsp.getCurvePoint3_(pc0, pc1, pc2, b);
+                    var texCoord = files.q3bsp.getCurvePoint2_(tc0, tc1, tc2, b);
+                    var lmCoord = files.q3bsp.getCurvePoint2_(lc0, lc1, lc2, b);
+                    var color = files.q3bsp.getCurvePoint3_(cc0, cc1, cc2, a);
 
                     var vert = {
                         pos: pos,
@@ -892,237 +819,5 @@ q3bsp.tesselate = function(face, verts, meshVerts, level) {
             }
 
         }
-    }
-};
-
-//
-// BSP Collision Detection
-//
-
-q3bsp.trace = function(traceId, start, end, radius, slide) {
-    if(!radius) { radius = 0; }
-    if(!slide) { slide = false; }
-
-    if (!brushSides) { return end; }
-
-    var output = {
-        startsOut: true,
-        allSolid: false,
-        plane: null,
-        fraction: 1
-    };
-
-    q3bsp.traceNode(0, 0, 1, start, end, radius, output);
-
-    if(output.fraction != 1) { // collided with something
-        if(slide && output.plane) {
-            var endDist = Math.abs(vec3.dot( end, output.plane.normal ) - (output.plane.distance + radius + 0.03125));
-            for (var i = 0; i < 3; i++) {
-                end[i] = end[i] + endDist * (output.plane.normal[i]);
-            }
-        } else {
-            for (var i = 0; i < 3; i++) {
-                end[i] = start[i] + output.fraction * (end[i] - start[i]);
-            }
-        }
-    }
-
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'trace',
-			traceId: traceId,
-			end: end
-		    });
-    }
-};
-
-q3bsp.traceNode = function(nodeIdx, startFraction, endFraction, start, end, radius, output) {
-    if (nodeIdx < 0) { // Leaf node?
-        var leaf = leaves[-(nodeIdx + 1)];
-        for (var i = 0; i < leaf.leafBrushCount; i++) {
-            var brush = brushes[leafBrushes[leaf.leafBrush + i]];
-            var shader = shaders[brush.shader];
-            if (brush.brushSideCount > 0 && (shader.contents & 1)) {
-                q3bsp.traceBrush(brush, start, end, radius, output);
-            }
-        }
-        return;
-    }
-
-    // Tree node
-    var node = nodes[nodeIdx];
-    var plane = planes[node.plane];
-
-    var startDist = vec3.dot(plane.normal, start) - plane.distance;
-    var endDist = vec3.dot(plane.normal, end) - plane.distance;
-
-    if (startDist >= radius && endDist >= radius) {
-        q3bsp.traceNode(node.children[0], startFraction, endFraction, start, end, radius, output );
-    } else if (startDist < -radius && endDist < -radius) {
-        q3bsp.traceNode(node.children[1], startFraction, endFraction, start, end, radius, output );
-    } else {
-        var side;
-        var fraction1, fraction2, middleFraction;
-        var middle = [0, 0, 0];
-
-        if (startDist < endDist) {
-            side = 1; // back
-            var iDist = 1 / (startDist - endDist);
-            fraction1 = (startDist - radius + 0.03125) * iDist;
-            fraction2 = (startDist + radius + 0.03125) * iDist;
-        } else if (startDist > endDist) {
-            side = 0; // front
-            var iDist = 1 / (startDist - endDist);
-            fraction1 = (startDist + radius + 0.03125) * iDist;
-            fraction2 = (startDist - radius - 0.03125) * iDist;
-        } else {
-            side = 0; // front
-            fraction1 = 1;
-            fraction2 = 0;
-        }
-
-        if (fraction1 < 0) fraction1 = 0;
-        else if (fraction1 > 1) fraction1 = 1;
-        if (fraction2 < 0) fraction2 = 0;
-        else if (fraction2 > 1) fraction2 = 1;
-
-        middleFraction = startFraction + (endFraction - startFraction) * fraction1;
-
-        for (var i = 0; i < 3; i++) {
-            middle[i] = start[i] + fraction1 * (end[i] - start[i]);
-        }
-
-        q3bsp.traceNode(node.children[side], startFraction, middleFraction, start, middle, radius, output );
-
-        middleFraction = startFraction + (endFraction - startFraction) * fraction2;
-
-        for (var i = 0; i < 3; i++) {
-            middle[i] = start[i] + fraction2 * (end[i] - start[i]);
-        }
-
-        q3bsp.traceNode(node.children[side===0?1:0], middleFraction, endFraction, middle, end, radius, output );
-    }
-};
-
-q3bsp.traceBrush = function(brush, start, end, radius, output) {
-    var startFraction = -1;
-    var endFraction = 1;
-    var startsOut = false;
-    var endsOut = false;
-    var collisionPlane = null;
-
-    for (var i = 0; i < brush.brushSideCount; i++) {
-        var brushSide = brushSides[brush.brushSide + i];
-        var plane = planes[brushSide.plane];
-
-        var startDist = vec3.dot( start, plane.normal ) - (plane.distance + radius);
-        var endDist = vec3.dot( end, plane.normal ) - (plane.distance + radius);
-
-        if (startDist > 0) startsOut = true;
-        if (endDist > 0) endsOut = true;
-
-        // make sure the trace isn't completely on one side of the brush
-        if (startDist > 0 && endDist > 0) { return; }
-        if (startDist <= 0 && endDist <= 0) { continue; }
-
-        if (startDist > endDist) { // line is entering into the brush
-            var fraction = (startDist - 0.03125) / (startDist - endDist);
-            if (fraction > startFraction) {
-                startFraction = fraction;
-                collisionPlane = plane;
-            }
-        } else { // line is leaving the brush
-            var fraction = (startDist + 0.03125) / (startDist - endDist);
-            if (fraction < endFraction)
-                endFraction = fraction;
-        }
-    }
-
-    if (startsOut === false) {
-        output.startsOut = false;
-        if (endsOut === false)
-            output.allSolid = true;
-        return;
-    }
-
-    if (startFraction < endFraction) {
-        if (startFraction > -1 && startFraction < output.fraction) {
-            output.plane = collisionPlane;
-            if (startFraction < 0)
-                startFraction = 0;
-            output.fraction = startFraction;
-        }
-    }
-
-    return;
-};
-
-//
-// Visibility Checking
-//
-
-var lastLeaf = -1;
-
-q3bsp.checkVis = function(visCluster, testCluster) {
-    if(visCluster == testCluster || visCluster == -1) { return true; }
-    var i = (visCluster * visSize) + (testCluster >> 3);
-    var visSet = visBuffer[i];
-    return (visSet & (1 << (testCluster & 7)) !== 0);
-};
-
-q3bsp.getLeaf = function(pos) {
-    var index = 0;
-
-    var node = null;
-    var plane = null;
-    var distance = 0;
-
-    while (index >= 0) {
-        node = nodes[index];
-        plane = planes[node.plane];
-        distance = vec3.dot(plane.normal, pos) - plane.distance;
-
-        if (distance >= 0) {
-            index = node.children[0];
-        } else {
-            index = node.children[1];
-        }
-    }
-
-    return -(index+1);
-};
-
-q3bsp.buildVisibleList = function(leafIndex) {
-    // Determine visible faces
-    if(leafIndex == lastLeaf) { return; }
-    lastLeaf = leafIndex;
-
-    var curLeaf = leaves[leafIndex];
-
-    var visibleShaders = new Array(shaders.length);
-
-    for(var i = 0; i < leaves.length; ++i) {
-        var leaf = leaves[i];
-        if(q3bsp.checkVis(curLeaf.cluster, leaf.cluster)) {
-            for(var j = 0; j < leaf.leafFaceCount; ++j) {
-                var face = faces[leafFaces[[j + leaf.leafFace]]];
-                if(face) {
-                    visibleShaders[face.shader] = true;
-                }
-            }
-        }
-    }
-
-    var ar = new Array(visSize);
-
-    for(var i = 0; i < visSize; ++i) {
-        ar[i] = visBuffer[(curLeaf.cluster * visSize) + i];
-    }
-
-    if (GAMEPLAY_WORKER) {
-	postMessage({
-			type: 'visibility',
-			visibleSurfaces: visibleShaders
-		    });
     }
 };
