@@ -29,9 +29,9 @@
  * Modified by Adam Rzepka
  */
 
-goog.provide('binaryFile');
+goog.provide('utilities.binaryfile');
 
-var BinaryFile = function(data) {
+utilities.BinaryFile = function(data) {
     this.buffer = data;
     this.length = data.length;
     this.offset = 0;
@@ -39,104 +39,85 @@ var BinaryFile = function(data) {
     this.dataView = new DataView(data);
 };
 
-// This is the result of an interesting trick that Google does in their
-// GWT port of Quake 2. (For floats, anyway...) Rather than parse and
-// calculate the values manually they share the contents of a byte array
-// between several types of buffers, which allows you to push into one and
-// read out the other. The end result is, effectively, a typecast!
-
-// var bf_byteBuff = new ArrayBuffer(4);
-
-// var bf_wba = new Int8Array(bf_byteBuff);
-// var bf_wuba = new Uint8Array(bf_byteBuff);
-
-// var bf_wsa = new Int16Array(bf_byteBuff);
-// var bf_wusa = new Uint16Array(bf_byteBuff);
-
-// var bf_wia = new Int32Array(bf_byteBuff);
-// var bf_wuia = new Uint32Array(bf_byteBuff);
-
-// var bf_wfa = new Float32Array(bf_byteBuff);
-
-BinaryFile.prototype.eof = function() {
+utilities.BinaryFile.prototype.eof = function() {
     return this.offset >= this.length;
 };
 
 // Seek to the given byt offset within the stream
-BinaryFile.prototype.seek = function(offset) {
+utilities.BinaryFile.prototype.seek = function(offset) {
     this.offset = offset;
     return this; // to allow chaining
 };
 
-BinaryFile.prototype.skip = function(bytesToSkip) {
+utilities.BinaryFile.prototype.skip = function(bytesToSkip) {
     this.offset += bytesToSkip;
     return this; // to allow chaining
-}
+};
 
 // Seek to the given byt offset within the stream
-BinaryFile.prototype.tell = function() {
+utilities.BinaryFile.prototype.tell = function() {
     return this.offset;
 };
 
 // Read a signed byte from the stream
-BinaryFile.prototype.readByte = function() {
+utilities.BinaryFile.prototype.readByte = function() {
     return this.dataView.getInt8(this.offset++);
 };
 
 // Read an unsigned byte from the stream
-BinaryFile.prototype.readUByte = function() {
+utilities.BinaryFile.prototype.readUByte = function() {
     return this.dataView.getUint8(this.offset++);
 };
 
 // Read a signed short (2 bytes) from the stream
-BinaryFile.prototype.readShort = function() {
+utilities.BinaryFile.prototype.readShort = function() {
     var res = this.dataView.getInt16(this.offset, true);
     this.offset += 2;
     return res;
 };
 
 // Read an unsigned short (2 bytes) from the stream
-BinaryFile.prototype.readUShort = function() {
+utilities.BinaryFile.prototype.readUShort = function() {
     var res = this.dataView.getUint16(this.offset, true);
     this.offset += 2;
     return res;
 };
 
 // Read a signed long (4 bytes) from the stream
-BinaryFile.prototype.readLong = function() {
+utilities.BinaryFile.prototype.readLong = function() {
     var res = this.dataView.getInt32(this.offset, true);
     this.offset += 4;
     return res;
 };
 
 // Read an unsigned long (4 bytes) from the stream
-BinaryFile.prototype.readULong = function() {
+utilities.BinaryFile.prototype.readULong = function() {
     var res = this.dataView.getUint32(this.offset, true);
     this.offset += 4;
     return res;
 };
 
 // Read a float (4 bytes) from the stream
-BinaryFile.prototype.readFloat = function() {
+utilities.BinaryFile.prototype.readFloat = function() {
     var res = this.dataView.getFloat32(this.offset, true);
     this.offset += 4;
     return res;
 };
 
-BinaryFile.prototype.readFloatArray = function(count) {
+utilities.BinaryFile.prototype.readFloatArray = function(count) {
     var res = new Float32Array(this.data, this.offset, count);
     this.offset += 4 * count;
     return res;
 };
 
-BinaryFile.prototype.readLongArray = function(count) {
+utilities.BinaryFile.prototype.readLongArray = function(count) {
     var res = new Int32Array(this.data, this.offset, count);
     this.offset += 4 * count;
     return res;
 };
 
 
-BinaryFile.prototype.expandHalf = function(h) {
+utilities.BinaryFile.prototype.expandHalf = function(h) {
     var s = (h & 0x8000) >> 15;
     var e = (h & 0x7C00) >> 10;
     var f = h & 0x03FF;
@@ -150,13 +131,13 @@ BinaryFile.prototype.expandHalf = function(h) {
     return (s?-1:1) * Math.pow(2, e-15) * (1+(f/Math.pow(2, 10)));
 };
 
-BinaryFile.prototype.readHalf = function() {
+utilities.BinaryFile.prototype.readHalf = function() {
     var h = this.readUShort();
     return this.expandHalf(h);
 };
 
 // Read an ASCII string of the given length from the stream
-BinaryFile.prototype.readString = function(length) {
+utilities.BinaryFile.prototype.readString = function(length) {
     var str = String.fromCharCode.apply(null, new Uint8Array(this.data, this.offset, length));
     this.offset += length;
     return str;
