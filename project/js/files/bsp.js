@@ -30,73 +30,64 @@
 
 goog.require('files.binaryfile');
 goog.require('base');
-goog.require('base.vec3');
+goog.require('base.base.vec3');
 goog.require('base.mat4');
+goog.require('base.Map');
 
-goog.provide('files.files.q3bsp');
+goog.provide('files.files.bsp');
 
 
 /** @define {number}*/
-files.q3bsp.TESSELATION_LEVEL = 10;
+files.bsp.TESSELATION_LEVEL = 10;
 
 
-files.q3bsp.load = function(map) {
-    files.q3bsp.parse_(new files.BinaryFile(map));
+files.bsp.load = function(map) {
+    return files.bsp.parse_(new files.BinaryFile(map));
 };
 
 /** @private*/
 // Parses the BSP file
-files.q3bsp.parse_ = function(src) {
+files.bsp.parse_ = function(src) {
 
-    var header = files.q3bsp.readHeader_(src);
-
-    if(header.tag != 'IBSP' && header.version != 46) { return; } // Check for appropriate format
+    var shaders, lightmapData, verts, meshVerts, faces, models, compiledMap;
+    var header = files.bsp.readHeader_(src);
+    
+    if(header.tag != 'IBSP' && header.version != 46) { // Check for appropriate format
+	return null;
+    }
 
     // Read map entities
-    files.q3bsp.readEntities_(header.lumps[0], src);
+    // files.bsp.readEntities_(header.lumps[0], src);
 
     // Load visual map components
-    var shaders = files.q3bsp.readShaders_(header.lumps[1], src);
-    var lightmaps = files.q3bsp.readLightmaps_(header.lumps[14], src);
-    var verts = files.q3bsp.readVerts_(header.lumps[10], src);
-    var meshVerts = files.q3bsp.readMeshVerts_(header.lumps[11], src);
-    var faces = files.q3bsp.readFaces_(header.lumps[13], src);
-    var models = files.q3bsp.readModels_(header.lumps[7], src);
+    shaders = files.bsp.readShaders_(header.lumps[1], src);
+    lightmapData = files.bsp.readLightmaps_(header.lumps[14], src);
+    verts = files.bsp.readVerts_(header.lumps[10], src);
+    meshVerts = files.bsp.readMeshVerts_(header.lumps[11], src);
+    faces = files.bsp.readFaces_(header.lumps[13], src);
+    models = files.bsp.readModels_(header.lumps[7], src);
 
-    var compiledMap = files.q3bsp.compileMap_(verts, faces, meshVerts, lightmaps, shaders);
+    compiledMap = files.bsp.compileMap_(verts, faces, meshVerts, lightmapData, shaders);
 
-    render.registerMap([compiledMap.model],
-		       {
-			   vertices: compiledMap.vertices,
-			   indices: compiledMap.indices
-		       },
-		       {
-			   lightmaps: lightmaps,
-			   size: lightmaps[0].textureSize
-		       }
-		      );
-
-
+    return compiledMap;
+    
     // Load bsp components
     // not needed for now
-    // var planes = files.q3bsp.readPlanes_(header.lumps[2], src);
-    // var nodes = files.q3bsp.readNodes_(header.lumps[3], src);
-    // var leaves = files.q3bsp.readLeaves_(header.lumps[4], src);
-    // var leafFaces = files.q3bsp.readLeafFaces_(header.lumps[5], src);
-    // var leafBrushes = files.q3bsp.readLeafBrushes_(header.lumps[6], src);
-    // var brushes = files.q3bsp.readBrushes_(header.lumps[8], src);
-    // var brushSides = files.q3bsp.readBrushSides_(header.lumps[9], src);
-    // var visData = files.q3bsp.readVisData_(header.lumps[16], src);
+    // var planes = files.bsp.readPlanes_(header.lumps[2], src);
+    // var nodes = files.bsp.readNodes_(header.lumps[3], src);
+    // var leaves = files.bsp.readLeaves_(header.lumps[4], src);
+    // var leafFaces = files.bsp.readLeafFaces_(header.lumps[5], src);
+    // var leafBrushes = files.bsp.readLeafBrushes_(header.lumps[6], src);
+    // var brushes = files.bsp.readBrushes_(header.lumps[8], src);
+    // var brushSides = files.bsp.readBrushSides_(header.lumps[9], src);
+    // var visData = files.bsp.readVisData_(header.lumps[16], src);
     // var visBuffer = visData.buffer;
     // var visSize = visData.size;
-
-    //files.q3bsp.buildMeshes(leaves, leafFaces, faces, verts, meshVerts, models);
-
 };
 
 // Read all lump headers
 /** @private*/
-files.q3bsp.readHeader_ = function(src) {
+files.bsp.readHeader_ = function(src) {
     // Read the magic number and the version
     var header = {
         tag: src.readString(4),
@@ -116,53 +107,53 @@ files.q3bsp.readHeader_ = function(src) {
     return header;
 };
 
-// Read all entity structures
-/** @private*/
-files.q3bsp.readEntities_ = function(lump, src) {
-    src.seek(lump.offset);
-    var entities = src.readString(lump.length);
+// // Read all entity structures
+// /** @private*/
+// files.bsp.readEntities_ = function(lump, src) {
+//     src.seek(lump.offset);
+//     var entities = src.readString(lump.length);
 
-    var elements = {
-        targets: {}
-    };
+//     var elements = {
+//         targets: {}
+//     };
 
-    entities.replace(/\{([^}]*)\}/mg, function($0, entitySrc) {
-        var entity = {
-            classname: 'unknown'
-        };
-        entitySrc.replace(/"(.+)" "(.+)"$/mg, function($0, key, value) {
-            switch(key) {
-                case 'origin':
-                    value.replace(/(.+) (.+) (.+)/, function($0, x, y, z) {
-                        entity[key] = [
-                            parseFloat(x),
-                            parseFloat(y),
-                            parseFloat(z)
-                        ];
-                    });
-                    break;
-                case 'angle':
-                    entity[key] = parseFloat(value);
-                    break;
-                default:
-                    entity[key] = value;
-                    break;
-            }
-        });
+//     entities.replace(/\{([^}]*)\}/mg, function($0, entitySrc) {
+//         var entity = {
+//             classname: 'unknown'
+//         };
+//         entitySrc.replace(/"(.+)" "(.+)"$/mg, function($0, key, value) {
+//             switch(key) {
+//                 case 'origin':
+//                     value.replace(/(.+) (.+) (.+)/, function($0, x, y, z) {
+//                         entity[key] = [
+//                             parseFloat(x),
+//                             parseFloat(y),
+//                             parseFloat(z)
+//                         ];
+//                     });
+//                     break;
+//                 case 'angle':
+//                     entity[key] = parseFloat(value);
+//                     break;
+//                 default:
+//                     entity[key] = value;
+//                     break;
+//             }
+//         });
 
-        if(entity['targetname']) {
-            elements.targets[entity['targetname']] = entity;
-        }
+//         if(entity['targetname']) {
+//             elements.targets[entity['targetname']] = entity;
+//         }
 
-        if(!elements[entity.classname]) { elements[entity.classname] = []; }
-        elements[entity.classname].push(entity);
-    });
+//         if(!elements[entity.classname]) { elements[entity.classname] = []; }
+//         elements[entity.classname].push(entity);
+//     });
 
-};
+// };
 
 // Read all shader structures
 /** @private*/
-files.q3bsp.readShaders_ = function(lump, src) {
+files.bsp.readShaders_ = function(lump, src) {
     var count = lump.length / 72;
     var elements = [];
 
@@ -187,7 +178,7 @@ files.q3bsp.readShaders_ = function(lump, src) {
 
 // Scale up an RGB color
 /** @private*/
-files.q3bsp.brightnessAdjust_ = function(color, factor) {
+files.bsp.brightnessAdjust_ = function(color, factor) {
     var scale = 1.0, temp = 0.0;
 
     color[0] *= factor;
@@ -206,7 +197,7 @@ files.q3bsp.brightnessAdjust_ = function(color, factor) {
 };
 
 /** @private*/
-files.q3bsp.brightnessAdjustVertex_ = function(color, factor) {
+files.bsp.brightnessAdjustVertex_ = function(color, factor) {
     var scale = 1.0, temp = 0.0;
 
     color[0] *= factor;
@@ -226,7 +217,7 @@ files.q3bsp.brightnessAdjustVertex_ = function(color, factor) {
 
 // Read all lightmaps
 /** @private*/
-files.q3bsp.readLightmaps_ = function(lump, src) {
+files.bsp.readLightmaps_ = function(lump, src) {
     var lightmapSize = 128 * 128;
     var count = lump.length / (lightmapSize*3);
 
@@ -242,7 +233,6 @@ files.q3bsp.readLightmaps_ = function(lump, src) {
     var yOffset = 0;
 
     var lightmaps = [];
-    var lightmapRects = [];
     var rgb = [ 0, 0, 0 ];
 
     src.seek(lump.offset);
@@ -254,7 +244,7 @@ files.q3bsp.readLightmaps_ = function(lump, src) {
             rgb[1] = src.readUByte();
             rgb[2] = src.readUByte();
 
-            files.q3bsp.brightnessAdjust_(rgb, 4.0);
+            files.bsp.brightnessAdjust_(rgb, 4.0);
 
             elements[j] = rgb[0];
             elements[j+1] = rgb[1];
@@ -262,20 +252,9 @@ files.q3bsp.readLightmaps_ = function(lump, src) {
             elements[j+3] = 255;
         }
 
-        lightmaps.push({
-            x: xOffset, y: yOffset,
-            width: 128, height: 128,
-            bytes: elements
-        });
-
-        lightmapRects.push({
-		x: xOffset,
-		y: yOffset,
-		width: 128,
-		height: 128,
-		textureSize: textureSize,
-		bytes: elements
-            });
+        lightmaps.push(new base.Map.Lightmap(
+	    xOffset, yOffset, 128, 128,
+	    new Uint8Array(elements)));
 
         xOffset += 128;
         if(xOffset >= textureSize) {
@@ -284,11 +263,11 @@ files.q3bsp.readLightmaps_ = function(lump, src) {
         }
     }
 
-    return lightmapRects;
+    return new base.Map.LightmapData(lightmaps, textureSize);
 };
 
 /** @private*/
-files.q3bsp.readVerts_ = function(lump, src) {
+files.bsp.readVerts_ = function(lump, src) {
     var count = lump.length/44;
     var elements = [];
 
@@ -300,7 +279,7 @@ files.q3bsp.readVerts_ = function(lump, src) {
             lmCoord: [ src.readFloat(), src.readFloat() ],
             lmNewCoord: [ 0, 0 ],
             normal: [ src.readFloat(), src.readFloat(), src.readFloat() ],
-            color: files.q3bsp.brightnessAdjustVertex_(files.q3bsp.colorToVec_(src.readULong()), 4.0)
+            color: files.bsp.brightnessAdjustVertex_(files.bsp.colorToVec_(src.readULong()), 4.0)
         });
     }
 
@@ -308,7 +287,7 @@ files.q3bsp.readVerts_ = function(lump, src) {
 };
 
 /** @private*/
-files.q3bsp.readMeshVerts_ = function(lump, src) {
+files.bsp.readMeshVerts_ = function(lump, src) {
     var count = lump.length/4;
     var meshVerts = [];
 
@@ -322,7 +301,7 @@ files.q3bsp.readMeshVerts_ = function(lump, src) {
 
 // Read all face structures
 /** @private*/
-files.q3bsp.readFaces_ = function(lump, src) {
+files.bsp.readFaces_ = function(lump, src) {
     var faceCount = lump.length / 104;
     var faces = [];
 
@@ -355,7 +334,7 @@ files.q3bsp.readFaces_ = function(lump, src) {
 
 // Read all Plane structures
 /** @private*/
-files.q3bsp.readPlanes_ = function(lump, src) {
+files.bsp.readPlanes_ = function(lump, src) {
     var count = lump.length / 16;
     var elements = [];
 
@@ -372,7 +351,7 @@ files.q3bsp.readPlanes_ = function(lump, src) {
 
 // Read all Node structures
 /** @private*/
-files.q3bsp.readNodes_ = function(lump, src) {
+files.bsp.readNodes_ = function(lump, src) {
     var count = lump.length / 36;
     var elements = [];
 
@@ -391,7 +370,7 @@ files.q3bsp.readNodes_ = function(lump, src) {
 
 // Read all Leaf structures
 /** @private*/
-files.q3bsp.readLeaves_ = function(lump, src) {
+files.bsp.readLeaves_ = function(lump, src) {
     var count = lump.length / 48;
     var elements = [];
 
@@ -414,7 +393,7 @@ files.q3bsp.readLeaves_ = function(lump, src) {
 
 // Read all Leaf Faces
 /** @private*/
-files.q3bsp.readLeafFaces_ = function(lump, src) {
+files.bsp.readLeafFaces_ = function(lump, src) {
     var count = lump.length / 4;
     var elements = [];
 
@@ -428,7 +407,7 @@ files.q3bsp.readLeafFaces_ = function(lump, src) {
 
 // Read all Brushes
 /** @private*/
-files.q3bsp.readBrushes_ = function(lump, src) {
+files.bsp.readBrushes_ = function(lump, src) {
     var count = lump.length / 12;
     var elements = [];
 
@@ -446,7 +425,7 @@ files.q3bsp.readBrushes_ = function(lump, src) {
 
 // Read all Leaf Brushes
 /** @private*/
-files.q3bsp.readLeafBrushes_ = function(lump, src) {
+files.bsp.readLeafBrushes_ = function(lump, src) {
     var count = lump.length / 4;
     var elements = [];
 
@@ -460,7 +439,7 @@ files.q3bsp.readLeafBrushes_ = function(lump, src) {
 
 // Read all Brush Sides
 /** @private*/
-files.q3bsp.readBrushSides_ = function(lump, src) {
+files.bsp.readBrushSides_ = function(lump, src) {
     var count = lump.length / 8;
     var elements = [];
 
@@ -477,7 +456,7 @@ files.q3bsp.readBrushSides_ = function(lump, src) {
 
 // Read all Vis Data
 /** @private*/
-files.q3bsp.readVisData_ = function(lump, src) {
+files.bsp.readVisData_ = function(lump, src) {
     src.seek(lump.offset);
     var vecCount = src.readLong();
     var size = src.readLong();
@@ -496,7 +475,7 @@ files.q3bsp.readVisData_ = function(lump, src) {
 };
 
 /** @private*/
-files.q3bsp.readModels_ = function(lump, src) {
+files.bsp.readModels_ = function(lump, src) {
     var count = lump.length / 40;
     var models = new Array(count);
 
@@ -524,7 +503,7 @@ files.q3bsp.readModels_ = function(lump, src) {
 };
 
 /** @private*/
-files.q3bsp.colorToVec_ = function(color) {
+files.bsp.colorToVec_ = function(color) {
     return[
         (color & 0xFF) / 0xFF,
         ((color & 0xFF00) >> 8) / 0xFF,
@@ -539,31 +518,32 @@ files.q3bsp.colorToVec_ = function(color) {
 //
 
 /** @private*/
-files.q3bsp.compileMap_ = function(verts, faces, meshVerts, lightmaps, shaders) {
+files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders) {
 
     // Find associated shaders for all clusters
+    var i, j, k, face, shader, lightmap, vert, texSize;
 
     // Per-face operations
-    for(var i = 0; i < faces.length; ++i) {
-        var face = faces[i];
+    for(i = 0; i < faces.length; ++i) {
+        face = faces[i];
 
         if(face.type==1 || face.type==2 || face.type==3) {
             // Add face to the appropriate texture face list
-            var shader = shaders[face.shader];
+            shader = shaders[face.shader];
             shader.faces.push(face);
-            var lightmap = lightmaps[face.lightmap];
+            lightmap = lightmapData.lightmaps[face.lightmap];
 
             if(!lightmap) {
-                lightmap = lightmaps[0];
+                lightmap = lightmapData.lightmaps[0];
             }
 
             if(face.type==1 || face.type==3) {
                 shader.geomType = face.type;
                 // Transform lightmap coords to match position in combined texture
-                for(var j = 0; j < face.meshVertCount; ++j) {
-                    var vert = verts[face.vertex + meshVerts[face.meshVert + j]];
+                for(j = 0; j < face.meshVertCount; ++j) {
+                    vert = verts[face.vertex + meshVerts[face.meshVert + j]];
 
-		    var texSize = lightmap.textureSize;
+		    texSize = lightmap.textureSize;
                     vert.lmNewCoord[0] = (vert.lmCoord[0] * lightmap.width / texSize)
 			+ lightmap.x / texSize;
                     vert.lmNewCoord[1] = (vert.lmCoord[1] * lightmap.height / texSize)
@@ -571,11 +551,11 @@ files.q3bsp.compileMap_ = function(verts, faces, meshVerts, lightmaps, shaders) 
                 }
             } else {
                 // Build Bezier curve
-                files.q3bsp.tesselate_(face, verts, meshVerts);
-                for(var j = 0; j < face.vertCount; ++j) {
-                    var vert = verts[face.vertex + j];
+                files.bsp.tesselate_(face, verts, meshVerts);
+                for(j = 0; j < face.vertCount; ++j) {
+                    vert = verts[face.vertex + j];
 
-		    var texSize = lightmap.textureSize;
+		    texSize = lightmap.textureSize;
                     vert.lmNewCoord[0] = (vert.lmCoord[0] * lightmap.width / texSize) + lightmap.x / texSize;
                     vert.lmNewCoord[1] = (vert.lmCoord[1] * lightmap.height / texSize) + lightmap.y / texSize;
                 }
@@ -586,8 +566,8 @@ files.q3bsp.compileMap_ = function(verts, faces, meshVerts, lightmaps, shaders) 
     // Compile vert list
     var vertices = [];
     var offset = 0;
-    for(var i = 0; i < verts.length; ++i) {
-        var vert = verts[i];
+    for(i = 0; i < verts.length; ++i) {
+        vert = verts[i];
 
         vertices[offset++] = vert.pos[0];
         vertices[offset++] = vert.pos[1];
@@ -612,59 +592,48 @@ files.q3bsp.compileMap_ = function(verts, faces, meshVerts, lightmaps, shaders) 
     // Compile index list
     var indices = [];
     var meshes = [];
+    var mesh;
 
-    for(var i = 0; i <  shaders.length; ++i) {
-        var shader = shaders[i];
+    for(i = 0; i <  shaders.length; ++i) {
+        shader = shaders[i];
         if(shader.faces.length > 0) {
             shader.indexOffset = indices.length * 2; // Offset is in bytes
 
-            for(var j = 0; j < shader.faces.length; ++j) {
-                var face = shader.faces[j];
+            for(j = 0; j < shader.faces.length; ++j) {
+                face = shader.faces[j];
                 face.indexOffset = indices.length * 2;
-                for(var k = 0; k < face.meshVertCount; ++k) {
+                for(k = 0; k < face.meshVertCount; ++k) {
                     indices.push(face.vertex + meshVerts[face.meshVert + k]);
                 }
                 shader.elementCount += face.meshVertCount;
 
             }
-
-	    var mesh = {
-		lightningType: LightningType.LIGHT_MAP,
-		elementsArrayId: -1,
-		elementsOffset: shader.indexOffset,
-		elementsCount: shader.elementCount,
-		frames: [{arrayBufferId: -1}],
-		materials: [{shaderName: shader.shaderName, defaultTexture: null}]
-	    };
-
-	    meshes.push(mesh);
-
         }
 //        shader.faces = null; // Don't need to send this to the render thread.
     }
 
+    var geometryData = new base.GeometryData(new Uint16Array(indices),
+					     [new Float32Array(vertices)]);
 
-    var model = {
-	id: -1,
-	meshes: meshes,
-	framesCount: 1,
-	skinsIndices: {
-	    '__default__': 0
-	},
-	skinsCount: 1
-    };
+    for (i = 0; i < shaders.length; ++i) {
+	shader = shaders[i];
+	if (shader.faces.length > 0) {
+	    mesh = new base.Mesh(geometryData, shader.indexOffset,
+				 shader.elementCount, [new base.Material(shader.shaderName)]);
+	    meshes.push(mesh);
+	}
+    }
 
-    return {
-	vertices: vertices,
-	indices: indices,
-	model: model
-    };
+    var model = new base.Model(meshes, 1, []);
 
+    return new base.Map([model],
+			lightmapData,
+			geometryData);
 };
 
 
 /** @private*/
-files.q3bsp.buildModels_ = function(leaves, leafFaces, faces, verts, meshVerts, models) {
+files.bsp.buildModels_ = function(leaves, leafFaces, faces, verts, meshVerts, models) {
     var i;
 
     for (i = 0; i < leaves.length; ++i) {
@@ -680,44 +649,45 @@ files.q3bsp.buildModels_ = function(leaves, leafFaces, faces, verts, meshVerts, 
 //
 
 /** @private*/
-files.q3bsp.getCurvePoint3_ = function(c0, c1, c2, dist) {
+files.bsp.getCurvePoint3_ = function(c0, c1, c2, dist) {
     var b = 1.0 - dist;
 
-    return vec3.add(
-        vec3.add(
-            vec3.scale(c0, (b*b), [0, 0, 0]),
-            vec3.scale(c1, (2*b*dist), [0, 0, 0])
+    return base.vec3.add(
+        base.vec3.add(
+            base.vec3.scale(c0, (b*b), [0, 0, 0]),
+            base.vec3.scale(c1, (2*b*dist), [0, 0, 0])
         ),
-        vec3.scale(c2, (dist*dist), [0, 0, 0])
+        base.vec3.scale(c2, (dist*dist), [0, 0, 0])
     );
 };
 
 // This is kinda ugly. Clean it up at some point?
 /** @private*/
-files.q3bsp.getCurvePoint2_ = function(c0, c1, c2, dist) {
+files.bsp.getCurvePoint2_ = function(c0, c1, c2, dist) {
     var b = 1.0 - dist;
 
-    c30 = [c0[0], c0[1], 0];
-    c31 = [c1[0], c1[1], 0];
-    c32 = [c2[0], c2[1], 0];
+    var c30 = [c0[0], c0[1], 0];
+    var c31 = [c1[0], c1[1], 0];
+    var c32 = [c2[0], c2[1], 0];
 
-    var res = vec3.add(
-        vec3.add(
-            vec3.scale(c30, (b*b), [0, 0, 0]),
-            vec3.scale(c31, (2*b*dist), [0, 0, 0])
+    var res = base.vec3.add(
+        base.vec3.add(
+            base.vec3.scale(c30, (b*b), [0, 0, 0]),
+            base.vec3.scale(c31, (2*b*dist), [0, 0, 0])
         ),
-        vec3.scale(c32, (dist*dist), [0, 0, 0])
+        base.vec3.scale(c32, (dist*dist), [0, 0, 0])
     );
 
     return [res[0], res[1]];
 };
 
 /** @private*/
-files.q3bsp.tesselate_ = function(face, verts, meshVerts) {
+files.bsp.tesselate_ = function(face, verts, meshVerts) {
+    var i, j, py, px;
     var off = face.vertex;
     var count = face.vertCount;
 
-    var level = files.q3bsp.TESSELATION_LEVEL;
+    var level = files.bsp.TESSELATION_LEVEL;
 
     var L1 = level + 1;
 
@@ -727,8 +697,8 @@ files.q3bsp.tesselate_ = function(face, verts, meshVerts) {
     face.vertCount = 0;
     face.meshVertCount = 0;
 
-    for(var py = 0; py < face.size[1]-2; py += 2) {
-        for(var px = 0; px < face.size[0]-2; px += 2) {
+    for(py = 0; py < face.size[1]-2; py += 2) {
+        for(px = 0; px < face.size[0]-2; px += 2) {
 
             var rowOff = (py*face.size[0]);
 
@@ -743,13 +713,13 @@ files.q3bsp.tesselate_ = function(face, verts, meshVerts) {
             face.vertCount += L1 * L1;
 
             // Tesselate!
-            for(var i = 0; i < L1; ++i) {
+            for(i = 0; i < L1; ++i) {
                 var a = i / level;
 
-                var pos = files.q3bsp.getCurvePoint3_(c0.pos, c3.pos, c6.pos, a);
-                var lmCoord = files.q3bsp.getCurvePoint2_(c0.lmCoord, c3.lmCoord, c6.lmCoord, a);
-                var texCoord = files.q3bsp.getCurvePoint2_(c0.texCoord, c3.texCoord, c6.texCoord, a);
-                var color = files.q3bsp.getCurvePoint3_(c0.color, c3.color, c6.color, a);
+                var pos = files.bsp.getCurvePoint3_(c0.pos, c3.pos, c6.pos, a);
+                var lmCoord = files.bsp.getCurvePoint2_(c0.lmCoord, c3.lmCoord, c6.lmCoord, a);
+                var texCoord = files.bsp.getCurvePoint2_(c0.texCoord, c3.texCoord, c6.texCoord, a);
+                var color = files.bsp.getCurvePoint3_(c0.color, c3.color, c6.color, a);
 
                 var vert = {
                     pos: pos,
@@ -763,35 +733,35 @@ files.q3bsp.tesselate_ = function(face, verts, meshVerts) {
                 verts.push(vert);
             }
 
-            for(var i = 1; i < L1; i++) {
-                var a = i / level;
+            for(i = 1; i < L1; i++) {
+                a = i / level;
 
-                var pc0 = files.q3bsp.getCurvePoint3_(c0.pos, c1.pos, c2.pos, a);
-                var pc1 = files.q3bsp.getCurvePoint3_(c3.pos, c4.pos, c5.pos, a);
-                var pc2 = files.q3bsp.getCurvePoint3_(c6.pos, c7.pos, c8.pos, a);
+                var pc0 = files.bsp.getCurvePoint3_(c0.pos, c1.pos, c2.pos, a);
+                var pc1 = files.bsp.getCurvePoint3_(c3.pos, c4.pos, c5.pos, a);
+                var pc2 = files.bsp.getCurvePoint3_(c6.pos, c7.pos, c8.pos, a);
 
-                var tc0 = files.q3bsp.getCurvePoint3_(c0.texCoord, c1.texCoord, c2.texCoord, a);
-                var tc1 = files.q3bsp.getCurvePoint3_(c3.texCoord, c4.texCoord, c5.texCoord, a);
-                var tc2 = files.q3bsp.getCurvePoint3_(c6.texCoord, c7.texCoord, c8.texCoord, a);
+                var tc0 = files.bsp.getCurvePoint3_(c0.texCoord, c1.texCoord, c2.texCoord, a);
+                var tc1 = files.bsp.getCurvePoint3_(c3.texCoord, c4.texCoord, c5.texCoord, a);
+                var tc2 = files.bsp.getCurvePoint3_(c6.texCoord, c7.texCoord, c8.texCoord, a);
 
-                var lc0 = files.q3bsp.getCurvePoint3_(c0.lmCoord, c1.lmCoord, c2.lmCoord, a);
-                var lc1 = files.q3bsp.getCurvePoint3_(c3.lmCoord, c4.lmCoord, c5.lmCoord, a);
-                var lc2 = files.q3bsp.getCurvePoint3_(c6.lmCoord, c7.lmCoord, c8.lmCoord, a);
+                var lc0 = files.bsp.getCurvePoint3_(c0.lmCoord, c1.lmCoord, c2.lmCoord, a);
+                var lc1 = files.bsp.getCurvePoint3_(c3.lmCoord, c4.lmCoord, c5.lmCoord, a);
+                var lc2 = files.bsp.getCurvePoint3_(c6.lmCoord, c7.lmCoord, c8.lmCoord, a);
 
-                var cc0 = files.q3bsp.getCurvePoint3_(c0.color, c1.color, c2.color, a);
-                var cc1 = files.q3bsp.getCurvePoint3_(c3.color, c4.color, c5.color, a);
-                var cc2 = files.q3bsp.getCurvePoint3_(c6.color, c7.color, c8.color, a);
+                var cc0 = files.bsp.getCurvePoint3_(c0.color, c1.color, c2.color, a);
+                var cc1 = files.bsp.getCurvePoint3_(c3.color, c4.color, c5.color, a);
+                var cc2 = files.bsp.getCurvePoint3_(c6.color, c7.color, c8.color, a);
 
-                for(var j = 0; j < L1; j++)
+                for(j = 0; j < L1; j++)
                 {
                     var b = j / level;
 
-                    var pos = files.q3bsp.getCurvePoint3_(pc0, pc1, pc2, b);
-                    var texCoord = files.q3bsp.getCurvePoint2_(tc0, tc1, tc2, b);
-                    var lmCoord = files.q3bsp.getCurvePoint2_(lc0, lc1, lc2, b);
-                    var color = files.q3bsp.getCurvePoint3_(cc0, cc1, cc2, a);
+                    pos = files.bsp.getCurvePoint3_(pc0, pc1, pc2, b);
+                    texCoord = files.bsp.getCurvePoint2_(tc0, tc1, tc2, b);
+                    lmCoord = files.bsp.getCurvePoint2_(lc0, lc1, lc2, b);
+                    color = files.bsp.getCurvePoint3_(cc0, cc1, cc2, a);
 
-                    var vert = {
+                    vert = {
                         pos: pos,
                         texCoord: texCoord,
                         lmCoord: lmCoord,
@@ -821,3 +791,4 @@ files.q3bsp.tesselate_ = function(face, verts, meshVerts) {
         }
     }
 };
+
