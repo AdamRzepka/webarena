@@ -63,9 +63,9 @@ base.Model = function (meshes, framesCount, framesData, tags, skins) {
     this.framesCount = framesCount;
     /**
      * @const
-     * @type {Array<base.Model.Frame>}
+     * @type {Array<base.Model.FrameData>}
      */
-    this.framesData_ = {};
+    this.framesData = framesData;
     /**
      * @const
      * @type {Array.<string>}
@@ -75,7 +75,7 @@ base.Model = function (meshes, framesCount, framesData, tags, skins) {
      * One model can be displayed with different materials, when they have .skin
      * files specified.
      * @const
-     * @type {Array<string>}
+     * @type {Array.<string>}
      */
     this.skins = (skins && skins[0]) ? skins : ['__default__'];  // If skins are not defined explicitly, we create default skin
 
