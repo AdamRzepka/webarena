@@ -1,24 +1,91 @@
+/**
+ * @license
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 'use strict';
 
 goog.require('goog.debug.Logger');
-goog.require('zip.js');
+goog.require('files.zipjs');
 
-goog.provide('resources');
+goog.provide('files.ResourceManager');
 
-resources.ResourceManager = function() {
-    this.basedir = 'resources/';
+/**
+ * @constructor
+ * Resource manager downloads, unpacks and holds game resources.
+ * In future it will also hadle caching in local storage.
+ */
+files.ResourceManager = function() {
+    /**
+     * @public
+     * @type {string}
+     */
+    this.basedir = 'files/';
+    /**
+     * @private
+     * @type {Object.<string, string>}
+     * Blob urls to texture image
+     */
     this.textures = {};
+    /**
+     * @private
+     * @type {Object.<string, string>}
+     */
     this.scripts = {};
+    /**
+     * @private
+     * @type {Object.<string, ArrayBuffer>}
+     */
     this.models = {};
+    /**
+     * @private
+     * @type {Object.<string, string>}
+     */
     this.configFiles = {};
+    /**
+     * @private
+     * @type {ArrayBuffer}
+     */
     this.map = null;
 
+    /**
+     * @private
+     */
     this.zipsToLoad = 0;
+    /**
+     * @private
+     */
     this.filesToLoad = 0;
+    /**
+     * @private
+     */
     this.loadedCallback = null;
 };
 
-resources.ResourceManager.prototype.load = function (archives, callback) {
+/**
+ * @private
+ */
+files.ResourceManager.prototype.logger = goog.debug.Logger.getLogger('files.ResourceManager');
+
+/**
+ * @public
+ * @param {Array.<string>} archives
+ * @param {function()} callback
+ */
+files.ResourceManager.prototype.load = function (archives, callback) {
     var i;
     this.zipsToLoad = archives.length;
     this.filesToLoad = 0;
@@ -27,7 +94,12 @@ resources.ResourceManager.prototype.load = function (archives, callback) {
 	this.loadArchive(archives[i]);
 };
 
-resources.ResourceManager.prototype.getTexture = function (path) {
+/**
+ * @public
+ * @param {string} path
+ * @return {string} Blob url to texture image
+ */
+files.ResourceManager.prototype.getTexture = function (path) {
     var texture = this.textures[path];
     if (texture === undefined)
         throw 'Texture ' + path + ' not loaded.';
@@ -35,49 +107,107 @@ resources.ResourceManager.prototype.getTexture = function (path) {
         return texture;
 };
 
-resources.ResourceManager.prototype.getModel = function (path) {
+/**
+ * @public
+ * @return {Array.<string>}
+ */
+files.ResourceManager.prototype.getTextures = function () {
+    return this.textures;
+};
+
+/**
+ * @public
+ * @param {string} path
+ * @return {ArrayBuffer}
+ */
+files.ResourceManager.prototype.getModel = function (path) {
     var model = this.models[path];
-    if (model === undefined)
-        throw 'Model ' + path + ' not loaded.';
-    else
+    if (model === undefined) {
+	this.logger.log(goog.debug.Logger.Level.Severe,
+			'Model ' + path + ' not loaded.');
+	return null;
+    }
+    else {
         return model;
+    }
 };
 
-resources.ResourceManager.prototype.getScript = function (path) {
+/**
+ * @public
+ * @param {string} path
+ * @return {string}
+ */
+files.ResourceManager.prototype.getScript = function (path) {
     var script = this.scripts[path];
-    if (script === undefined)
-        throw 'Script ' + path + ' not loaded.';
-    else
+    if (script === undefined) {
+	this.logger.log(goog.debug.Logger.Level.Severe,
+			'Script ' + path + ' not loaded.');
+	return null;
+    }
+    else {
         return script;
+    }
 };
 
-resources.ResourceManager.prototype.getConfigFile = function (path) {
+/**
+ * @public
+ * @return {Array.<string>}
+ */
+files.ResourceManager.prototype.getScripts = function () {
+    return this.scripts;
+};
+
+/**
+ * @public
+ * @param {string} path
+ * @return {string}
+ */
+files.ResourceManager.prototype.getConfigFile = function (path) {
     var file = this.configFiles[path];
-    if (file === undefined)
-        throw 'File ' + path + ' not loaded.';
+    if (file === undefined) {
+	this.logger.log(goog.debug.Logger.Level.Severe,
+			'File ' + path + ' not loaded.');
+	return null;
+    }
     else
         return file;
 };
 
-resources.ResourceManager.prototype.getMap = function () {
-    if (this.map === null)
-        throw 'Map not loaded.';
+/**
+ * @public
+ * @return {ArrayBuffer}
+ */
+files.ResourceManager.prototype.getMap = function () {
+    if (this.map === null){
+	this.logger.log(goog.debug.Logger.Level.Severe,
+		'Map not loaded.');
+	return null;
+    }
     else
         return this.map;
 };
 
-resources.ResourceManager.prototype.releaseAll = function () {
+/**
+ * @public
+ */
+files.ResourceManager.prototype.releaseAll = function () {
     // TODO
 };
 
 
-resources.ResourceManager.prototype.reportLoadedFile = function () {
+/**
+ * @private
+ */
+files.ResourceManager.prototype.reportLoadedFile = function () {
     this.filesToLoad--;
     if (this.filesToLoad === 0 && this.zipsToLoad === 0)
 	this.loadedCallback();
 };
 
-resources.ResourceManager.prototype.loadArchive = function (archive) {
+/**
+ * @private
+ */
+files.ResourceManager.prototype.loadArchive = function (archive) {
     var self = this;
     zip.createReader(new zip.HttpReader(this.basedir + archive + '.zip'),
 		     function (reader) {
@@ -92,7 +222,10 @@ resources.ResourceManager.prototype.loadArchive = function (archive) {
 		     });
 };
 
-resources.ResourceManager.prototype.loadEntry = function (entry) {
+/**
+ * @private
+ */
+files.ResourceManager.prototype.loadEntry = function (entry) {
     var self = this;
     var filename = entry.filename;
     var ext = filename.slice(filename.lastIndexOf('.') + 1);

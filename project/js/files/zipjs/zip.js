@@ -26,7 +26,7 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-goog.provide('zip.js');
+goog.provide('files.zipjs');
 
 (function(obj) {
 
