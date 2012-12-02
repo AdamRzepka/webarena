@@ -263,23 +263,6 @@ base.Mesh = function(geometry, indicesOffset, indicesCount, materials) {
 };
 
 /**
- * Base class for material, containing only material name. Material class corresponds
- * to shader strings found in bsp and md3, which in fact can reffer either to
- * explicit shader declaration or to ordinary texture (with default shader). Material
- * unifies this concept.
- * @constructor
- * @param {string} name Material name as found in md3/bsp/skin file, without
- * trailing zeros
- */
-base.Material = function (name) {
-    /**
-     * @const
-     * @type {string}
-     */
-    this.name = name;
-};
-
-/**
  * Buffer for raw geometry data.
  * @constructor
  * @param {Uint16Array} indices Index array

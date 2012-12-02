@@ -29,101 +29,57 @@
 
 "use strict";
 
-goog.provide('q3ShaderLoader');
-
-//
-// Shader Tokenizer
-//
-function ShaderTokenizer(src) {
-    // Strip out comments
-    src = src.replace(/\/\/.*$/mg, ''); // C++ style (//...)
-    src = src.replace(/\/\*[^*\/]*\*\//mg, ''); // C style (/*...*/) (Do the shaders even use these?)
-    this.tokens = src.match(/[^\s\n\r\"]+/mg);
-
-    this.offset = 0;
-}
-
-ShaderTokenizer.prototype.EOF = function() {
-    if(this.tokens === null) { return true; }
-    var token = this.tokens[this.offset];
-    while(token === '' && this.offset < this.tokens.length) {
-        this.offset++;
-        token = this.tokens[this.offset];
-    }
-    return this.offset >= this.tokens.length;
-};
-
-ShaderTokenizer.prototype.next = function() {
-    if(this.tokens === null) { return null; }
-    var token = '';
-    while(token === '' && this.offset < this.tokens.length) {
-        token = this.tokens[this.offset++];
-    }
-    return token;
-};
-
-ShaderTokenizer.prototype.prev = function() {
-    if(this.tokens === null) { return null; }
-    var token = '';
-    while(token === '' && this.offset >= 0) {
-        token = this.tokens[this.offset--];
-    }
-    return token;
-};
+goog.require('base.ShaderScript');
+goog.provide('files.ShaderScriptLoader');
 
 //
 // Shader Loading
 //
 
-var Q3ShaderLoader = { shaders: {} };
+var ShaderScriptLoader = {
+    /** @type Object.<string, Material> */
+    shadersMap: {}
+};
 
-Q3ShaderLoader.loadAll = function(rm, onload) {
+/**
+ * @param {files.ResourceManager} rm
+ */
+ShaderScriptLoader.loadAll = function(rm) {
     var shaderFile;
-    // for(i = 0; i < sources.length; ++i) {
-    //     Q3ShaderLoader.load(sources[i], onload);
-    // }
+
     for (shaderFile in rm.scripts) {
 	if (rm.scripts.hasOwnProperty(shaderFile)) {
-	    Q3ShaderLoader.load(shaderFile, rm.getScript(shaderFile), onload);
+	    ShaderScriptLoader.load(shaderFile, rm.getScript(shaderFile));
 	}
     }
 };
 
-Q3ShaderLoader.load = function(url, shaderFile, onload) {
-    Q3ShaderLoader.parse(url, shaderFile, onload);
-};
-
-Q3ShaderLoader.parse = function(url, src, onload) {
-    var shaders = Q3ShaderLoader.shaders,
+/**
+ * @private
+ */
+ShaderScriptLoader.load = function(url, src) {
+    var shadersMap = ShaderScriptLoader.shadersMap,
+	shaders = [],
 	shader,
-	tokens = new ShaderTokenizer(src),
+	tokens = new files.ShaderScriptLoader.Tokenizer(src),
 	name,
 	i;
 
     // Parse a shader
     while(!tokens.EOF()) {
         name = tokens.next();
-        shader = Q3ShaderLoader.parseShader(name, tokens);
+        shader = ShaderScriptLoader.parseShader(name, tokens);
         if(shader) {
-            shader.url = url;
-
-            if(shader.stages) {
-                for(i = 0; i < shader.stages.length; ++i) {
-                    // Build a WebGL shader program out of the stage parameters set here
-                    shader.stages[i].shaderSrc = Q3ShaderLoader.buildShaderSource(shader, shader.stages[i]);
-                }
-            }
+//            shader.url = url;
+            shadersMap[name] = shader;
         }
-        shaders[name] = shader;
-    }
-
-    // Send shaders to gl Thread
-    if (onload) {
-	onload(shaders);
     }
 };
 
-Q3ShaderLoader.parseShader = function(name, tokens) {
+/**
+ * @private
+ */
+ShaderScriptLoader.parseShader = function(name, tokens) {
     var brace = tokens.next(),
 	shader;
     if(brace !== '{') {
@@ -131,8 +87,9 @@ Q3ShaderLoader.parseShader = function(name, tokens) {
     }
 
     shader = {
-        name: name,
-        cull: 'back',
+	name: name,
+	isDefault: false,
+        cull: goog.webgl.BACK,
         sky: false,
         blend: false,
         opaque: false,
@@ -148,21 +105,21 @@ Q3ShaderLoader.parseShader = function(name, tokens) {
 
         switch (token) {
             case '{': {
-                var stage = Q3ShaderLoader.parseStage(tokens);
+                var stage = ShaderScriptLoader.parseStage(shader, tokens);
 
-                // I really really really don't like doing Q3ShaderLoader, which basically just forces lightmaps to use the 'filter' blendmode
-                // but if I don't a lot of textures end up looking too bright. I'm sure I'm jsut missing something, and Q3ShaderLoader shouldn't
+                // I really really really don't like doing ShaderScriptLoader, which basically just forces lightmaps to use the 'filter' blendmode
+                // but if I don't a lot of textures end up looking too bright. I'm sure I'm jsut missing something, and ShaderScriptLoader shouldn't
                 // be needed.
                 if(stage.isLightmap && (stage.hasBlendFunc)) {
-                    stage.blendSrc = 'GL_DST_COLOR';
-                    stage.blendDest = 'GL_ZERO';
+                    stage.blendSrc = goog.webgl.DST_COLOR;
+                    stage.blendDest = goog.webgl.ZERO;
                 }
 
                 // I'm having a ton of trouble getting lightingSpecular to work properly,
-                // so Q3ShaderLoader little hack gets it looking right till I can figure out the problem
+                // so ShaderScriptLoader little hack gets it looking right till I can figure out the problem
                 if(stage.alphaGen == 'lightingspecular') {
-                    stage.blendSrc = 'GL_ONE';
-                    stage.blendDest = 'GL_ZERO';
+                    stage.blendSrc = goog.webgl.ONE;
+                    stage.blendDest = goog.webgl.ZERO;
                     stage.hasBlendFunc = false;
                     stage.depthWrite = true;
                     shader.stages = [];
@@ -185,7 +142,7 @@ Q3ShaderLoader.parseShader = function(name, tokens) {
                 switch(deform.type) {
                     case 'wave':
                         deform.spread = 1.0 / parseFloat(tokens.next());
-                        deform.waveform = Q3ShaderLoader.parseWaveform(tokens);
+                        deform.waveform = ShaderScriptLoader.parseWaveform(tokens);
                         break;
                     default: deform = null; break;
                 }
@@ -226,10 +183,13 @@ Q3ShaderLoader.parseShader = function(name, tokens) {
         shader.sort = (shader.opaque ? 3 : 9);
     }
 
-    return shader;
+    return /**@type {base.ShaderScript}*/(shader);
 };
 
-Q3ShaderLoader.parseStage = function(tokens) {
+/**
+ * @private
+ */
+ShaderScriptLoader.parseStage = function(shader, tokens) {
     var stage = {
         map: null,
         clamp: false,
@@ -239,14 +199,16 @@ Q3ShaderLoader.parseStage = function(tokens) {
         alphaGen: '1.0',
         alphaFunc: null,
         alphaWaveform: null,
-        blendSrc: 'GL_ONE',
-        blendDest: 'GL_ZERO',
+        blendSrc: goog.webgl.ONE,
+        blendDest: goog.webgl.ZERO,
         hasBlendFunc: false,
         tcMods: [],
         animMaps: [],
         animFreq: 0,
         depthFunc: 'lequal',
-        depthWrite: true
+        depthWrite: true,
+	isLightmap: false,
+	shaderSrc: null
     };
 
     // Parse a shader
@@ -276,7 +238,7 @@ Q3ShaderLoader.parseStage = function(tokens) {
                 stage.rgbGen = tokens.next().toLowerCase();;
                 switch(stage.rgbGen) {
                     case 'wave':
-                        stage.rgbWaveform = Q3ShaderLoader.parseWaveform(tokens);
+                        stage.rgbWaveform = ShaderScriptLoader.parseWaveform(tokens);
                         if(!stage.rgbWaveform) { stage.rgbGen = 'identity'; }
                         break;
                 };
@@ -286,7 +248,7 @@ Q3ShaderLoader.parseStage = function(tokens) {
                 stage.alphaGen = tokens.next().toLowerCase();
                 switch(stage.alphaGen) {
                     case 'wave':
-                        stage.alphaWaveform = Q3ShaderLoader.parseWaveform(tokens);
+                        stage.alphaWaveform = ShaderScriptLoader.parseWaveform(tokens);
                         if(!stage.alphaWaveform) { stage.alphaGen = '1.0'; }
                         break;
                     default: break;
@@ -351,7 +313,7 @@ Q3ShaderLoader.parseStage = function(tokens) {
                         tcMod.tSpeed = parseFloat(tokens.next());
                         break;
                     case 'stretch':
-                        tcMod.waveform = Q3ShaderLoader.parseWaveform(tokens);
+                        tcMod.waveform = ShaderScriptLoader.parseWaveform(tokens);
                         if(!tcMod.waveform) { tcMod.type = null; }
                         break;
                     case 'turb':
@@ -381,11 +343,15 @@ Q3ShaderLoader.parseStage = function(tokens) {
     }
 
     stage.isLightmap = stage.map == '$lightmap';
+    stage.shaderSrc = ShaderScriptLoader.buildShaderSource(shader, stage);
 
-    return stage;
+    return /**@type {base.ShaderScriptStage}*/(stage);
 };
 
-Q3ShaderLoader.parseWaveform = function(tokens) {
+/**
+ * @private
+ */
+ShaderScriptLoader.parseWaveform = function(tokens) {
     return {
         funcName: tokens.next().toLowerCase(),
         base: parseFloat(tokens.next()),
@@ -399,18 +365,24 @@ Q3ShaderLoader.parseWaveform = function(tokens) {
 // WebGL Shader creation
 //
 
-// Q3ShaderLoader whole section is a bit ugly, but it gets the job done. The job, in Q3ShaderLoader case, is translating
+// ShaderScriptLoader whole section is a bit ugly, but it gets the job done. The job, in ShaderScriptLoader case, is translating
 // Quake 3 shaders into GLSL shader programs. We should probably be doing a bit more normalization here.
 
-Q3ShaderLoader.buildShaderSource = function(shader, stage) {
+/**
+ * @private
+ */
+ShaderScriptLoader.buildShaderSource = function(shader, stage) {
     return {
-        vertex: Q3ShaderLoader.buildVertexShader(shader, stage),
-        fragment: Q3ShaderLoader.buildFragmentShader(shader, stage)
+        vertex: ShaderScriptLoader.buildVertexShader(shader, stage),
+        fragment: ShaderScriptLoader.buildFragmentShader(shader, stage)
     };
 };
 
-Q3ShaderLoader.buildVertexShader = function(stageShader, stage) {
-    var shader = new ShaderBuilder();
+/**
+ * @private
+ */
+ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
+    var shader = new files.ShaderBuilder();
     var i;
 
     shader.addAttribs({
@@ -540,8 +512,11 @@ Q3ShaderLoader.buildVertexShader = function(stageShader, stage) {
 
 };
 
-Q3ShaderLoader.buildFragmentShader = function(stageShader, stage) {
-    var shader = new ShaderBuilder();
+/**
+ * @private
+ */
+ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
+    var shader = new files.ShaderBuilder();
 
     shader.addVaryings({
         vTexCoord: 'vec2',
@@ -573,7 +548,7 @@ Q3ShaderLoader.buildFragmentShader = function(stageShader, stage) {
             shader.addWaveform('alpha', stage.alphaWaveform);
             break;
         case 'lightingspecular':
-            // For now Q3ShaderLoader is VERY special cased. May not work well with all instances of lightingSpecular
+            // For now ShaderScriptLoader is VERY special cased. May not work well with all instances of lightingSpecular
             shader.addUniforms({
                 lightmap: 'sampler2D'
             });
@@ -584,7 +559,7 @@ Q3ShaderLoader.buildFragmentShader = function(stageShader, stage) {
             shader.addLines([
                 'vec4 light = texture2D(lightmap, vLightCoord.st);',
                 'rgb *= light.rgb;',
-                'rgb += light.rgb * texColor.a * 0.6;', // Q3ShaderLoader was giving me problems, so I'm ignorning an actual specular calculation for now
+                'rgb += light.rgb * texColor.a * 0.6;', // ShaderScriptLoader was giving me problems, so I'm ignorning an actual specular calculation for now
                 'float alpha = 1.0;'
             ]);
             break;
@@ -620,11 +595,68 @@ Q3ShaderLoader.buildFragmentShader = function(stageShader, stage) {
     return shader.getSource();
 };
 
+
+//
+// Shader Tokenizer
+//
+/**
+ * @private
+ */
+files.ShaderScriptTokenizer = function (src) {
+    // Strip out comments
+    src = src.replace(/\/\/.*$/mg, ''); // C++ style (//...)
+    src = src.replace(/\/\*[^*\/]*\*\//mg, ''); // C style (/*...*/) (Do the shaders even use these?)
+    this.tokens = src.match(/[^\s\n\r\"]+/mg);
+
+    this.offset = 0;
+};
+
+/**
+ * @private
+ */
+files.ShaderScriptTokenizer.prototype.EOF = function() {
+    if(this.tokens === null) { return true; }
+    var token = this.tokens[this.offset];
+    while(token === '' && this.offset < this.tokens.length) {
+        this.offset++;
+        token = this.tokens[this.offset];
+    }
+    return this.offset >= this.tokens.length;
+};
+
+/**
+ * @private
+ */
+files.ShaderScriptTokenizer.prototype.next = function() {
+    if(this.tokens === null) { return null; }
+    var token = '';
+    while(token === '' && this.offset < this.tokens.length) {
+        token = this.tokens[this.offset++];
+    }
+    return token;
+};
+
+/**
+ * @private
+ */
+files.ShaderScriptTokenizer.prototype.prev = function() {
+    if(this.tokens === null) { return null; }
+    var token = '';
+    while(token === '' && this.offset >= 0) {
+        token = this.tokens[this.offset--];
+    }
+    return token;
+};
+
+
 //
 // WebGL Shader builder utility
 //
 
-function ShaderBuilder() {
+/**
+ * @private
+ */
+files.ShaderBuilder = function () {
     this.attrib = {};
     this.varying = {};
     this.uniform = {};
@@ -634,35 +666,50 @@ function ShaderBuilder() {
     this.statements = [];
 };
 
-ShaderBuilder.prototype.addAttribs = function(attribs) {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.addAttribs = function(attribs) {
     for (var name in attribs) {
         this.attrib[name] = 'attribute ' + attribs[name] + ' ' + name + ';';
     }
 };
 
-ShaderBuilder.prototype.addVaryings = function(varyings) {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.addVaryings = function(varyings) {
     for (var name in varyings) {
         this.varying[name] = 'varying ' + varyings[name] + ' ' + name + ';';
     }
 };
 
-ShaderBuilder.prototype.addUniforms = function(uniforms) {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.addUniforms = function(uniforms) {
     for (var name in uniforms) {
         this.uniform[name] = 'uniform ' + uniforms[name] + ' ' + name + ';';
     }
 };
 
-ShaderBuilder.prototype.addFunction = function(name, lines) {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.addFunction = function(name, lines) {
     this.functions[name] = lines.join('\n');
 };
 
-ShaderBuilder.prototype.addLines = function(statements) {
+files.ShaderBuilder.prototype.addLines = function(statements) {
     for(var i = 0; i < statements.length; ++i) {
         this.statements.push(statements[i]);
     }
 };
 
-ShaderBuilder.prototype.getSource = function() {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.getSource = function() {
     var src = '\
 #ifdef GL_ES \n\
 precision highp float; \n\
@@ -693,8 +740,10 @@ precision highp float; \n\
 };
 
 // q3-centric functions
-
-ShaderBuilder.prototype.addWaveform = function(name, wf, timeVar) {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.addWaveform = function(name, wf, timeVar) {
     if(!wf) {
         this.statements.push('float ' + name + ' = 0.0;');
         return;
@@ -722,7 +771,10 @@ ShaderBuilder.prototype.addWaveform = function(name, wf, timeVar) {
     this.statements.push('float ' + name + ' = ' + wf.base.toFixed(4) + ' + ' + funcName + '(' + wf.phase + ' + ' + timeVar + ' * ' + wf.freq.toFixed(4) + ') * ' + wf.amp.toFixed(4) + ';');
 };
 
-ShaderBuilder.prototype.addSquareFunc = function() {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.addSquareFunc = function() {
     this.addFunction('square', [
         'float square(float val) {',
         '   return (mod(floor(val*2.0)+1.0, 2.0) * 2.0) - 1.0;',
@@ -730,7 +782,10 @@ ShaderBuilder.prototype.addSquareFunc = function() {
     ]);
 };
 
-ShaderBuilder.prototype.addTriangleFunc = function() {
+/**
+ * @private
+ */
+files.ShaderBuilder.prototype.addTriangleFunc = function() {
     this.addFunction('triangle', [
         'float triangle(float val) {',
         '   return abs(2.0 * fract(val) - 1.0);',
