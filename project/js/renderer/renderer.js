@@ -1,91 +1,122 @@
+/**
+ * @license
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 'use strict';
 
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.Logger.Level');
 
-//goog.require('resources');
-goog.require('gl-matrix');
-goog.require('q3ShaderLoader');
-goog.require('q3GlShader');
-goog.provide('renderer');
-goog.require('common');
+goog.require('base');
+goog.require('base.Mat4');
+goog.require('base.Vec3');
+goog.require('renderer.Mesh');
+goog.require('renderer.Material');
+goog.require('renderer.MaterialManager');
+
+goog.provide('renderer.Renderer');
 
 /**
  * @constructor
  * @param {WebGLRenderingContext} gl
- * @param {resources.ResourceManager} resourcemanager
  */
-renderer.Renderer = function(gl, resourceManager) {
+renderer.Renderer = function(gl) {
 
     /**
+     * @private
      * @type {WebGLRenderingContext}
      */
-    this.gl = gl;
-    /**
-     * @type {resources.ResourceManager}
-     */
-    this.resourceManager = resourceManager;
+    this.gl_ = gl;
 
     /**
+     * @private
      * @type {Array.<WebGLBuffer>}
      */
-    this.arrayBuffers = [];
+    this.vertexBuffers_ = [];
+
     /**
+     * @private
      * @type {Array.<WebGLBuffer>}
      */
-    this.elementArrayBuffers = [];
+    this.indexBuffers_ = [];
 
     /**
-     * @type {?}
+     * @private
+     * @type {Array.<base.Model>}
      */
-    this.lightmap = null;
+    this.models_ = [];
 
     /**
-     * @type {Array.<Model>}
+     * @private
+     * @type {Array.<base.ModelInstance>}
      */
-    this.models = [];
+    this.modelInstances_ = [];
 
     /**
-     * @type {Array.<ModelInstance>}
+     * @private
+     * @type {Array.<renderer.Mesh>}
      */
-    this.modelsInstances = [];
+    this.meshes_ = [];
 
     /**
-     * @type {Array.<Mesh>}
-     */
-    this.meshes = [];
-
-    /**
-     * @type {Array.<MeshInstance>}
+     * @private
+     * @type {Array.<renderer.MeshInstance>}
      * Mesh instances sorted by shader and model
      */
-    this.meshesInstances = [];
+    this.meshInstances_ = [];
 
     /**
-     * @type {mat4}
+     * @private
+     * @type {base.Mat4}
      */
-    this.viewMtx = mat4.identity();
+    this.viewMtx_ = base.Mat4.identity();
     /**
-     * @type {mat4}
+     * @private
+     * @type {base.Mat4}
      */
-    this.projectionMtx = mat4.perspective(90, 1.6, 0.1, 4096);
+    this.projectionMtx_ = base.Mat4.perspective(90, 1.6, 0.1, 4096);
 
     /**
-     * @type {mat4}
+     * @private
+     * @type {base.Mat4}
      * Temp matrix used in rendering
      */
-    this.modelViewMtx = mat4.create();
+    this.modelViewMtx_ = base.Mat4.create();
 
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.enable(gl.CULL_FACE);
-
-    Q3ShaderLoader.loadAll(resourceManager);
-    Q3GlShader.init(gl, resourceManager);
 };
 
+/**
+ * @public
+ * @param {Array.<base.ShaderScript>} shaderScripts
+ * @param {Object.<string,string>} texturesUrls blob URIs of images
+ */
+renderer.Renderer.prototype.buildShaders = function(shaderScripts, texturesUrls) {
+    this.materialManager.buildShaders(shaderScripts, texturesUrls);
+};
+
+/**
+ * @public
+ * Where the magic happens...
+ */
 renderer.Renderer.prototype.render = function () {
     // TODO: sort meshes to limit state changes
     var i, j, length,
@@ -93,13 +124,13 @@ renderer.Renderer.prototype.render = function () {
         skinNum,
         shader, stage,
         time = 0, // @todo
-        gl = this.gl;
+        gl = this.gl_;
 
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
 
-    for (i = this.meshesInstances.length - 1; i >= 0; --i) {
-	meshInst = this.meshesInstances[i];
+    for (i = this.meshInstances_.length - 1; i >= 0; --i) {
+	meshInst = this.meshInstances_[i];
 	modelInst = meshInst.modelInstance;
 	meshBase = meshInst.baseMesh;
 
@@ -107,35 +138,291 @@ renderer.Renderer.prototype.render = function () {
 	    continue;
 	}
 
-	skinNum = modelInst.skinId;
-	shader = meshBase.materials[skinNum].shader;
+	shader = meshInst.material.shader;
 
-	Q3GlShader.setShader(gl, shader);
+	this.materialManager.setShader(shader);
 	length = shader.stages.length;
 	for (j = 0; j < length; ++j) {
 	    stage = shader.stages[j];
-	    Q3GlShader.setShaderStage(gl, shader, stage, time);
-	    if (shader === Q3GlShader.defaultShader || shader === Q3GlShader.modelShader) {
+	    this.materialManager.setShaderStage(shader, stage, time);
+	    if (meshInst.material.defaultTexture) {
 		// if it is default shader, use texture from meshBase
-		Q3GlShader.bindTexture(gl, meshBase.materials[skinNum].defaultTexture, stage.program);
+		this.materialManager.bindTexture(meshInst.material.defaultTexture, stage.program);
 	    }
 
-	    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.elementArrayBuffers[meshBase.elementsArrayId]);
-	    gl.bindBuffer(gl.ARRAY_BUFFER, this.arrayBuffers[meshBase.frames[modelInst.frame].arrayBufferId]);
+	    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
+			  this.indexBuffers_[meshBase.elementsArrayId]);
+	    gl.bindBuffer(gl.ARRAY_BUFFER,
+			  this.vertexBuffers_[meshBase.frames[modelInst.frame].arrayBufferId]);
 
-	    mat4.multiply(this.viewMtx, modelInst.matrix, this.modelViewMtx);
+	    base.Mat4.multiply(this.viewMtx_, modelInst.matrix, this.modelViewMtx_);
+	    this.bindShaderAttribs(stage.program, this.modelViewMtx_, this.projectionMtx_);
 
-	    this.bindShaderAttribs(stage.program, this.modelViewMtx, this.projectionMtx);
-
-	    gl.drawElements(gl.TRIANGLES, meshBase.elementsCount, gl.UNSIGNED_SHORT, meshBase.elementsOffset);
+	    gl.drawElements(gl.TRIANGLES,
+			    meshBase.indicesCount,
+			    gl.UNSIGNED_SHORT,
+			    meshBase.indicesOffset);
 	}
 
     }
 
 };
 
+/**
+ * @public
+ * @param {Array.<base.Model>} models
+ * @param {base.GeometryData} geometryData
+ * @param {base.Map.LightmapData} lightmapData
+ */
+renderer.Renderer.prototype.registerMap = function (models, geometryData, lightmapData) {
+
+    var i, j;
+    var gl = this.gl_;
+    var model, mesh, meshes, materials;
+    var vertexBufferSize = this.vertexBuffers_.length;
+    var indexBufferSize = this.indexBuffers_.length;
+    
+    var vertexBuffer = gl.createBuffer();
+    var indexBuffer = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometryData.vertices[0]), gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(geometryData.indices), gl.STATIC_DRAW);
+
+    this.vertexBuffers_.push(vertexBuffer);
+    this.indexBuffers_.push(indexBuffer);
+
+    this.materialManager.buildLightmap(lightmapData);
+
+    for (i = 0; i < models.length; ++i) {
+	model = models[i];
+
+	meshes.length = 0;
+	for (j = 0; j < model.meshes.length; ++j) {
+	    materials = model.meshes[j].materialNames.map(function (name) {
+		this.materialManager.getMaterial(
+		    name,
+		    renderer.LightningType.LIGHT_MAP);
+	    });
+
+	    mesh = new renderer.Mesh(
+		model.meshes[j],
+		materials,
+		indexBufferSize,
+		vertexBufferSize);
+
+//	    meshes.push(mesh);
+	    this.meshes_.push(mesh);
+	}
+	model.meshes = meshes;
+	this.addModel(model);
+    }
+};
+
+// /**
+//  * @param {renderer.Model} model
+//  * @param {{vertices: Float32Array, frames: Array<{indices: Uint16Array}>}} vertexData
+//  * @return {number} id of added model
+//  */
+// renderer.Renderer.prototype.registerMd3 = function (model, vertexData) {
+//     var i, j;
+//     var firstArrayIndex;
+//     var gl = this.gl_;
+
+//     var indexBuffer = this.gl_.createBuffer();
+//     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+//     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexData.indices, gl.STATIC_DRAW);
+
+//     this.elementArrayBuffers.push(indexBuffer);
+
+//     firstArrayIndex = this.arrayBuffers.length;
+//     for (i = 0; i < vertexData.frames.length; ++i) {
+// 	var vertexBuffer = gl.createBuffer();
+// 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+// 	gl.bufferData(gl.ARRAY_BUFFER, vertexData.frames[i].vertices, gl.STATIC_DRAW);
+
+// 	this.arrayBuffers.push(vertexBuffer);
+//     }
+
+//     this.models_.push(model);
+//     for (i = 0; i < model.meshes.length; ++i) {
+// 	var mesh = model.meshes[i];
+// 	mesh.id = this.meshes_.length;
+// 	mesh.elementsArrayId = this.elementArrayBuffers.length - 1;
+
+// 	this.meshes_.push(mesh);
+// 	for (j = 0; j < model.framesCount; ++j) {
+// 	    mesh.frames[j].arrayBufferId = firstArrayIndex + j;
+// 	}
+
+// 	for (j = 0; j < mesh.materials.length; ++j) {
+// 	    mesh.materials[j] = Q3GlShader.getMaterial(mesh.materials[j].shaderName, LightningType.LIGHT_DYNAMIC);
+// 	}
+//     }
+//     return this.models_.length - 1; // index of added model
+// };
+
+/**
+ * @public
+ * @param {number} modelBaseId id of model
+ * @param {mat4} matrix
+ * @param {string} [skinName]
+ */
+renderer.Renderer.prototype.registerModelInstance = function (id, modelBaseId, matrix, skinName) {
+    var i,
+        baseModel = this.models_[modelBaseId],
+        skinId = -1,
+        instance = null,
+        baseMesh,
+        meshInstance;
+    
+    if (!baseModel) {
+	this.logger_.log(goog.debug.Logger.Level.SEVERE,
+			"Wrong model index in registerModelInstance: " + modelBaseId);
+	return;
+    }
+
+    skinId = baseModel.skins.indexOf(skinName || '__default__');
+    if (skinId === -1) { // default skin
+	skinId = 0;
+	this.logger_.log(goog.debug.Logger.Level.WARNING,
+			"Wrong skin name in makeModelInstance: "
+			+ skinName + ". Replaced with default.");
+    }
+
+    instance = new base.ModelInstance(
+	id,
+	baseModel,
+	skinId
+    );
+
+    base.Model.setMatrix(matrix);
+    this.addModelInstance(instance);
+    
+    for (i = 0; i < baseModel.meshes.length; ++i){
+	baseMesh = baseModel.meshes[i];
+	meshInstance = new renderer.MeshInstance(baseMesh, instance, baseMesh.materials[skinId]);
+	this.meshInstances_.push(meshInstance);
+    }
+};
+
+// renderer.Renderer.prototype.prepareForRendering = function() {
+//     // @todo
+// };
+
+/**
+ * @public
+ * @param {Array.<number>} modelsInstancesIds
+ * @param {Array.<mat4>} matrices
+ * @param {Array.<number>} frames
+ */
+renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrices, frames) {
+    var i,
+        model;
+
+    if (modelsInstancesIds.length != matrices.length || matrices.length != frames.length) {
+	this.logger_.log(goog.debug.Logger.Level.SEVERE,
+			"Arrays passed to updateModels must have the same length");
+	return;
+    }
+
+    for (i = 0; i < modelsInstancesIds.length; ++i) {
+	model = this.modelInstances_[modelsInstancesIds[i]];
+	if (!model) {
+	    this.logger_.log(goog.debug.Logger.Level.WARNING,
+			    ("Invalid model instance id passed to updateModels: "
+			     + modelsInstancesIds[i]));
+	    continue;
+	}
+	model.setMatrix(matrices[i]);
+	model.setFrame(frames[i]);
+    }
+};
+
+// renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, frame) {
+//     var model = this.modelInstances_[modelInstanceId];
+//     if (model === undefined) {
+// 	console.log("Invalid model instance id passed to updateModels: " + modelInstanceId);
+//     }
+//     model.matrix = matrix;
+//     model.frame = frame;
+// };
+
+/**
+ * @public
+ * @param {Array.<number>} modelsInstancesIds
+ * @param {Array.<boolean>} visibilityArray
+ */
+renderer.Renderer.prototype.setModelsVisibility = function (modelsInstancesIds, visibilityArray) {
+    // @todo
+};
+
+// renderer.Renderer.prototype.setMeshVisibility = function (objectId, meshId, visible) {
+//     // @todo
+// };
+
+/**
+ * @public
+ * @param {mat4} cameraMatrix inversed view matrix
+ */
+renderer.Renderer.prototype.updateCamera = function (cameraMatrix) {
+    base.Mat4.inverse(cameraMatrix, this.viewMtx_);
+};
+
+/**
+ * @private
+ */
+renderer.Renderer.prototype.logger_ = goog.debug.Logger.getLogger('renderer.Renderer');
+
+/**
+ * @private
+ * @param {base.Model}
+ * Functions inserts model to proper position in this.models_ table
+ */
+renderer.Renderer.prototype.addModel = function(model) {
+    var size = this.models_.length;
+    var id = model.id;
+    var i;
+    goog.asserts.assert(!this.models_[id]); // is undefined or null - slot is empty
+    
+    // Filling gap between size and id with null to ensure, that the table
+    // won't be treated as a hash map by js engine.
+    for (i = size; i < id; ++i) {
+	this.models_[i] = null;
+    }
+    this.models_[id] = model;
+};
+
+/**
+ * @private
+ * @param {base.Model}
+ * Functions inserts model to proper position in this.models_ table
+ */
+renderer.Renderer.prototype.addModelInstance = function(model) {
+    var size = this.modelInstances_.length;
+    var id = model.id;
+    var i;
+    goog.asserts.assert(!this.modelInstances_[id]); // is undefined or null - slot is empty
+    
+    // Filling gap between size and id with null to ensure, that the table
+    // won't be treated as a hash map by js engine.
+    for (i = size; i < id; ++i) {
+	this.modelInstances_[i] = null;
+    }
+    this.modelInstances_[id] = model;
+};
+
+
+/**
+ * @private
+ * @param {renderer.ShaderProgram} shader
+ * @param {base.Mat4} modelViewMat
+ * @param {base.Mat4} projectionMat
+ */
 renderer.Renderer.prototype.bindShaderAttribs = function(shader, modelViewMat, projectionMat) {
-    var gl = this.gl;
+    var gl = this.gl_;
 
     var vertexStride = 56;
 
@@ -167,223 +454,3 @@ renderer.Renderer.prototype.bindShaderAttribs = function(shader, modelViewMat, p
         gl.vertexAttribPointer(shader.attrib.color, 4, gl.FLOAT, false, vertexStride, 10*4);
     }
 };
-
-renderer.Renderer.prototype.buildLightmaps = function(size, lightmaps) {
-    var gl = this.gl;
-
-    this.lightmap = Q3GlShader.createSolidTexture(gl, [255,255,255,255]);
-    gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-
-    for(var i = 0; i < lightmaps.length; ++i) {
-        gl.texSubImage2D(
-            gl.TEXTURE_2D, 0, lightmaps[i].x, lightmaps[i].y, lightmaps[i].width, lightmaps[i].height,
-            gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(lightmaps[i].bytes)
-            );
-    }
-
-    gl.generateMipmap(gl.TEXTURE_2D);
-
-//    q3glshader.init(gl, this.lightmap);
-};
-
-/**
- * @param {Array.<renderer.Model>} models
- * @param {{vertices: Float32Array, indices: Uint16Array}} vertexData
- * @param {?}
- * @return {Array.<number>} ids of added models
- */
-renderer.Renderer.prototype.registerMap = function (models, vertexData, lightmapData) {
-
-    var i, j;
-    var gl = this.gl;
-    var resultIndices = [];
-
-    var vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData.vertices), gl.STATIC_DRAW);
-
-    var indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexData.indices), gl.STATIC_DRAW);
-
-    var arrayBufferSize = this.arrayBuffers.length;
-    var elementBufferSize = this.elementArrayBuffers.length;
-    this.arrayBuffers.push(vertexBuffer);
-    this.elementArrayBuffers.push(indexBuffer);
-
-    this.buildLightmaps(lightmapData.size, lightmapData.lightmaps);
-    Q3GlShader.lightmap = this.lightmap;
-
-    for (i = 0; i < models.length; ++i) {
-	var model = models[i];
-	model.id = i;
-	this.models.push(model);
-
-	for (j = 0; j < model.meshes.length; ++j) {
-	    var mesh = model.meshes[j];
-	    mesh.id = this.meshes.length;
-	    mesh.elementsArrayId = elementBufferSize;
-	    mesh.frames[0].arrayBufferId = arrayBufferSize;
-	    mesh.materials[0] = Q3GlShader.getMaterial(mesh.materials[0].shaderName, mesh.lightningType);
-	    this.meshes.push(mesh);
-	}
-
-	// there will be exactly one map instance, so we create it immediately
-        resultIndices.push(this.makeModelInstance(this.models.length - 1, mat4.identity(), null));
-    }
-    return resultIndices;
-};
-
-/**
- * @param {renderer.Model} model
- * @param {{vertices: Float32Array, frames: Array<{indices: Uint16Array}>}} vertexData
- * @return {number} id of added model
- */
-renderer.Renderer.prototype.registerMd3 = function (model, vertexData) {
-    var i, j;
-    var firstArrayIndex;
-    var gl = this.gl;
-
-    var indexBuffer = this.gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexData.indices, gl.STATIC_DRAW);
-
-    this.elementArrayBuffers.push(indexBuffer);
-
-    firstArrayIndex = this.arrayBuffers.length;
-    for (i = 0; i < vertexData.frames.length; ++i) {
-	var vertexBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, vertexData.frames[i].vertices, gl.STATIC_DRAW);
-
-	this.arrayBuffers.push(vertexBuffer);
-    }
-
-    this.models.push(model);
-    for (i = 0; i < model.meshes.length; ++i) {
-	var mesh = model.meshes[i];
-	mesh.id = this.meshes.length;
-	mesh.elementsArrayId = this.elementArrayBuffers.length - 1;
-
-	this.meshes.push(mesh);
-	for (j = 0; j < model.framesCount; ++j) {
-	    mesh.frames[j].arrayBufferId = firstArrayIndex + j;
-	}
-
-	for (j = 0; j < mesh.materials.length; ++j) {
-	    mesh.materials[j] = Q3GlShader.getMaterial(mesh.materials[j].shaderName, LightningType.LIGHT_DYNAMIC);
-	}
-    }
-    return this.models.length - 1; // index of added model
-};
-
-/**
- * @param {number} modelBaseId id of model as returned by registerMap/registerMd3
- * @param {mat4} matrix
- * @param {string} skinName
- * @return {number} model instance id
- */
-renderer.Renderer.prototype.makeModelInstance = function (modelBaseId, matrix, skinName) {
-    var i,
-        baseModel = this.models[modelBaseId],
-        skinId = baseModel.skinsIndices[skinName ? skinName : '__default__'],
-        instance = null,
-        baseMesh,
-        meshInstance;
-
-    if (baseModel === undefined) {
-	throw "Wrong model index in makeModelInstance: " + modelBaseId;
-    }
-    if (skinId === undefined) {
-	console.log("Wrong skin name in makeModelInstance: " + skinName + ". Replaced with default.");
-	skinId = 0;
-    }
-
-    instance = {
-	id: this.modelsInstances.length,
-	baseModel: baseModel,
-	skinId: skinId,
-	matrix: matrix,
-	frame: 0,
-	visible: true
-    };
-
-    for (i = 0; i < baseModel.meshes.length; ++i){
-	baseMesh = baseModel.meshes[i];
-	meshInstance = {
-	    id: this.meshesInstances.length,
-	    baseMesh: baseMesh,
-	    modelInstance: instance,
-	    material: baseMesh.materials[skinId],
-	    culled: false
-	};
-	this.meshesInstances.push(meshInstance);
-    }
-
-    this.modelsInstances.push(instance);
-
-    return instance.id;
-};
-
-/**
- *
- */
-renderer.Renderer.prototype.prepareForRendering = function() {
-    // @todo
-};
-
-/**
- * @param {Array.<number>} modelsInstancesIds
- * @param {Array.<mat4>} matrices
- * @param {Array.<number>} frames
- */
-renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrices, frames) {
-    var i,
-        model;
-
-    if (modelsInstancesIds.length != matrices.length || matrices.length != frames.length) {
-	throw "Arrays passed to updateModels must have the same length";
-    }
-
-    for (i = 0; i < modelsInstancesIds.length; ++i) {
-	model = this.modelsInstances[modelsInstancesIds[i]];
-	if (model === undefined) {
-	    console.log("Invalid model instance id passed to updateModels: " + modelsInstancesIds[i]);
-	    continue;
-	}
-	model.matrix = matrices[i];
-	model.frame = frames[i];
-    }
-};
-
-renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, frame) {
-    var model = this.modelsInstances[modelInstanceId];
-    if (model === undefined) {
-	console.log("Invalid model instance id passed to updateModels: " + modelInstanceId);
-    }
-    model.matrix = matrix;
-    model.frame = frame;
-};
-
-/**
- * @param {Array.<number>} modelsInstancesIds
- * @param {Array.<boolean>} visibilityArray
- */
-renderer.Renderer.prototype.setModelsVisibility = function (modelsInstancesIds, visibilityArray) {
-    // @todo
-};
-
-// renderer.Renderer.prototype.setMeshVisibility = function (objectId, meshId, visible) {
-//     // @todo
-// };
-
-/**
- * @param {mat4} cameraMatrix inversed view matrix
- */
-renderer.Renderer.prototype.updateCamera = function (cameraMatrix) {
-    mat4.inverse(cameraMatrix, this.viewMtx);
-};
-

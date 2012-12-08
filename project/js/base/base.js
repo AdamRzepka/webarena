@@ -54,7 +54,6 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
      */
     this.id = id;
     /**
-     * @const
      * @type {Array<base.Mesh>}
      */
     this.meshes = meshes;
@@ -162,70 +161,62 @@ base.ModelInstance = function(id, baseModel, skinId) {
 };
 
 
-// These functions could be non-static methods, but it would create problem after sending
-// to different worker, since structural copy algorythm breaks prototype chain.
 /**
  * @public
- * @param {base.ModelInstance} self
  * @return {base.Mat4}
  */
-base.ModelInstance.getMatrix = function (self) {
-    return self.matrix_;
+base.ModelInstance.prototype.getMatrix = function () {
+    return this.matrix_;
 };
 
 /**
  * @public
- * @param {base.ModelInstance} self
  * @param {base.Mat4} matrix
  * This function shouldn't be called directly by game worker.
  */
-base.ModelInstance.setMatrix = function (self, matrix) {
+base.ModelInstance.prototype.setMatrix = function (matrix) {
     var det = 0;
     if (goog.DEBUG) {
 	// Checks if matrix looks OK.
-	det = mat4.determinant(mat);
-	goog.asserts.assert(det !== 0 && det < 10e9); 
+	det = base.Mat4.determinant(matrix);
+	goog.asserts.assert(det !== 0 && det < 10e9 && det > -10e9); 
     }
-    self.matrix_ = matrix;
+    this.matrix_ = matrix;
 };
 
 /**
  * @public
- * @param {base.ModelInstance} self
  * @return {number}
  */
-base.ModelInstance.getFrame = function (self) {
-    return self.frame_;
+base.ModelInstance.prototype.getFrame = function () {
+    return this.frame_;
 };
 
 /**
  * @public
- * @param {base.ModelInstance} self
  * @param {number} frame
  * This function shouldn't be called directly by game worker.
  */
-base.ModelInstance.setFrame = function (self, frame) {
-    goog.asserts.assert(frame >= 0 && frame < self.baseModel_.getFramesCount());
-    self.frame_ = frame;
+base.ModelInstance.prototype.setFrame = function (frame) {
+    goog.asserts.assert(frame >= 0 && frame < this.baseModel_.getFramesCount());
+    this.frame_ = frame;
 };
 
 /**
  * @public
- * @param {base.ModelInstance} self
  * @return {boolean}
  */
-base.ModelInstance.getVisibility = function (self) {
-    return self.visibility_;
+base.ModelInstance.prototype.getVisibility = function () {
+    return this.visibility_;
 };
 
 /**
  * @public
- * @param {base.ModelInstance} self
  * @param {boolean} visibility
  * This function shouldn't be called directly by game worker.
  */
-base.ModelInstance.setVisibility = function (self, visibility) {
-    self.visibility_ = visibility;
+base.ModelInstance.prototype.setVisibility = function (visibility) {
+    this.visibility_ = visibility;
 };
 
 
@@ -239,7 +230,7 @@ base.ModelInstance.setVisibility = function (self, visibility) {
  * @param {number} indicesCount
  * @param {Array.<base.Materials>} materials
  */
-base.Mesh = function(geometry, indicesOffset, indicesCount, materials) {
+base.Mesh = function(geometry, indicesOffset, indicesCount, materialNames) {
     /**
      * @const
      * @type {base.GeometryData}
@@ -259,9 +250,9 @@ base.Mesh = function(geometry, indicesOffset, indicesCount, materials) {
     /**
      * List of all materials, the instances of the mesh can have.
      * @const
-     * @type {Array.<base.Material>}
+     * @type {Array.<string>}
      */
-    this.materials = materials;
+    this.materialNames = materialNames;
 };
 
 /**

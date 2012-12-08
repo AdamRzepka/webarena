@@ -151,7 +151,7 @@ renderer.MaterialManager = function(gl) {
      * @private
      * @type {WebGLTexture}
      */
-    this.lightmap = null;
+    this.lightmap = this.createSolidTexture(gl, [255,255,255,255]);
     this.texMat = base.Mat4.create();
     /**
      * @private
@@ -223,6 +223,29 @@ renderer.MaterialManager.prototype.buildMaterials = function (shaderScripts, ima
 	    null,
 	    renderer.LightningType.LIGHT_CUSTOM);
     }
+};
+
+/**
+ * @public
+ * @param {base.Map.LightmapData} lightmapData
+ */
+renderer.MaterialManager.prototype.buildLightmap = function (lightmapData) {
+    var gl = this.gl;
+    var size = lightmapData.size;
+    var lightmaps = lightmapData.lightmaps;
+    gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+    for(var i = 0; i < lightmaps.length; ++i) {
+        gl.texSubImage2D(
+            gl.TEXTURE_2D, 0, lightmaps[i].x, lightmaps[i].y, lightmaps[i].width, lightmaps[i].height,
+            gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(lightmaps[i].bytes)
+            );
+    }
+
+    gl.generateMipmap(gl.TEXTURE_2D);
 };
 
 /**
