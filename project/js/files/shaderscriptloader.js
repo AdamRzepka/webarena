@@ -37,8 +37,8 @@ goog.provide('files.ShaderScriptLoader');
 //
 
 var ShaderScriptLoader = {
-    /** @type Object.<string, Material> */
-    shadersMap: {}
+    /** @type Object.<base.ShaderScript> */
+    shaderScripts: []
 };
 
 /**
@@ -58,7 +58,7 @@ ShaderScriptLoader.loadAll = function(rm) {
  * @private
  */
 ShaderScriptLoader.load = function(url, src) {
-    var shadersMap = ShaderScriptLoader.shadersMap,
+    var shaderScripts = ShaderScriptLoader.shaderScripts,
 	shaders = [],
 	shader,
 	tokens = new files.ShaderScriptLoader.Tokenizer(src),
@@ -71,7 +71,7 @@ ShaderScriptLoader.load = function(url, src) {
         shader = ShaderScriptLoader.parseShader(name, tokens);
         if(shader) {
 //            shader.url = url;
-            shadersMap[name] = shader;
+            shaderScripts.push(shader);
         }
     }
 };
@@ -89,7 +89,7 @@ ShaderScriptLoader.parseShader = function(name, tokens) {
     shader = {
 	name: name,
 	isDefault: false,
-        cull: goog.webgl.BACK,
+        cull: 'back',
         sky: false,
         blend: false,
         opaque: false,
@@ -111,15 +111,15 @@ ShaderScriptLoader.parseShader = function(name, tokens) {
                 // but if I don't a lot of textures end up looking too bright. I'm sure I'm jsut missing something, and ShaderScriptLoader shouldn't
                 // be needed.
                 if(stage.isLightmap && (stage.hasBlendFunc)) {
-                    stage.blendSrc = goog.webgl.DST_COLOR;
-                    stage.blendDest = goog.webgl.ZERO;
+                    stage.blendSrc = 'GL_DST_COLOR';
+                    stage.blendDest = 'GL_ZERO';
                 }
 
                 // I'm having a ton of trouble getting lightingSpecular to work properly,
                 // so ShaderScriptLoader little hack gets it looking right till I can figure out the problem
                 if(stage.alphaGen == 'lightingspecular') {
-                    stage.blendSrc = goog.webgl.ONE;
-                    stage.blendDest = goog.webgl.ZERO;
+                    stage.blendSrc = 'GL_ONE';
+                    stage.blendDest = 'GL_ZERO';
                     stage.hasBlendFunc = false;
                     stage.depthWrite = true;
                     shader.stages = [];
@@ -199,8 +199,8 @@ ShaderScriptLoader.parseStage = function(shader, tokens) {
         alphaGen: '1.0',
         alphaFunc: null,
         alphaWaveform: null,
-        blendSrc: goog.webgl.ONE,
-        blendDest: goog.webgl.ZERO,
+        blendSrc: 'GL_ONE',
+        blendDest: 'GL_ZERO',
         hasBlendFunc: false,
         tcMods: [],
         animMaps: [],

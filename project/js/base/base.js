@@ -21,9 +21,6 @@
  * Used by renderer and game.
  * They are extended in renderer module.
  *
- * The encapsulation is ensured only by jsdoc annotation (+ google closure).
- * I know it's not the best way, but it's significantly more efficient than
- * private-as-constructor-local-variable approach.
  */
 
 goog.require('goog.asserts');
@@ -47,10 +44,15 @@ goog.provide('base.Model.Frame');
  * @param {Array.<string>} [tags]
  * @param {Array.<string>} [skins]
  */
-base.Model = function (meshes, framesCount, framesData, tags, skins) {
+base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
     goog.asserts.assert(meshes.length > 0);
     goog.asserts.assert(framesCount > 0);
 
+    /**
+     * @const
+     * @type {number}
+     */
+    this.id = id;
     /**
      * @const
      * @type {Array<base.Mesh>}

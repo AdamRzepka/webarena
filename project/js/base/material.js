@@ -55,9 +55,9 @@ base.ShaderScript = function () {
     this.isDefault = true;
     /**
      * @const
-     * @type {number}
+     * @type {string}
      */
-    this.cull = goog.webgl.BACK;
+    this.cull = 'back';
     /**
      * @const
      * @type {boolean}
@@ -133,14 +133,14 @@ base.ShaderScriptStage = function () {
     this.alphaWaveform = null;
     /**
      * @const
-     * @type {number}
+     * @type {string}
      */
-    this.blendSrc = goog.webgl.ONE;
+    this.blendSrc = 'GL_ONE';
     /**
      * @const
-     * @type {number}
+     * @type {string}
      */
-    this.blendDest = goog.webgl.ZERO;
+    this.blendDest = 'GL_ZERO';
     /**
      * @const
      * @type {boolean}
@@ -163,9 +163,9 @@ base.ShaderScriptStage = function () {
     this.animFreq = 0;
     /**
      * @const
-     * @type {number}
+     * @type {string}
      */
-    this.depthFunc = goog.webgl.LEQUAL;
+    this.depthFunc = 'lequal';
     /**
      * @const
      * @type {boolean}
