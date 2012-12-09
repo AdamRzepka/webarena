@@ -45,7 +45,7 @@ goog.provide('files.zipjs');
      var INFLATE_JS = "inflate.js";
      var DEFLATE_JS = "deflate.js";
 
-     var BlobBuilder = obj.WebKitBlobBuilder || obj.MozBlobBuilder || obj.MSBlobBuilder || obj.BlobBuilder;
+     // var BlobBuilder = obj.WebKitBlobBuilder || obj.MozBlobBuilder || obj.MSBlobBuilder || obj.BlobBuilder;
 
      function Crc32() {
 	 var crc = -1, that = this;
@@ -104,9 +104,8 @@ goog.provide('files.zipjs');
 	 var that = this, blobReader;
 
 	 function init(callback, onerror) {
-	     var blobBuilder = new BlobBuilder();
-	     blobBuilder.append(text);
-	     blobReader = new BlobReader(blobBuilder.getBlob("text/plain"));
+	     var blob = new Blob(text, { "type": "text\/plain"});
+	     blobReader = new BlobReader(blob);
 	     blobReader.init(function() {
 				 that.size = blobReader.size;
 				 callback();
@@ -274,15 +273,15 @@ goog.provide('files.zipjs');
      };
 
      function TextWriter() {
-	 var that = this, blobBuilder;
+	 var that = this, blob;
 
 	 function init(callback, onerror) {
-	     blobBuilder = new BlobBuilder();
+	     blob = new Blob();
 	     callback();
 	 }
 
 	 function writeUint8Array(array, callback, onerror) {
-	     blobBuilder.append(array.buffer);
+	     blob = new Blob([blob, new DataView(array.buffer)], {"type": "text\/plain"});
 	     callback();
 	 }
 
@@ -292,7 +291,7 @@ goog.provide('files.zipjs');
 		 callback(e.target.result);
 	     };
 	     reader.onerror = onerror;
-	     reader.readAsText(blobBuilder.getBlob("text/plain"), "x-user-defined");
+	     reader.readAsText(blob, "x-user-defined");
 	 }
 
 	 that.init = init;
@@ -346,14 +345,14 @@ goog.provide('files.zipjs');
 	 }
 
 	 function writeUint8Array(array, callback, onerror) {
-	     var blobBuilder = new BlobBuilder();
-	     blobBuilder.append(array.buffer);
+	     var blob = new Blob([new DataView(array.buffer)],
+				 {"type": contentType});
 	     writer.onwrite = function() {
 		 writer.onwrite = null;
 		 callback();
 	     };
 	     writer.onerror = onerror;
-	     writer.write(blobBuilder.getBlob(contentType));
+	     writer.write();
 	 }
 
 	 function getData(callback) {
@@ -368,20 +367,21 @@ goog.provide('files.zipjs');
      FileWriter.prototype.constructor = FileWriter;
 
      function BlobWriter(contentType) {
-	 var blobBuilder, that = this;
+	 var blob, that = this;
 
 	 function init(callback, onerror) {
-	     blobBuilder = new BlobBuilder();
+	     blob = new Blob();
 	     callback();
 	 }
 
 	 function writeUint8Array(array, callback, onerror) {
-	     blobBuilder.append(array.buffer);
+	     blob = new Blob([blob, new DataView(array.buffer)],
+			     {"type": contentType});
 	     callback();
 	 }
 
 	 function getData(callback) {
-	     callback(blobBuilder.getBlob(contentType));
+	     callback(blob);
 	 }
 
 	 that.init = init;
@@ -392,15 +392,16 @@ goog.provide('files.zipjs');
      BlobWriter.prototype.constructor = BlobWriter;
 
      function ArrayBufferWriter(contentType) {
-     	 var blobBuilder, that = this;
+     	 var blob, that = this;
 
      	 function init(callback, onerror) {
-     	     blobBuilder = new BlobBuilder();
+     	     blob = new Blob();
      	     callback();
      	 }
 
      	 function writeUint8Array(array, callback, onerror) {
-     	     blobBuilder.append(array.buffer);
+	     blob = new Blob([blob, new DataView(array.buffer)],
+			     {"type": contentType});
      	     callback();
      	 }
 
@@ -410,7 +411,7 @@ goog.provide('files.zipjs');
 	         callback(e.target.result);
 	     };
 	     reader.onerror = onerror;
-     	     reader.readAsArrayBuffer(blobBuilder.getBlob(contentType));
+     	     reader.readAsArrayBuffer(blob);
      	 }
 
      	 that.init = init;
