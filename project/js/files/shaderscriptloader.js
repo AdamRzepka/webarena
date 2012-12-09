@@ -1,8 +1,28 @@
-/*
- * q3shader.js - Parses Quake 3 shader files (.shader)
- */
+/**
+ * @license
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+ 
+ * This file is modified verison of q3shader.js by Brandon Jones. Below
+ * is a copyright note from the original file.
+ *
+
+ * q3shader.js - Parses Quake 3 shader files (.shader)
+
+ * 
  * Copyright (c) 2009 Brandon Jones
  *
  * This software is provided 'as-is', without any express or implied
@@ -36,7 +56,7 @@ goog.provide('files.ShaderScriptLoader');
 // Shader Loading
 //
 
-var ShaderScriptLoader = {
+files.ShaderScriptLoader = {
     /** @type Object.<base.ShaderScript> */
     shaderScripts: []
 };
@@ -44,12 +64,12 @@ var ShaderScriptLoader = {
 /**
  * @param {files.ResourceManager} rm
  */
-ShaderScriptLoader.loadAll = function(rm) {
+files.ShaderScriptLoader.loadAll = function(rm) {
     var shaderFile;
 
     for (shaderFile in rm.scripts) {
 	if (rm.scripts.hasOwnProperty(shaderFile)) {
-	    ShaderScriptLoader.load(shaderFile, rm.getScript(shaderFile));
+	    files.ShaderScriptLoader.load(shaderFile, rm.getScript(shaderFile));
 	}
     }
 };
@@ -57,18 +77,18 @@ ShaderScriptLoader.loadAll = function(rm) {
 /**
  * @private
  */
-ShaderScriptLoader.load = function(url, src) {
-    var shaderScripts = ShaderScriptLoader.shaderScripts,
+files.ShaderScriptLoader.load = function(url, src) {
+    var shaderScripts = files.ShaderScriptLoader.shaderScripts,
 	shaders = [],
 	shader,
-	tokens = new files.ShaderScriptLoader.Tokenizer(src),
+	tokens = new files.ShaderScriptTokenizer(src),
 	name,
 	i;
 
     // Parse a shader
     while(!tokens.EOF()) {
         name = tokens.next();
-        shader = ShaderScriptLoader.parseShader(name, tokens);
+        shader = files.ShaderScriptLoader.parseShader(name, tokens);
         if(shader) {
 //            shader.url = url;
             shaderScripts.push(shader);
@@ -79,7 +99,7 @@ ShaderScriptLoader.load = function(url, src) {
 /**
  * @private
  */
-ShaderScriptLoader.parseShader = function(name, tokens) {
+files.ShaderScriptLoader.parseShader = function(name, tokens) {
     var brace = tokens.next(),
 	shader;
     if(brace !== '{') {
@@ -105,10 +125,10 @@ ShaderScriptLoader.parseShader = function(name, tokens) {
 
         switch (token) {
             case '{': {
-                var stage = ShaderScriptLoader.parseStage(shader, tokens);
+                var stage = files.ShaderScriptLoader.parseStage(shader, tokens);
 
-                // I really really really don't like doing ShaderScriptLoader, which basically just forces lightmaps to use the 'filter' blendmode
-                // but if I don't a lot of textures end up looking too bright. I'm sure I'm jsut missing something, and ShaderScriptLoader shouldn't
+                // I really really really don't like doing files.ShaderScriptLoader, which basically just forces lightmaps to use the 'filter' blendmode
+                // but if I don't a lot of textures end up looking too bright. I'm sure I'm jsut missing something, and files.ShaderScriptLoader shouldn't
                 // be needed.
                 if(stage.isLightmap && (stage.hasBlendFunc)) {
                     stage.blendSrc = 'GL_DST_COLOR';
@@ -116,7 +136,7 @@ ShaderScriptLoader.parseShader = function(name, tokens) {
                 }
 
                 // I'm having a ton of trouble getting lightingSpecular to work properly,
-                // so ShaderScriptLoader little hack gets it looking right till I can figure out the problem
+                // so files.ShaderScriptLoader little hack gets it looking right till I can figure out the problem
                 if(stage.alphaGen == 'lightingspecular') {
                     stage.blendSrc = 'GL_ONE';
                     stage.blendDest = 'GL_ZERO';
@@ -142,7 +162,7 @@ ShaderScriptLoader.parseShader = function(name, tokens) {
                 switch(deform.type) {
                     case 'wave':
                         deform.spread = 1.0 / parseFloat(tokens.next());
-                        deform.waveform = ShaderScriptLoader.parseWaveform(tokens);
+                        deform.waveform = files.ShaderScriptLoader.parseWaveform(tokens);
                         break;
                     default: deform = null; break;
                 }
@@ -189,7 +209,7 @@ ShaderScriptLoader.parseShader = function(name, tokens) {
 /**
  * @private
  */
-ShaderScriptLoader.parseStage = function(shader, tokens) {
+files.ShaderScriptLoader.parseStage = function(shader, tokens) {
     var stage = {
         map: null,
         clamp: false,
@@ -238,7 +258,7 @@ ShaderScriptLoader.parseStage = function(shader, tokens) {
                 stage.rgbGen = tokens.next().toLowerCase();;
                 switch(stage.rgbGen) {
                     case 'wave':
-                        stage.rgbWaveform = ShaderScriptLoader.parseWaveform(tokens);
+                        stage.rgbWaveform = files.ShaderScriptLoader.parseWaveform(tokens);
                         if(!stage.rgbWaveform) { stage.rgbGen = 'identity'; }
                         break;
                 };
@@ -248,7 +268,7 @@ ShaderScriptLoader.parseStage = function(shader, tokens) {
                 stage.alphaGen = tokens.next().toLowerCase();
                 switch(stage.alphaGen) {
                     case 'wave':
-                        stage.alphaWaveform = ShaderScriptLoader.parseWaveform(tokens);
+                        stage.alphaWaveform = files.ShaderScriptLoader.parseWaveform(tokens);
                         if(!stage.alphaWaveform) { stage.alphaGen = '1.0'; }
                         break;
                     default: break;
@@ -313,7 +333,7 @@ ShaderScriptLoader.parseStage = function(shader, tokens) {
                         tcMod.tSpeed = parseFloat(tokens.next());
                         break;
                     case 'stretch':
-                        tcMod.waveform = ShaderScriptLoader.parseWaveform(tokens);
+                        tcMod.waveform = files.ShaderScriptLoader.parseWaveform(tokens);
                         if(!tcMod.waveform) { tcMod.type = null; }
                         break;
                     case 'turb':
@@ -343,7 +363,7 @@ ShaderScriptLoader.parseStage = function(shader, tokens) {
     }
 
     stage.isLightmap = stage.map == '$lightmap';
-    stage.shaderSrc = ShaderScriptLoader.buildShaderSource(shader, stage);
+    stage.shaderSrc = files.ShaderScriptLoader.buildShaderSource(shader, stage);
 
     return /**@type {base.ShaderScriptStage}*/(stage);
 };
@@ -351,7 +371,7 @@ ShaderScriptLoader.parseStage = function(shader, tokens) {
 /**
  * @private
  */
-ShaderScriptLoader.parseWaveform = function(tokens) {
+files.ShaderScriptLoader.parseWaveform = function(tokens) {
     return {
         funcName: tokens.next().toLowerCase(),
         base: parseFloat(tokens.next()),
@@ -365,23 +385,23 @@ ShaderScriptLoader.parseWaveform = function(tokens) {
 // WebGL Shader creation
 //
 
-// ShaderScriptLoader whole section is a bit ugly, but it gets the job done. The job, in ShaderScriptLoader case, is translating
+// files.ShaderScriptLoader whole section is a bit ugly, but it gets the job done. The job, in files.ShaderScriptLoader case, is translating
 // Quake 3 shaders into GLSL shader programs. We should probably be doing a bit more normalization here.
 
 /**
  * @private
  */
-ShaderScriptLoader.buildShaderSource = function(shader, stage) {
+files.ShaderScriptLoader.buildShaderSource = function(shader, stage) {
     return {
-        vertex: ShaderScriptLoader.buildVertexShader(shader, stage),
-        fragment: ShaderScriptLoader.buildFragmentShader(shader, stage)
+        vertex: files.ShaderScriptLoader.buildVertexShader(shader, stage),
+        fragment: files.ShaderScriptLoader.buildFragmentShader(shader, stage)
     };
 };
 
 /**
  * @private
  */
-ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
+files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
     var shader = new files.ShaderBuilder();
     var i;
 
@@ -515,7 +535,7 @@ ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
 /**
  * @private
  */
-ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
+files.ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
     var shader = new files.ShaderBuilder();
 
     shader.addVaryings({
@@ -548,7 +568,7 @@ ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
             shader.addWaveform('alpha', stage.alphaWaveform);
             break;
         case 'lightingspecular':
-            // For now ShaderScriptLoader is VERY special cased. May not work well with all instances of lightingSpecular
+            // For now files.ShaderScriptLoader is VERY special cased. May not work well with all instances of lightingSpecular
             shader.addUniforms({
                 lightmap: 'sampler2D'
             });
@@ -559,7 +579,7 @@ ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
             shader.addLines([
                 'vec4 light = texture2D(lightmap, vLightCoord.st);',
                 'rgb *= light.rgb;',
-                'rgb += light.rgb * texColor.a * 0.6;', // ShaderScriptLoader was giving me problems, so I'm ignorning an actual specular calculation for now
+                'rgb += light.rgb * texColor.a * 0.6;', // files.ShaderScriptLoader was giving me problems, so I'm ignorning an actual specular calculation for now
                 'float alpha = 1.0;'
             ]);
             break;

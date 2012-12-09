@@ -83,16 +83,16 @@ goog.inherits(renderer.Mesh, base.Mesh);
 
 /**
  * @constructor
- * @param {renderer.Mesh} typeMesh
+ * @param {renderer.Mesh} baseMesh
  * @param {base.ModelInstance} modelInstance
  * @param {renderer.Material} material
  */
-renderer.MeshInstance = function(typeMesh, modelInstance, material) {
+renderer.MeshInstance = function(baseMesh, modelInstance, material) {
     /**
      * @const
      * @type {renderer.Mesh}
      */
-    this.baseMesh = null;
+    this.baseMesh = baseMesh;
     /**
      * @type {boolean}
      */
@@ -101,10 +101,10 @@ renderer.MeshInstance = function(typeMesh, modelInstance, material) {
      * @const
      * @type {base.ModelInstance}
      */
-    this.modelInstance = null;
+    this.modelInstance = modelInstance;
     /**
      * @const
      * @type {renderer.Material}
      */
-    this.material = null;  
+    this.material = material;
 };

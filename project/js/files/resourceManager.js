@@ -33,7 +33,7 @@ files.ResourceManager = function() {
      * @public
      * @type {string}
      */
-    this.basedir = 'files/';
+    this.basedir = 'resources/';
     /**
      * @private
      * @type {Object.<string, string>}

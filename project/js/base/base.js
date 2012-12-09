@@ -27,11 +27,11 @@ goog.require('goog.asserts');
 goog.require('base.Vec3');
 goog.require('base.Mat4');
 
+goog.provide('base');
 goog.provide('base.Model');
 goog.provide('base.ModelInstance');
 goog.provide('base.Mesh');
 goog.provide('base.GeometryData');
-goog.provide('base.Material');
 goog.provide('base.Model.Frame');
 
 /**
@@ -83,6 +83,17 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
 };
 
 /**
+ * @public
+ * @return {number}
+ */
+base.Model.getNextId = (function() {
+    var id = -1;
+    return function() {
+	return ++id;
+    };
+})();
+
+/**
  * @constructor
  * @param {Float32Array} aabb
  * @param {base.Vec3} origin
@@ -122,7 +133,7 @@ base.Model.FrameData = function(aabb, origin, radius, tags) {
 base.ModelInstance = function(id, baseModel, skinId) {
     goog.asserts.assert(id >= 0);
     goog.asserts.assert(goog.isDefAndNotNull(baseModel));
-    goog.asserts.assert(skinId >= 0 && skinId < baseModel.getSkins().length);
+    goog.asserts.assert(skinId >= 0 && skinId < baseModel.skins.length);
     
     /**
      * @const
@@ -157,9 +168,19 @@ base.ModelInstance = function(id, baseModel, skinId) {
      * @private
      * @type {boolean}
      */
-    this.visibility_ = false;
+    this.visibility_ = true;
 };
 
+/**
+ * @public
+ * @return {number}
+ */
+base.ModelInstance.getNextId = (function() {
+    var id = -1;
+    return function() {
+	return ++id;
+    };
+})();
 
 /**
  * @public

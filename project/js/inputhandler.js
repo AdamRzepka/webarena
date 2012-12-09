@@ -1,6 +1,6 @@
-goog.provide('input');
+goog.provide('InputHandler');
 
-function InputHandler()
+InputHandler = function()
 {
     var self = this;
     self.keyMap = new Array(128);

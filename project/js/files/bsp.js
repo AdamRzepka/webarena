@@ -1,9 +1,29 @@
-/*
+/**
+ * @license
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+
+ 
+ * This file is modified verison of q3bsp_worker.js by Brandon Jones. Below
+ * is a copyright note from the original file.
+
  * q3bsp_worker.js - Parses Quake 3 Maps (.bsp) for use in WebGL
  * This file is the threaded backend that does the main parsing and processing
- */
 
-/*
+ *
  * Copyright (c) 2009 Brandon Jones
  *
  * This software is provided 'as-is', without any express or implied
@@ -30,11 +50,11 @@
 
 goog.require('files.binaryfile');
 goog.require('base');
-goog.require('base.base.vec3');
-goog.require('base.mat4');
+goog.require('base.Vec3');
+goog.require('base.Mat4');
 goog.require('base.Map');
 
-goog.provide('files.files.bsp');
+goog.provide('files.bsp');
 
 
 /** @define {number}*/
@@ -543,7 +563,7 @@ files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders)
                 for(j = 0; j < face.meshVertCount; ++j) {
                     vert = verts[face.vertex + meshVerts[face.meshVert + j]];
 
-		    texSize = lightmap.textureSize;
+		    texSize = lightmapData.size;
                     vert.lmNewCoord[0] = (vert.lmCoord[0] * lightmap.width / texSize)
 			+ lightmap.x / texSize;
                     vert.lmNewCoord[1] = (vert.lmCoord[1] * lightmap.height / texSize)
@@ -619,12 +639,12 @@ files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders)
 	shader = shaders[i];
 	if (shader.faces.length > 0) {
 	    mesh = new base.Mesh(geometryData, shader.indexOffset,
-				 shader.elementCount, [new base.Material(shader.shaderName)]);
+				 shader.elementCount, [shader.shaderName]);
 	    meshes.push(mesh);
 	}
     }
 
-    var model = new base.Model(meshes, 1, []);
+    var model = new base.Model(base.Model.getNextId(), meshes, 1, []);
 
     return new base.Map([model],
 			lightmapData,
@@ -652,12 +672,12 @@ files.bsp.buildModels_ = function(leaves, leafFaces, faces, verts, meshVerts, mo
 files.bsp.getCurvePoint3_ = function(c0, c1, c2, dist) {
     var b = 1.0 - dist;
 
-    return base.vec3.add(
-        base.vec3.add(
-            base.vec3.scale(c0, (b*b), [0, 0, 0]),
-            base.vec3.scale(c1, (2*b*dist), [0, 0, 0])
+    return base.Vec3.add(
+        base.Vec3.add(
+            base.Vec3.scale(c0, (b*b), [0, 0, 0]),
+            base.Vec3.scale(c1, (2*b*dist), [0, 0, 0])
         ),
-        base.vec3.scale(c2, (dist*dist), [0, 0, 0])
+        base.Vec3.scale(c2, (dist*dist), [0, 0, 0])
     );
 };
 
@@ -670,12 +690,12 @@ files.bsp.getCurvePoint2_ = function(c0, c1, c2, dist) {
     var c31 = [c1[0], c1[1], 0];
     var c32 = [c2[0], c2[1], 0];
 
-    var res = base.vec3.add(
-        base.vec3.add(
-            base.vec3.scale(c30, (b*b), [0, 0, 0]),
-            base.vec3.scale(c31, (2*b*dist), [0, 0, 0])
+    var res = base.Vec3.add(
+        base.Vec3.add(
+            base.Vec3.scale(c30, (b*b), [0, 0, 0]),
+            base.Vec3.scale(c31, (2*b*dist), [0, 0, 0])
         ),
-        base.vec3.scale(c32, (dist*dist), [0, 0, 0])
+        base.Vec3.scale(c32, (dist*dist), [0, 0, 0])
     );
 
     return [res[0], res[1]];

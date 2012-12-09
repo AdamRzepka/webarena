@@ -1,27 +1,29 @@
-goog.require('input');
-goog.require('gl-matrix');
-goog.provide('camera');
+goog.require('InputHandler');
+goog.require('base.Mat4');
+goog.require('base.Vec3');
 
-function Camera(input, startPosition)
+goog.provide('game.Camera');
+
+game.Camera = function(input, startPosition)
 {
     var self = this;
 
     self.input = input;
-    self.position = vec3.create(startPosition);
-    self.rotation = mat4.identity();
-    mat4.rotateX(self.rotation, (Math.PI / 2));
+    self.position = base.Vec3.create(startPosition);
+    self.rotation = base.Mat4.identity();
+    base.Mat4.rotateX(self.rotation, (Math.PI / 2));
     self.speed = 4.0;
 
-    self.camMtx = mat4.identity();
-    mat4.rotateX(self.camMtx, Math.PI / 2.0);
-    mat4.translate(self.camMtx, self.position);
+    self.camMtx = base.Mat4.identity();
+    base.Mat4.rotateX(self.camMtx, Math.PI / 2.0);
+    base.Mat4.translate(self.camMtx, self.position);
 
-}
+};
 
-Camera.prototype.update = function()
+game.Camera.prototype.update = function()
 {
     var dirty = false;
-    var dir = vec3.create([0.0, 0.0, 0.0]);
+    var dir = base.Vec3.create([0.0, 0.0, 0.0]);
 
     if (this.input.keyPressed("W"))
     {
@@ -48,22 +50,22 @@ Camera.prototype.update = function()
     }
     if (this.input.mouseDown)
     {
-	var globalRot = mat4.identity();
-	mat4.rotateZ(globalRot, -this.input.mouseDeltaXY.x / 50.0);
-	this.rotation = mat4.multiply(globalRot, this.rotation);
-	var localRot = mat4.identity();
-	mat4.rotateX(localRot, -this.input.mouseDeltaXY.y / 50.0);
-	mat4.multiply(this.rotation, localRot);
+	var globalRot = base.Mat4.identity();
+	base.Mat4.rotateZ(globalRot, -this.input.mouseDeltaXY.x / 50.0);
+	this.rotation = base.Mat4.multiply(globalRot, this.rotation);
+	var localRot = base.Mat4.identity();
+	base.Mat4.rotateX(localRot, -this.input.mouseDeltaXY.y / 50.0);
+	base.Mat4.multiply(this.rotation, localRot);
 
 	dirty = true;
     }
 
     if (dirty)
     {
-	mat4.set(this.rotation, this.camMtx);
+	base.Mat4.set(this.rotation, this.camMtx);
 	//      mat4.transpose(this.viewMtx);
-	mat4.multiplyVec3(this.rotation, dir);
-	vec3.add(this.position, dir);
+	base.Mat4.multiplyVec3(this.rotation, dir);
+	base.Vec3.add(this.position, dir);
 	//      mat4.translate(this.viewMtx, this.position);
 
 	this.camMtx[12] = this.position[0];
@@ -75,6 +77,6 @@ Camera.prototype.update = function()
     }
 };
 
-Camera.prototype.getCameraMatrix = function () {
+game.Camera.prototype.getCameraMatrix = function () {
     return this.camMtx;
-}
+};

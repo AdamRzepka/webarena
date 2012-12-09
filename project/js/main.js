@@ -1,11 +1,14 @@
 'use strict';
 
-goog.require('renderer');
-goog.require('resources');
-goog.require('q3bsp');
-goog.require('input');
-goog.require('camera');
-goog.require('resources.Md3');
+goog.require('goog.debug.FancyWindow');
+goog.require('base');
+goog.require('base.Mat4');
+goog.require('files.ResourceManager');
+goog.require('files.bsp');
+goog.require('files.ShaderScriptLoader');
+goog.require('renderer.Renderer');
+goog.require('InputHandler');
+goog.require('game.Camera');
 
 var DEFAULT_MAP = 'oa_rpg3dm2';
 
@@ -38,11 +41,9 @@ function initWebGL(canvas) {
     return gl;
 }
 
-(function() {
-    var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-            window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-    window.requestAnimationFrame = requestAnimationFrame;
-})();
+var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+        window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+
 
 var render;
 
@@ -50,20 +51,23 @@ function main() {
     var canvas = document.getElementById('glcanvas');
 
     var gl = initWebGL(canvas);
+    var debugWindow = new goog.debug.FancyWindow('main');
+    debugWindow.setEnabled(true);
+    debugWindow.init();
 
     var map = getQueryVariable('map');
 
     if (map === null)
         map = DEFAULT_MAP;
 
-    var rm = new resources.ResourceManager();
+    var rm = new files.ResourceManager();
     var input = new InputHandler();
-    var camera = new Camera(input, [0, 0, 0]);
+    var camera = new game.Camera(input, [0, 0, 0]);
 
     var lastTime = Date.now();
     var timeAcc = 0;
 
-    var weaponMtx = mat4.identity();
+    var weaponMtx = base.Mat4.identity();
     var weaponOff = [10, -10, -4];
     var weaponId = -1;
     var weaponRot = [0, 0, -1, 0,
@@ -80,23 +84,31 @@ function main() {
 	}
 	lastTime = Date.now();
 	render.updateCamera(camera.getCameraMatrix());
-	mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
-	mat4.multiply(weaponMtx, weaponRot, weaponMtx);
-	render.updateModel(weaponId, weaponMtx, 0);
+	// base.Mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
+	// base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
+	// render.updateModel(weaponId, weaponMtx, 0);
 	render.render();
 	requestAnimationFrame(update);
     }
 
     rm.load([map, "lightning"], function () {
-	// var im = new Image();
-	// im.src = rm.textures["textures/skies/dimclouds"];
-	// window.document.body.appendChild(im);
-	render = new renderer.Renderer(gl, rm);
-	q3bsp.load(rm.getMap(), 10);
-	var md3 = resources.Md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
-	var id = render.registerMd3(md3.model, md3.vertexData);
-	weaponId = render.makeModelInstance(id, weaponMtx);
-	render.updateCamera(mat4.identity());
+	render = new renderer.Renderer(gl);
+
+	files.ShaderScriptLoader.loadAll(rm);
+	render.buildShaders(files.ShaderScriptLoader.shaderScripts, rm.getTextures());
+	
+	var map = files.bsp.load(rm.getMap());
+	render.registerMap(map.models, map.geometry, map.lightmapData);
+	map.models.forEach(function (model) {
+	    render.registerModelInstance(base.ModelInstance.getNextId(),
+					 model.id,
+					 base.Mat4.identity());
+	});
+	
+//	var md3 = resources.Md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
+//	var id = render.registerMd3(md3.model, md3.vertexData);
+//	weaponId = render.makeModelInstance(id, weaponMtx);
+	render.updateCamera(base.Mat4.identity());
 	requestAnimationFrame(update);
     });
 }

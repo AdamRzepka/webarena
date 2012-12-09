@@ -1,8 +1,28 @@
-/*
- * q3glshader.js - Transforms a parsed Q3 shader definition into a set of WebGL compatible states
- */
+/**
+ * @license
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
 
-/*
+ 
+ * This file is modified verison of q3glshader.js by Brandon Jones. Below
+ * is a copyright note from the original file.
+
+ * q3glshader.js - Transforms a parsed Q3 shader definition into a set of WebGL compatible states
+ 
+ *
  * Copyright (c) 2009 Brandon Jones
  *
  * This software is provided 'as-is', without any express or implied
@@ -28,6 +48,9 @@
  */
 
 'use strict';
+
+goog.require('goog.debug.Logger');
+goog.require('goog.debug.Logger.Level');
 
 goog.require('base.Mat4');
 goog.require('renderer.Material');
@@ -175,7 +198,7 @@ renderer.MaterialManager = function(gl) {
      * @private
      * @type {renderer.ShaderProgram}
      */    
-    this.defautlModelProgram = this.compileShaderProgram(
+    this.defaultModelProgram = this.compileShaderProgram(
 	renderer.MaterialManager.defaultVertexSrc,
 	renderer.MaterialManager.defaultModelFragmentSrc);
 
@@ -204,7 +227,7 @@ renderer.MaterialManager.prototype.logger =
  * @param {Object.<string, base.ShaderScript>} shaderScripts
  * @param {Object.<string, string>} images Map of image paths and blob URLs to images
  */
-renderer.MaterialManager.prototype.buildMaterials = function (shaderScripts, images) {
+renderer.MaterialManager.prototype.buildShaders = function (shaderScripts, images) {
     var name;
     var shaderScript;
     var i;
@@ -218,7 +241,7 @@ renderer.MaterialManager.prototype.buildMaterials = function (shaderScripts, ima
     for (i = 0; i < shaderScripts.length; ++i) {
 	shaderScript = shaderScripts[i];
 	name = shaderScript.name;
-	this.shaders[name] = new renderer.Material(
+	this.materials[name] = new renderer.Material(
 	    this.build(this.gl, shaderScript),
 	    null,
 	    renderer.LightningType.LIGHT_CUSTOM);
@@ -240,7 +263,8 @@ renderer.MaterialManager.prototype.buildLightmap = function (lightmapData) {
 
     for(var i = 0; i < lightmaps.length; ++i) {
         gl.texSubImage2D(
-            gl.TEXTURE_2D, 0, lightmaps[i].x, lightmaps[i].y, lightmaps[i].width, lightmaps[i].height,
+            gl.TEXTURE_2D, 0, lightmaps[i].x, lightmaps[i].y,
+	    lightmaps[i].width, lightmaps[i].height,
             gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(lightmaps[i].bytes)
             );
     }
@@ -306,10 +330,10 @@ renderer.MaterialManager.prototype.build = function(gl, shader) {
         glStage.blendDest = this.translateBlend(gl, stage.blendDest);
         glStage.depthFunc = this.translateDepthFunc(gl, stage.depthFunc);
 
-	if(glStage.shaderSrc && !glStage.program) {
-            glStage.program = this.compileShaderProgram(gl, glStage.shaderSrc.vertex,
+//	if(glStage.shaderSrc && !glStage.program) {
+            glStage.program = this.compileShaderProgram(glStage.shaderSrc.vertex,
 							      glStage.shaderSrc.fragment);
-        }
+	//      }
 
 	this.setStageTexture(gl, stage);
 
@@ -332,7 +356,7 @@ renderer.MaterialManager.prototype.buildDefault = function(gl, lightningType) {
         depthFunc: gl.LEQUAL,
         depthWrite: true,
 	program: (lightningType == renderer.LightningType.LIGHT_MAP) ?
-	    this.defaultProgram : this.modelProgram
+	    this.defaultLightmapProgram : this.defaultModelProgram
     };
 
     // if(surface) {
@@ -432,7 +456,7 @@ renderer.MaterialManager.prototype.setStageTexture = function(
 		stage.animTexture[i] = textures[stage.animMaps[i]];
 	    }
 	    else {
-		this.logger.log(goog.debug.Logger.Level.Warning,
+		this.logger.log(goog.debug.Logger.Level.WARNING,
 				'Texture ' + stage.animMaps[i] + ' not found');
 		stage.animTexture[i] = this.defaultTexture;
 	    }
@@ -456,7 +480,7 @@ renderer.MaterialManager.prototype.setStageTexture = function(
 	    }
 	}
 	else {
-	    this.logger.log(goog.debug.Logger.Level.Warning,
+	    this.logger.log(goog.debug.Logger.Level.WARNING,
 			    'Texture ' + stage.map + ' not found');
 	}
         // this.loadTextureUrl(gl, stage.map, stage.clamp, function(texture) {
@@ -579,23 +603,23 @@ renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage
         }
     }
 
-    gl.useProgram(program);
+    gl.useProgram(program.glProgram);
 
     var texture = stage.texture;
     if(!texture) { texture = this.defaultTexture; }
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1i(program.uniform.texture, 0);
+    gl.uniform1i(program.uniforms.texture, 0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
-    if(program.uniform.lightmap) {
+    if(program.uniforms.lightmap) {
         gl.activeTexture(gl.TEXTURE1);
-        gl.uniform1i(program.uniform.lightmap, 1);
+        gl.uniform1i(program.uniforms.lightmap, 1);
         gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
     }
 
-    if(program.uniform.time) {
-        gl.uniform1f(program.uniform.time, time);
+    if(program.uniforms.time) {
+        gl.uniform1f(program.uniforms.time, time);
     }
 
     return program;
@@ -609,7 +633,7 @@ renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage
 renderer.MaterialManager.prototype.bindTexture = function (texture, program) {
     var gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1i(program.uniform.texture, 0);
+    gl.uniform1i(program.uniforms.texture, 0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
 };
 
@@ -698,6 +722,7 @@ renderer.MaterialManager.prototype.compileShaderProgram = function(vertexSrc, fr
  * @type {string}
  */
 renderer.MaterialManager.defaultVertexSrc = 
+    'precision highp float;\n' +
     'attribute vec3 position; \n' +
     'attribute vec3 normal; \n' +
     'attribute vec2 texCoord; \n' +
@@ -723,7 +748,8 @@ renderer.MaterialManager.defaultVertexSrc =
  * @const
  * @type {string}
  */
-renderer.MaterialManager.defaultLightmapFragmentSrc = 
+renderer.MaterialManager.defaultLightmapFragmentSrc =
+    'precision highp float;\n' +
     'varying vec2 vTexCoord; \n' +
     'varying vec2 vLightmapCoord; \n' +
     'uniform sampler2D texture; \n' +
@@ -740,7 +766,8 @@ renderer.MaterialManager.defaultLightmapFragmentSrc =
  * @const
  * @type {string}
  */
-renderer.MaterialManager.defaultModelFragmentSrc = 
+renderer.MaterialManager.defaultModelFragmentSrc =
+    'precision highp float;\n' +
     'varying vec2 vTexCoord; \n' +
     'varying vec4 vColor; \n' +
     'uniform sampler2D texture; \n' +
