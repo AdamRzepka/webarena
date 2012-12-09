@@ -91,6 +91,7 @@ def get_files_for_shaders(shaders, baseoa):
     textures_dep = []
     scripts_dep = []
     shaders_found = set()
+    code = []
     
     for script_path in scripts:
         shaders_dep = parse_shader_file(baseoa + '/scripts/' + script_path)
@@ -98,10 +99,17 @@ def get_files_for_shaders(shaders, baseoa):
             if shader in shaders_dep:
 #                print 'Shader', shader, 'found in script', script_path
                 shaders_found.add(shader)
-                if shaders_dep[shader] != []:
-                    scripts_dep.append('scripts/' + script_path)
-                    textures_dep.extend(shaders_dep[shader])
-                    
+                code.append(shaders_dep[shader][1])
+                if shaders_dep[shader][0] != []:
+                    #scripts_dep.append('scripts/' + script_path)
+                    textures_dep.extend(shaders_dep[shader][0])
+
+    temp_file_name = '/scripts/__all__.shader'
+    with open(baseoa + temp_file_name, 'w') as f:
+        f.write('\n'.join(code));
+
+    scripts_dep.append(temp_file_name)
+    
     not_found = set(shaders).difference(shaders_found)    
     for s in not_found:
         print 'Warning: Shader', s, 'not found in any script.'
@@ -115,8 +123,12 @@ def parse_shader_file(script_path):
         line = script.readline()
         shader_name = ''
         textures = []
+        code = []
         state = 'global'
         while line != '':
+            # there are various line endings in shader files;
+            # converting them to unix format
+            code.append(line.strip('\n\r'));
             line = line.strip().lower()
             if line[:2] == '//' or line == '\n':
                 pass
@@ -129,7 +141,8 @@ def parse_shader_file(script_path):
                 if line == '{':
                     state = 'stage'
                 elif line == '}':
-                    shaders[shader_name] = textures
+                    shaders[shader_name] = (textures, '\n'.join(code))
+                    code = []
                     textures = []
                     state = 'global'
             elif state == 'stage':
