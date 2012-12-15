@@ -23,60 +23,60 @@ goog.provide('renderer.Mesh');
 goog.require('goog');
 goog.require('base');
 
-/**
- * @constructor
- * @extends {base.Mesh}
- * @param {base.Mesh} mesh
- * @param {number} indexBufferId
- * @param {Array.<number>} vertexBufferIds
- * @param {renderer.LightningType} lightningType
- */
-renderer.Mesh = function(mesh, material, indexBufferId, vertexBufferIds, lightningType) {
-    /**
-     * @const
-     * @type {base.GeometryData}
-     */
-    this.geometry = mesh.geometry;
-    /**
-     * @const
-     * Offset in geometry buffer
-     * @type {number}
-     */
-    this.indicesOffset = mesh.indicesOffset;
-    /**
-     * @const
-     * @type {number}
-     */
-    this.indicesCount = mesh.indicesCount;
-    /**
-     * List of all materials, the instances of the mesh can have.
-     * @const
-     * @type {Array.<renderer.Material>}
-     */
-    this.materialNames = mesh.materialNames;
+// /**
+//  * @constructor
+//  * @extends {base.Mesh}
+//  * @param {base.Mesh} mesh
+//  * @param {number} indexBufferId
+//  * @param {Array.<number>} vertexBufferIds
+//  * @param {renderer.LightningType} lightningType
+//  */
+// renderer.Mesh = function(mesh, material, indexBufferId, vertexBufferIds, lightningType) {
+//     /**
+//      * @const
+//      * @type {base.GeometryData}
+//      */
+//     this.geometry = mesh.geometry;
+//     /**
+//      * @const
+//      * Offset in geometry buffer
+//      * @type {number}
+//      */
+//     this.indicesOffset = mesh.indicesOffset;
+//     /**
+//      * @const
+//      * @type {number}
+//      */
+//     this.indicesCount = mesh.indicesCount;
+//     /**
+//      * List of all materials, the instances of the mesh can have.
+//      * @const
+//      * @type {Array.<renderer.Material>}
+//      */
+//     this.materialNames = mesh.materialNames;
 
-    /**
-     * List of all materials, the instances of the mesh can have.
-     * @const
-     * @type {Array.<renderer.Material>}
-     */
-    this.materials = material;
-    /**
-     * @const
-     * @type {number}
-     */
-    this.indexBufferId = indexBufferId;
-    /**
-     * @const
-     * @type {Array.<number>}
-     */
-    this.vertexBufferIds = vertexBufferIds;
-    /**
-     * @const
-     * @type {renderer.LightningType}
-     */
-    this.lightningType = lightningType;
-};
+//     /**
+//      * List of all materials, the instances of the mesh can have.
+//      * @const
+//      * @type {Array.<renderer.Material>}
+//      */
+//     this.materials = material;
+//     /**
+//      * @const
+//      * @type {number}
+//      */
+//     this.indexBufferId = indexBufferId;
+//     /**
+//      * @const
+//      * @type {Array.<number>}
+//      */
+//     this.vertexBufferIds = vertexBufferIds;
+//     /**
+//      * @const
+//      * @type {renderer.LightningType}
+//      */
+//     this.lightningType = lightningType;
+// };
 
 goog.inherits(renderer.Mesh, base.Mesh);
 
@@ -90,7 +90,7 @@ goog.inherits(renderer.Mesh, base.Mesh);
 renderer.MeshInstance = function(baseMesh, modelInstance, material) {
     /**
      * @const
-     * @type {renderer.Mesh}
+     * @type {base.Mesh}
      */
     this.baseMesh = baseMesh;
     /**

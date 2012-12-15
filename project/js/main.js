@@ -98,7 +98,7 @@ function main() {
 	render.buildShaders(files.ShaderScriptLoader.shaderScripts, rm.getTextures());
 	
 	var map = files.bsp.load(rm.getMap());
-	render.registerMap(map.models, map.geometry, map.lightmapData);
+	render.registerMap(map.models, map.lightmapData);
 	map.models.forEach(function (model) {
 	    render.registerModelInstance(base.ModelInstance.getNextId(),
 					 model.id,

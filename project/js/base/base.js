@@ -31,6 +31,7 @@ goog.provide('base');
 goog.provide('base.Model');
 goog.provide('base.ModelInstance');
 goog.provide('base.Mesh');
+goog.provide('base.LightningType');
 goog.provide('base.GeometryData');
 goog.provide('base.Model.Frame');
 
@@ -131,7 +132,6 @@ base.Model.FrameData = function(aabb, origin, radius, tags) {
  * @param {number} skinId
  */
 base.ModelInstance = function(id, baseModel, skinId) {
-    goog.asserts.assert(id >= 0);
     goog.asserts.assert(goog.isDefAndNotNull(baseModel));
     goog.asserts.assert(skinId >= 0 && skinId < baseModel.skins.length);
     
@@ -249,9 +249,9 @@ base.ModelInstance.prototype.setVisibility = function (visibility) {
  * @param {base.GeometryData} geometry
  * @param {number} indicesOffset
  * @param {number} indicesCount
- * @param {Array.<base.Materials>} materials
+ * @param {Array.<string>} materialNames
  */
-base.Mesh = function(geometry, indicesOffset, indicesCount, materialNames) {
+base.Mesh = function(geometry, indicesOffset, indicesCount, materialNames, lightningType) {
     /**
      * @const
      * @type {base.GeometryData}
@@ -274,22 +274,72 @@ base.Mesh = function(geometry, indicesOffset, indicesCount, materialNames) {
      * @type {Array.<string>}
      */
     this.materialNames = materialNames;
+    /**
+     * @const
+     * @type {base.LightningType}
+     */
+    this.lightningType = lightningType;
+     
+    /**
+     * @type {Array.<base.Material>}
+     */
+    this.materials = [];
 };
+
+/**
+ * @enum
+ */
+base.LightningType = {
+    LIGHT_2D: -4,
+    LIGHT_VERTEX: -3,
+    LIGHT_WHITE: -2,
+    LIGHT_DYNAMIC: -1,
+    LIGHT_MAP: 0,
+    LIGHT_CUSTOM: 1
+};
+
 
 /**
  * Buffer for raw geometry data.
  * @constructor
  * @param {Uint16Array} indices Index array
  * @param {Array<Float32Array>} vertices Array vertex array. One vertex array
+ * @param {base.GeometryData.Layout} layout
  * corresponds to one frame.
  */
-base.GeometryData = function(indices, vertices) {
+base.GeometryData = function(indices, vertices, layout) {
+    goog.asserts.assert(layout >= 0 && layout < base.GeometryData.Layout.SIZE);
     /**
+     * @const
      * @type {Uint16Array}
      */
     this.indices = indices;
     /**
+     * @const
      * @type {Array<Float32Array>}
      */
     this.vertices = vertices;
+    /**
+     * @const
+     * @type {base.GeometryData.Layout}
+     */
+    this.layout = layout;
+    /**
+     * @type {number}
+     */
+    this.indexBufferId = -1;
+    /**
+     * @type {Array.<number>}
+     */
+    this.vertexBufferIds = [];
+};
+
+/**
+ * @enum
+ */
+base.GeometryData.Layout = {
+    BSP: 0,
+    MD3: 1,
+    SKY: 2,
+    SIZE: 3
 };

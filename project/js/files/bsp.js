@@ -633,13 +633,15 @@ files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders)
     }
 
     var geometryData = new base.GeometryData(new Uint16Array(indices),
-					     [new Float32Array(vertices)]);
+					     [new Float32Array(vertices)],
+					     base.GeometryData.Layout.BSP);
 
     for (i = 0; i < shaders.length; ++i) {
 	shader = shaders[i];
 	if (shader.faces.length > 0) {
 	    mesh = new base.Mesh(geometryData, shader.indexOffset,
-				 shader.elementCount, [shader.shaderName]);
+				 shader.elementCount, [shader.shaderName],
+				 base.LightningType.LIGHT_MAP);
 	    meshes.push(mesh);
 	}
     }
@@ -647,8 +649,7 @@ files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders)
     var model = new base.Model(base.Model.getNextId(), meshes, 1, []);
 
     return new base.Map([model],
-			lightmapData,
-			geometryData);
+			lightmapData);
 };
 
 

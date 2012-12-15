@@ -53,9 +53,32 @@ goog.require('goog.debug.Logger');
 goog.require('goog.debug.Logger.Level');
 
 goog.require('base.Mat4');
-goog.require('renderer.Material');
+goog.provide('renderer.Material');
 
 goog.provide('renderer.MaterialManager');
+
+/**
+ * @constructor
+ */
+renderer.Material = function (shader, defaultTexture, lightningType) {
+    /**
+     * @const
+     * @type {renderer.Shader}
+     */
+    this.shader = shader;
+    /**
+     * @const
+     * @type {WebGLTexture}
+     */
+    this.defaultTexture = defaultTexture;
+    /**
+     * @const
+     * @type {base.LightningType}
+     */
+    this.lightningType = lightningType;
+};
+
+goog.inherits(renderer.Material, base.Material);
 
 /**
  * @constructor
@@ -102,7 +125,7 @@ renderer.Shader = function () {
     /**
      * @type {boolean}
      */
-    this.sky = null;
+    this.sky = false;
     /**
      * @type {number}
      */
@@ -191,7 +214,7 @@ renderer.MaterialManager = function(gl) {
      * @private
      * @type {renderer.ShaderProgram}
      */
-    this.defaultLigthmapProgram = this.compileShaderProgram(
+    this.defaultLightmapProgram = this.compileShaderProgram(
 	renderer.MaterialManager.defaultVertexSrc,
 	renderer.MaterialManager.defaultLightmapFragmentSrc);
     /**
@@ -206,12 +229,12 @@ renderer.MaterialManager = function(gl) {
      * @private
      * @type {renderer.Shader}
      */
-    this.defaultLightmapShader = this.buildDefault(gl, renderer.LightningType.LIGHT_MAP);
+    this.defaultLightmapShader = this.buildDefault(gl, base.LightningType.LIGHT_MAP);
     /**
      * @private
      * @type {renderer.Shader}
      */
-    this.defaultModelShader = this.buildDefault(gl, renderer.LightningType.LIGHT_DYNAMIC);
+    this.defaultModelShader = this.buildDefault(gl, base.LightningType.LIGHT_DYNAMIC);
 
 };
 
@@ -244,7 +267,7 @@ renderer.MaterialManager.prototype.buildShaders = function (shaderScripts, image
 	this.materials[name] = new renderer.Material(
 	    this.build(this.gl, shaderScript),
 	    null,
-	    renderer.LightningType.LIGHT_CUSTOM);
+	    base.LightningType.LIGHT_CUSTOM);
     }
 };
 
@@ -275,7 +298,7 @@ renderer.MaterialManager.prototype.buildLightmap = function (lightmapData) {
 /**
  * @public
  * @param {string} name
- * @param {renderer.LightningType} lightningtype
+ * @param {base.LightningType} lightningtype
  * @return {renderer.Material}
  */
 renderer.MaterialManager.prototype.getMaterial = function (name, lightningType) {
@@ -295,7 +318,7 @@ renderer.MaterialManager.prototype.getMaterial = function (name, lightningType) 
 	    defTexture = this.defaultTexture;
 	}
 	material = new renderer.Material(
-	    (renderer.LightningType == renderer.LightningType.LIGHT_MAP) ?
+	    (lightningType == base.LightningType.LIGHT_MAP) ?
 		this.defaultLightmapShader : this.defaultModelShader,
 	    defTexture,
 	    lightningType
@@ -350,12 +373,12 @@ renderer.MaterialManager.prototype.buildDefault = function(gl, lightningType) {
     var diffuseStage = {
         map: null,
 	texture: null,
-        isLightmap: (lightningType == renderer.LightningType.LIGHT_MAP),
+        isLightmap: (lightningType == base.LightningType.LIGHT_MAP),
         blendSrc: gl.ONE,
         blendDest: gl.ZERO,
         depthFunc: gl.LEQUAL,
         depthWrite: true,
-	program: (lightningType == renderer.LightningType.LIGHT_MAP) ?
+	program: (lightningType == base.LightningType.LIGHT_MAP) ?
 	    this.defaultLightmapProgram : this.defaultModelProgram
     };
 

@@ -25,8 +25,8 @@ goog.require('base');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('renderer.Mesh');
-goog.require('renderer.Material');
 goog.require('renderer.MaterialManager');
+goog.require('renderer.Sky');
 
 goog.provide('renderer.Renderer');
 
@@ -78,6 +78,11 @@ renderer.Renderer = function(gl) {
     this.materialManager_ = new renderer.MaterialManager(gl);
     /**
      * @private
+     * @type {renderer.Sky}
+     */
+    this.sky_ = new renderer.Sky();
+    /**
+     * @private
      * @type {base.Mat4}
      */
     this.viewMtx_ = base.Mat4.identity();
@@ -86,7 +91,6 @@ renderer.Renderer = function(gl) {
      * @type {base.Mat4}
      */
     this.projectionMtx_ = base.Mat4.perspective(90, 1.6, 0.1, 4096);
-
     /**
      * @private
      * @type {base.Mat4}
@@ -148,14 +152,15 @@ renderer.Renderer.prototype.render = function () {
 	    }
 
 	    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
-			  this.indexBuffers_[meshBase.indexBufferId]);
+			  this.indexBuffers_[meshBase.geometry.indexBufferId]);
 	    gl.bindBuffer(gl.ARRAY_BUFFER,
 			  this.vertexBuffers_[
-			      meshBase.vertexBufferIds[modelInst.getFrame()]
+			      meshBase.geometry.vertexBufferIds[modelInst.getFrame()]
 			  ]);
 
 	    base.Mat4.multiply(this.viewMtx_, modelInst.getMatrix(), this.modelViewMtx_);
-	    this.bindShaderAttribs(stage.program, this.modelViewMtx_, this.projectionMtx_);
+	    this.bindShaderAttribs_(stage.program, this.modelViewMtx_, this.projectionMtx_,
+				    meshBase.geometry.layout);
 
 	    gl.drawElements(gl.TRIANGLES,
 			    meshBase.indicesCount,
@@ -173,99 +178,32 @@ renderer.Renderer.prototype.render = function () {
  * @param {base.GeometryData} geometryData
  * @param {base.Map.LightmapData} lightmapData
  */
-renderer.Renderer.prototype.registerMap = function (models, geometryData, lightmapData) {
-
+renderer.Renderer.prototype.registerMap = function (models, lightmapData) {
     var i, j;
-    var gl = this.gl_;
-    var model, mesh, meshes, materials;
-    var vertexBufferSize = this.vertexBuffers_.length;
-    var indexBufferSize = this.indexBuffers_.length;
-    
-    var vertexBuffer = gl.createBuffer();
-    var indexBuffer = gl.createBuffer();
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometryData.vertices[0]), gl.STATIC_DRAW);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(geometryData.indices), gl.STATIC_DRAW);
-
-    this.vertexBuffers_.push(vertexBuffer);
-    this.indexBuffers_.push(indexBuffer);
 
     this.materialManager_.buildLightmap(lightmapData);
 
-    meshes = [];
     for (i = 0; i < models.length; ++i) {
-	model = models[i];
-
-	meshes.length = 0;
-	for (j = 0; j < model.meshes.length; ++j) {
-	    materials = model.meshes[j].materialNames.map(goog.bind(function (name) {
-		return this.materialManager_.getMaterial(
-		    name,
-		    renderer.LightningType.LIGHT_MAP);
-	    }, this));
-
-	    mesh = new renderer.Mesh(
-		model.meshes[j],
-		materials,
-		indexBufferSize,
-		[vertexBufferSize]);
-
-	    meshes.push(mesh);
-	    this.meshes_.push(mesh);
+	this.addMeshes(models[i]);
+	this.insertModel_(models[i]);
+	// find mesh with sky material
+	for (j = 0; j < models[i].meshes.length; ++j) {
+	    if (models[i].meshes[j].materials[0].shader.sky) {
+		this.sky_.build(models[i].meshes[j].materials[0], this);
+	    }
 	}
-	model.meshes = meshes;
-	this.addModel(model);
     }
+
 };
 
-// /**
-//  * @param {renderer.Model} model
-//  * @param {{vertices: Float32Array, frames: Array<{indices: Uint16Array}>}} vertexData
-//  * @return {number} id of added model
-//  */
-// renderer.Renderer.prototype.registerMd3 = function (model, vertexData) {
-//     var i, j;
-//     var firstArrayIndex;
-//     var gl = this.gl_;
-
-//     var indexBuffer = this.gl_.createBuffer();
-//     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-//     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexData.indices, gl.STATIC_DRAW);
-
-//     this.elementArrayBuffers.push(indexBuffer);
-
-//     firstArrayIndex = this.arrayBuffers.length;
-//     for (i = 0; i < vertexData.frames.length; ++i) {
-// 	var vertexBuffer = gl.createBuffer();
-// 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-// 	gl.bufferData(gl.ARRAY_BUFFER, vertexData.frames[i].vertices, gl.STATIC_DRAW);
-
-// 	this.arrayBuffers.push(vertexBuffer);
-//     }
-
-//     this.models_.push(model);
-//     for (i = 0; i < model.meshes.length; ++i) {
-// 	var mesh = model.meshes[i];
-// 	mesh.id = this.meshes_.length;
-// 	mesh.elementsArrayId = this.elementArrayBuffers.length - 1;
-
-// 	this.meshes_.push(mesh);
-// 	for (j = 0; j < model.framesCount; ++j) {
-// 	    mesh.frames[j].arrayBufferId = firstArrayIndex + j;
-// 	}
-
-// 	for (j = 0; j < mesh.materials.length; ++j) {
-// 	    mesh.materials[j] = Q3GlShader.getMaterial(mesh.materials[j].shaderName, LightningType.LIGHT_DYNAMIC);
-// 	}
-//     }
-//     return this.models_.length - 1; // index of added model
-// };
+renderer.Renderer.prototype.registerMd3 = function (model) {
+    this.addMeshes(model);
+    this.insertModel_(model);
+};
 
 /**
  * @public
+ * @param {number} id of modelInstance
  * @param {number} modelBaseId id of model
  * @param {mat4} matrix
  * @param {string} [skinName]
@@ -299,13 +237,58 @@ renderer.Renderer.prototype.registerModelInstance = function (id, modelBaseId, m
     );
 
     instance.setMatrix(matrix);
-    this.addModelInstance(instance);
+    i = this.meshInstances_.length;
+    this.addMeshInstances(instance);
+    // cull mesh if it has sky material
+    for (; i < this.meshInstances_.length; ++i) {
+	if (this.meshInstances_[i].material.shader.sky) {
+	    this.meshInstances_[i].culled = true;
+	}
+    }
+
+    this.insertModelInstance_(instance);
+};
+
+renderer.Renderer.prototype.addMeshes = function (model) {
+    var gl = this.gl_;
+    var meshes = model.meshes;
+    var j, materials, mesh;
+    
+    for (j = 0; j < meshes.length; ++j) {
+	mesh = meshes[j];
+
+	materials = mesh.materialNames.map(goog.bind(function (name) {
+	    return this.materialManager_.getMaterial(
+		name,
+		mesh.lightningType);
+	}, this));
+
+	mesh.materials = materials;
+
+	if (mesh.geometry.indexBufferId < 0) {
+	    this.createBuffers_(mesh.geometry);
+	}
+
+	this.meshes_.push(mesh);
+    }
+};
+
+/**
+ * @public
+ * @param {base.ModelInstance} modelInstance
+ */
+renderer.Renderer.prototype.addMeshInstances = function (modelInstance) {
+    var i, baseMesh, meshInstance;
+    var baseModel = modelInstance.baseModel;
+    var skinId = modelInstance.skinId;
     
     for (i = 0; i < baseModel.meshes.length; ++i){
 	baseMesh = baseModel.meshes[i];
-	meshInstance = new renderer.MeshInstance(baseMesh, instance, baseMesh.materials[skinId]);
+	meshInstance = new renderer.MeshInstance(baseMesh, modelInstance,
+						 baseMesh.materials[skinId]);
 	this.meshInstances_.push(meshInstance);
     }
+    
 };
 
 // renderer.Renderer.prototype.prepareForRendering = function() {
@@ -369,6 +352,7 @@ renderer.Renderer.prototype.setModelsVisibility = function (modelsInstancesIds, 
  */
 renderer.Renderer.prototype.updateCamera = function (cameraMatrix) {
     base.Mat4.inverse(cameraMatrix, this.viewMtx_);
+    this.sky_.updateMatrix(cameraMatrix);
 };
 
 /**
@@ -378,10 +362,42 @@ renderer.Renderer.prototype.logger_ = goog.debug.Logger.getLogger('renderer.Rend
 
 /**
  * @private
+ * @param {base.GeometryData} geometryData
+ */
+renderer.Renderer.prototype.createBuffers_ = function (geometryData) {
+    var gl = this.gl_, i;
+    var vertexBuffersSize, vertexBuffer, indexBuffer;
+
+    goog.asserts.assert(geometryData.indexBufferId === -1
+			&& geometryData.vertexBufferIds.length === 0);
+    
+    vertexBuffersSize = this.vertexBuffers_.length;
+    
+    vertexBuffer = gl.createBuffer();
+    indexBuffer = gl.createBuffer();
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometryData.indices, gl.STATIC_DRAW);
+
+    this.indexBuffers_.push(indexBuffer);
+    geometryData.indexBufferId = this.indexBuffers_.length - 1;
+
+    for (i = 0; i < geometryData.vertices.length; ++i) {
+	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, geometryData.vertices[i], gl.STATIC_DRAW);
+
+	this.vertexBuffers_.push(vertexBuffer);
+	geometryData.vertexBufferIds.push(this.vertexBuffers_.length - 1);
+    }
+    
+};
+
+/**
+ * @private
  * @param {base.Model}
  * Functions inserts model to proper position in this.models_ table
  */
-renderer.Renderer.prototype.addModel = function(model) {
+renderer.Renderer.prototype.insertModel_ = function(model) {
     var size = this.models_.length;
     var id = model.id;
     var i;
@@ -400,7 +416,7 @@ renderer.Renderer.prototype.addModel = function(model) {
  * @param {base.Model}
  * Functions inserts model to proper position in this.models_ table
  */
-renderer.Renderer.prototype.addModelInstance = function(model) {
+renderer.Renderer.prototype.insertModelInstance_ = function(model) {
     var size = this.modelInstances_.length;
     var id = model.id;
     var i;
@@ -421,11 +437,33 @@ renderer.Renderer.prototype.addModelInstance = function(model) {
  * @param {base.Mat4} modelViewMat
  * @param {base.Mat4} projectionMat
  */
-renderer.Renderer.prototype.bindShaderAttribs = function(shader, modelViewMat, projectionMat) {
+renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
+							  modelViewMat,
+							  projectionMat,
+							  vertexArrayLayout) {
     var gl = this.gl_;
 
-    var vertexStride = 56;
+    var vertexStride = 0, texOffset = 12, lightOffset = -1, normalOffset = -1,
+	colorOffset = -1;
 
+    switch (vertexArrayLayout) {
+    case base.GeometryData.Layout.BSP:
+	vertexStride = 56;
+	lightOffset = 20;
+	normalOffset = 28;
+	colorOffset = 40;
+	break;
+    case base.GeometryData.Layout.MD3:
+	vertexStride = 48; // @todo: check this
+	normalOffset = 20;
+	break;
+    case base.GeometryData.Layout.SKY:
+	vertexStride = 20;
+	break;
+    default:
+	goog.asserts.fail("Strange layout value in bindShaderAttribs: " + vertexArrayLayout);
+    }
+    
     // Set uniforms
     gl.uniformMatrix4fv(shader.uniforms.modelViewMat, false, modelViewMat);
     gl.uniformMatrix4fv(shader.uniforms.projectionMat, false, projectionMat);
@@ -436,21 +474,28 @@ renderer.Renderer.prototype.bindShaderAttribs = function(shader, modelViewMat, p
 
     if(shader.attribs.texCoord !== undefined) {
         gl.enableVertexAttribArray(shader.attribs.texCoord);
-        gl.vertexAttribPointer(shader.attribs.texCoord, 2, gl.FLOAT, false, vertexStride, 3*4);
+        gl.vertexAttribPointer(shader.attribs.texCoord, 2, gl.FLOAT, false,
+			       vertexStride, texOffset);
     }
 
-    if(shader.attribs.lightCoord !== undefined) {
+    if(shader.attribs.lightCoord !== undefined
+       && vertexArrayLayout === base.GeometryData.Layout.BSP) {
         gl.enableVertexAttribArray(shader.attribs.lightCoord);
-        gl.vertexAttribPointer(shader.attribs.lightCoord, 2, gl.FLOAT, false, vertexStride, 5*4);
+        gl.vertexAttribPointer(shader.attribs.lightCoord, 2, gl.FLOAT, false,
+			       vertexStride, lightOffset);
     }
 
-    if(shader.attribs.normal !== undefined) {
+    if(shader.attribs.normal !== undefined
+       && vertexArrayLayout !== base.GeometryData.Layout.SKY) {
         gl.enableVertexAttribArray(shader.attribs.normal);
-        gl.vertexAttribPointer(shader.attribs.normal, 3, gl.FLOAT, false, vertexStride, 7*4);
+        gl.vertexAttribPointer(shader.attribs.normal, 3, gl.FLOAT, false,
+			       vertexStride, normalOffset);
     }
 
-    if(shader.attribs.color !== undefined) {
+    if(shader.attribs.color !== undefined
+       && vertexArrayLayout === base.GeometryData.Layout.BSP) {
         gl.enableVertexAttribArray(shader.attribs.color);
-        gl.vertexAttribPointer(shader.attribs.color, 4, gl.FLOAT, false, vertexStride, 10*4);
+        gl.vertexAttribPointer(shader.attribs.color, 4, gl.FLOAT, false,
+			       vertexStride, colorOffset);
     }
 };

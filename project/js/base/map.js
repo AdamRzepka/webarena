@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+'use strict';
+
 goog.require('base');
 
 goog.provide('base.Map');
@@ -23,8 +25,10 @@ goog.provide('base.Map');
 /**
  * Class representing a level loaded from bsp. It is created by bsp loader.
  * @constructor
+ * @param {Array.<base.Model>} models
+ * @param {base.Map.Lightmap} lightmapData
  */
-base.Map = function(models, lightmapData, geometry) {
+base.Map = function(models, lightmapData) {
     this.bsp = null;
     /**
      * @const
@@ -36,11 +40,6 @@ base.Map = function(models, lightmapData, geometry) {
      * @type {base.Map.Lightmap}
      */
     this.lightmapData = lightmapData;
-    /**
-     * @const
-     * @type {base.GeometryData}
-     */
-    this.geometry = geometry;
 };
 
 /**
