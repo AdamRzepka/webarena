@@ -219,7 +219,7 @@ base.ModelInstance.prototype.getFrame = function () {
  * This function shouldn't be called directly by game worker.
  */
 base.ModelInstance.prototype.setFrame = function (frame) {
-    goog.asserts.assert(frame >= 0 && frame < this.baseModel_.getFramesCount());
+    goog.asserts.assert(frame >= 0 && frame < this.baseModel.framesCount);
     this.frame_ = frame;
 };
 

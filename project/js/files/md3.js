@@ -1,4 +1,5 @@
-goog.require('binaryFile');
+goog.require('base');
+goog.require('files.BinaryFile');
 goog.require('goog.asserts');
 
 goog.provide('files.md3');
@@ -10,9 +11,8 @@ files.md3.load = function(arrayBuffer, skins) {
 	frames = [],
 	tags = [],
 	model,
-	vertexData,
 	i = 0,
-	binaryFile = new BinaryFile(arrayBuffer);
+	binaryFile = new files.BinaryFile(arrayBuffer);
 
     // local functions
     function parseHeader_() {
@@ -115,78 +115,62 @@ files.md3.load = function(arrayBuffer, skins) {
 	    surfCount = 0,
 	    count = 0,
 	    mesh,
+	    meshes,
 	    surface,
 	    indicesOffset = 0,
 	    verticesOffset = 0,
 	    indices = [],
 	    vertices = [],
-	    frames = [],
+	    framesData = [],
 	    vertex,
-	    frame;
+	    frame,
+	    geometryData;
 
-	model = new Model();
-	model.framesCount = header.framesCount;
-	model.skinsIndices = {'__default__': 0};
-
-	for (i = 0; i < model.framesCount; ++i) {
-	    frames[i] = {vertices: []};
-	}
+	meshes = [];
 	
+	for (i = 0; i < header.framesCount; ++i) {
+	    vertices[i] = [];
+	}
+
 	surfCount = surfaces.length;
 	for (i = 0; i < surfCount; ++i) {
 	    surface = surfaces[i];
 	    indicesOffset = indices.length;
 	    
 	    count = surface.indices.length;
-	    verticesOffset = frames[0].vertices.length;
+	    verticesOffset = vertices[0].length;
 	    for (j = 0; j < count; ++j) {
 		indices.push(surface.indices[j] + verticesOffset);
 	    }
 
-	    v = 0;
 	    for (j = 0; j < header.framesCount; ++j) {
-		frame = frames[j];
 		for (k = 0; k < surface.verticesCount; ++k) {
-		    // TODO: get rid of lightmap coords and color
-		    frame.vertices.push(surface.vertices[k][0]); //x
-		    frame.vertices.push(surface.vertices[k][1]); //y
-		    frame.vertices.push(surface.vertices[k][2]); //z
-		    frame.vertices.push(surface.uv[2 * k]); // u
-		    frame.vertices.push(surface.uv[2 * k + 1]); // v
-		    frame.vertices.push(0.0); // lightmapU
-		    frame.vertices.push(0.0); // lightmapV
-		    frame.vertices.push(surface.vertices[k][3]); //nx
-		    frame.vertices.push(surface.vertices[k][4]); //ny
-		    frame.vertices.push(surface.vertices[k][5]); //nz		    
-		    frame.vertices.push(1.0); //r
-		    frame.vertices.push(1.0); //g
-		    frame.vertices.push(1.0); //b
-		    frame.vertices.push(1.0); //a
+		    vertices[j].push(surface.vertices[k][0]); //x
+		    vertices[j].push(surface.vertices[k][1]); //y
+		    vertices[j].push(surface.vertices[k][2]); //z
+		    vertices[j].push(surface.uv[2 * k]); // u
+		    vertices[j].push(surface.uv[2 * k + 1]); // v
+		    vertices[j].push(surface.vertices[k][3]); //nx
+		    vertices[j].push(surface.vertices[k][4]); //ny
+		    vertices[j].push(surface.vertices[k][5]); //nz		    
 		}
 	    }
+
+	    geometryData = new base.GeometryData(new Uint16Array(indices),
+						 vertices.map(function(v) {
+						     return new Float32Array(v);
+						 }),
+						 base.GeometryData.Layout.MD3);
 	    
-	    mesh = new Mesh();
-	    mesh.lightningType = LightningType.LIGHT_DYNAMIC;
-	    mesh.elementsArrayId = 0;
-	    mesh.elementsOffset = indicesOffset;
-	    mesh.elementsCount = surface.indices.length;
-	    
-	    for (j = 0; j < header.framesCount; ++j) {
-		mesh.frames[j] = {arrayBufferId: j};
-	    }
-	    
-	    mesh.materials[0].shaderName = surface.shaders[0].name;
-	    model.meshes.push(mesh);
+	    mesh = new base.Mesh(geometryData, indicesOffset, count,
+			    [surface.shaders[0].name], base.LightningType.LIGHT_DYNAMIC);
+	    meshes.push(mesh);
 	}
 
-	for (i = 0; i < frames.length; ++i) {
-	    frames[i].vertices = new Float32Array(frames[i].vertices);
-	}
-
-	vertexData = {
-	    indices: new Uint16Array(indices),
-	    frames: frames
-	};
+	framesData = []; // @todo
+	
+	model = new base.Model(base.Model.getNextId(), meshes, header.framesCount,
+			       framesData, tags);
     }
 
     header = parseHeader_();
@@ -208,8 +192,5 @@ files.md3.load = function(arrayBuffer, skins) {
 
     buildModel_();
 
-    return {
-	model: model,
-	vertexData: vertexData
-    };
+    return model;
 };

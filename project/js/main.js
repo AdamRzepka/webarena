@@ -5,6 +5,7 @@ goog.require('base');
 goog.require('base.Mat4');
 goog.require('files.ResourceManager');
 goog.require('files.bsp');
+goog.require('files.md3');
 goog.require('files.ShaderScriptLoader');
 goog.require('renderer.Renderer');
 goog.require('InputHandler');
@@ -84,9 +85,9 @@ function main() {
 	}
 	lastTime = Date.now();
 	render.updateCamera(camera.getCameraMatrix());
-	// base.Mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
-	// base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
-	// render.updateModel(weaponId, weaponMtx, 0);
+	base.Mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
+	base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
+	render.updateModel(weaponId, weaponMtx, 0);
 	render.render();
 	requestAnimationFrame(update);
     }
@@ -105,9 +106,12 @@ function main() {
 					 base.Mat4.identity());
 	});
 	
-//	var md3 = resources.Md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
-//	var id = render.registerMd3(md3.model, md3.vertexData);
-//	weaponId = render.makeModelInstance(id, weaponMtx);
+	var md3 = files.md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
+	render.registerMd3(md3);
+	weaponId = base.ModelInstance.getNextId();
+	render.registerModelInstance(weaponId,
+				     md3.id,
+				     weaponMtx);
 	render.updateCamera(base.Mat4.identity());
 	setTimeout(function() {
 	    requestAnimationFrame(update);

@@ -328,14 +328,16 @@ renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrice
     }
 };
 
-// renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, frame) {
-//     var model = this.modelInstances_[modelInstanceId];
-//     if (model === undefined) {
-// 	console.log("Invalid model instance id passed to updateModels: " + modelInstanceId);
-//     }
-//     model.matrix = matrix;
-//     model.frame = frame;
-// };
+renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, frame) {
+     var model = this.modelInstances_[modelInstanceId];
+     if (model === undefined) {
+	 this.logger_.log(goog.debug.Logger.Level.WARNING,
+ 			  "Invalid model instance id passed to updateModels: "
+			  + modelInstanceId);
+     }
+     model.setMatrix(matrix);
+     model.setFrame(frame);
+};
 
 /**
  * @public
@@ -458,7 +460,7 @@ renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
 	colorOffset = 40;
 	break;
     case base.GeometryData.Layout.MD3:
-	vertexStride = 48; // @todo: check this
+	vertexStride = 32; // @todo: check this
 	normalOffset = 20;
 	break;
     case base.GeometryData.Layout.SKY:
@@ -502,4 +504,12 @@ renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
         gl.vertexAttribPointer(shader.attribs.color, 4, gl.FLOAT, false,
 			       vertexStride, colorOffset);
     }
+    
+    // @todo create separate shader whithout colour for md3 and delete this
+    if(shader.attribs.color !== undefined
+       && vertexArrayLayout === base.GeometryData.Layout.MD3) {
+	gl.vertexAttrib4fv(shader.attribs.color, [1,1,1,1]);
+    }
+	
+
 };

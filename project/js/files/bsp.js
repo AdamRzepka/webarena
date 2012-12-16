@@ -48,7 +48,7 @@
  * Modified by Adam Rzepka
  */
 
-goog.require('files.binaryfile');
+goog.require('files.BinaryFile');
 goog.require('base');
 goog.require('base.Vec3');
 goog.require('base.Mat4');

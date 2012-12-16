@@ -29,7 +29,7 @@
  * Modified by Adam Rzepka
  */
 
-goog.provide('files.binaryfile');
+goog.provide('files.BinaryFile');
 
 /**
  * @constructor
