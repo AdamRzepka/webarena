@@ -198,7 +198,6 @@ renderer.MaterialManager = function(gl) {
      * @type {WebGLTexture}
      */
     this.lightmap = this.createSolidTexture(gl, [255,255,255,255]);
-    this.texMat = base.Mat4.create();
     /**
      * @private
      * @type {WebGLTexture}

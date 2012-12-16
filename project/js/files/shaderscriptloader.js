@@ -405,6 +405,8 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
     var shader = new files.ShaderBuilder();
     var i;
 
+    shader.addLines(['// source material: ' + stageShader.name]);
+    
     shader.addAttribs({
         position: 'vec3',
         normal: 'vec3',
@@ -538,6 +540,8 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
 files.ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
     var shader = new files.ShaderBuilder();
 
+    shader.addLines(['// source material: ' + stageShader.name]);
+    
     shader.addVaryings({
         vTexCoord: 'vec2',
         vColor: 'vec4'

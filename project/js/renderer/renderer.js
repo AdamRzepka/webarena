@@ -98,6 +98,8 @@ renderer.Renderer = function(gl) {
      */
     this.modelViewMtx_ = base.Mat4.create();
 
+    this.startTime_ = Date.now();
+
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST);
@@ -127,6 +129,8 @@ renderer.Renderer.prototype.render = function () {
         time = 0, // @todo
         gl = this.gl_;
 
+    time = (Date.now() - this.startTime_) / 1000;
+    
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
 

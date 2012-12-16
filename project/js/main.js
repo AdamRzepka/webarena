@@ -109,7 +109,9 @@ function main() {
 //	var id = render.registerMd3(md3.model, md3.vertexData);
 //	weaponId = render.makeModelInstance(id, weaponMtx);
 	render.updateCamera(base.Mat4.identity());
-	requestAnimationFrame(update);
+	setTimeout(function() {
+	    requestAnimationFrame(update);
+	}, 1);
     });
 }
 

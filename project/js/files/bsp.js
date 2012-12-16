@@ -575,7 +575,7 @@ files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders)
                 for(j = 0; j < face.vertCount; ++j) {
                     vert = verts[face.vertex + j];
 
-		    texSize = lightmap.textureSize;
+		    texSize = lightmapData.size;
                     vert.lmNewCoord[0] = (vert.lmCoord[0] * lightmap.width / texSize) + lightmap.x / texSize;
                     vert.lmNewCoord[1] = (vert.lmCoord[1] * lightmap.height / texSize) + lightmap.y / texSize;
                 }
