@@ -1,5 +1,9 @@
 goog.provide('InputHandler');
 
+
+/**
+ * @constructor
+ */
 InputHandler = function()
 {
     var self = this;
@@ -73,7 +77,7 @@ InputHandler = function()
 	if (typeof(key) == "string")
 	    key = key.charCodeAt(0);
 
-	return (key < self.oldKeyMap.length && self.oldkeyMap[key]);
+	return (key < self.oldKeyMap.length && self.oldKeyMap[key]);
     };
 
     self.clearInput = function()

@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,7 +32,6 @@ goog.provide('base.ModelInstance');
 goog.provide('base.Mesh');
 goog.provide('base.LightningType');
 goog.provide('base.GeometryData');
-goog.provide('base.Model.Frame');
 
 /**
  * Base class for game models. It represents both md3 models (one model per file)
@@ -55,7 +53,7 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
      */
     this.id = id;
     /**
-     * @type {Array<base.Mesh>}
+     * @type {Array.<base.Mesh>}
      */
     this.meshes = meshes;
     /**
@@ -65,7 +63,7 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
     this.framesCount = framesCount;
     /**
      * @const
-     * @type {Array<base.Model.FrameData>}
+     * @type {Array.<base.Model.FrameData>}
      */
     this.framesData = framesData;
     /**
@@ -99,7 +97,7 @@ base.Model.getNextId = (function() {
  * @param {Float32Array} aabb
  * @param {base.Vec3} origin
  * @param {number} radius
- * @param {Array.<glm.mat4>} [tags]
+ * @param {Array.<base.Mat4>} [tags]
  */
 base.Model.FrameData = function(aabb, origin, radius, tags) {
     /*
@@ -303,7 +301,7 @@ base.LightningType = {
  * Buffer for raw geometry data.
  * @constructor
  * @param {Uint16Array} indices Index array
- * @param {Array<Float32Array>} vertices Array vertex array. One vertex array
+ * @param {Array.<Float32Array>} vertices Array vertex array. One vertex array
  * @param {base.GeometryData.Layout} layout
  * corresponds to one frame.
  */
@@ -316,7 +314,7 @@ base.GeometryData = function(indices, vertices, layout) {
     this.indices = indices;
     /**
      * @const
-     * @type {Array<Float32Array>}
+     * @type {Array.<Float32Array>}
      */
     this.vertices = vertices;
     /**

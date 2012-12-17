@@ -1,5 +1,4 @@
 /**
- * @license
  Copyright (c) 2012 Gildas Lormeau. All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -27,23 +26,29 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * @fileoverview zip.js library
+ * @suppress {checkTypes}
+ */
+
 goog.provide('files.zipjs');
 
-(function(obj) {
+files.zipjs = (function(obj) {
 
-     var ERR_BAD_FORMAT = "File format is not recognized.";
-     var ERR_ENCRYPTED = "File contains encrypted entry.";
-     var ERR_ZIP64 = "File is using Zip64 (4gb+ file size).";
-     var ERR_READ = "Error while reading zip file.";
-     var ERR_WRITE = "Error while writing zip file.";
-     var ERR_WRITE_DATA = "Error while writing file data.";
-     var ERR_READ_DATA = "Error while reading file data.";
-     var ERR_DUPLICATED_NAME = "File already exists.";
-     var ERR_HTTP_RANGE = "HTTP Range not supported.";
-     var CHUNK_SIZE = 512 * 1024;
+    var ERR_BAD_FORMAT = "File format is not recognized.";
+    var ERR_ENCRYPTED = "File contains encrypted entry.";
+    var ERR_ZIP64 = "File is using Zip64 (4gb+ file size).";
+    var ERR_READ = "Error while reading zip file.";
+    var ERR_WRITE = "Error while writing zip file.";
+    var ERR_WRITE_DATA = "Error while writing file data.";
+    var ERR_READ_DATA = "Error while reading file data.";
+    var ERR_DUPLICATED_NAME = "File already exists.";
+    var ERR_HTTP_RANGE = "HTTP Range not supported.";
+    var CHUNK_SIZE = 512 * 1024;
 
-     var INFLATE_JS = "inflate.js";
-     var DEFLATE_JS = "deflate.js";
+    var INFLATE_JS = "inflate.js";
+    var DEFLATE_JS = "deflate.js";
+    var zipjs;
 
      // var BlobBuilder = obj.WebKitBlobBuilder || obj.MozBlobBuilder || obj.MSBlobBuilder || obj.BlobBuilder;
 
@@ -273,7 +278,7 @@ goog.provide('files.zipjs');
      };
 
      function TextWriter() {
-	 var that = this, blob;
+	 var that = this, blob, monerror;
 
 	 function init(callback, onerror) {
 	     blob = new Blob();
@@ -281,6 +286,7 @@ goog.provide('files.zipjs');
 	 }
 
 	 function writeUint8Array(array, callback, onerror) {
+	     monerror = onerror;
 	     blob = new Blob([blob, new DataView(array.buffer)], {"type": "text\/plain"});
 	     callback();
 	 }
@@ -290,7 +296,7 @@ goog.provide('files.zipjs');
 	     reader.onload = function(e) {
 		 callback(e.target.result);
 	     };
-	     reader.onerror = onerror;
+	     reader.onerror = monerror;
 	     reader.readAsText(blob, "x-user-defined");
 	 }
 
@@ -392,7 +398,7 @@ goog.provide('files.zipjs');
      BlobWriter.prototype.constructor = BlobWriter;
 
      function ArrayBufferWriter(contentType) {
-     	 var blob, that = this;
+     	 var blob, that = this, monerror;
 
      	 function init(callback, onerror) {
      	     blob = new Blob();
@@ -400,6 +406,7 @@ goog.provide('files.zipjs');
      	 }
 
      	 function writeUint8Array(array, callback, onerror) {
+	     monerror = onerror;
 	     blob = new Blob([blob, new DataView(array.buffer)],
 			     {"type": contentType});
      	     callback();
@@ -410,7 +417,7 @@ goog.provide('files.zipjs');
              reader.onload = function(e){
 	         callback(e.target.result);
 	     };
-	     reader.onerror = onerror;
+	     reader.onerror = monerror;
      	     reader.readAsArrayBuffer(blob);
      	 }
 
@@ -488,7 +495,7 @@ goog.provide('files.zipjs');
 		 reader.readUint8Array(offset + index, Math.min(CHUNK_SIZE, size - index), function(inputData) {
 					   var outputData = process.append(inputData, function() {
 						                               if (onprogress)
-							                           onprogress(index + message.current, size);
+							                           onprogress(index, size);
 					                                   });
 					   outputSize += outputData.length;
 					   onappend(true, inputData);
@@ -528,11 +535,11 @@ goog.provide('files.zipjs');
 	     onend(outputSize, crc32.get());
 	 }
 
-	 if (obj.zip.useWebWorkers) {
-	     worker = new Worker(obj.zip.workerScriptsPath + INFLATE_JS);
+	 if (zipjs.useWebWorkers) {
+	     worker = new Worker(zipjs.workerScriptsPath + INFLATE_JS);
 	     launchWorkerProcess(worker, reader, writer, offset, size, oninflateappend, onprogress, oninflateend, onreaderror, onwriteerror);
 	 } else
-	     launchProcess(new obj.zip.Inflater(), reader, writer, offset, size, oninflateappend, onprogress, oninflateend, onreaderror, onwriteerror);
+	     launchProcess(new zipjs.Inflater(), reader, writer, offset, size, oninflateappend, onprogress, oninflateend, onreaderror, onwriteerror);
 	 return worker;
      }
 
@@ -553,15 +560,15 @@ goog.provide('files.zipjs');
 	     launchWorkerProcess(worker, reader, writer, 0, reader.size, ondeflateappend, onprogress, ondeflateend, onreaderror, onwriteerror);
 	 }
 
-	 if (obj.zip.useWebWorkers) {
-	     worker = new Worker(obj.zip.workerScriptsPath + DEFLATE_JS);
+	 if (zipjs.useWebWorkers) {
+	     worker = new Worker(zipjs.workerScriptsPath + DEFLATE_JS);
 	     worker.addEventListener("message", onmessage, false);
 	     worker.postMessage({
 				    init : true,
 				    level : level
 			        });
 	 } else
-	     launchProcess(new obj.zip.Deflater(), reader, writer, 0, reader.size, ondeflateappend, onprogress, ondeflateend, onreaderror, onwriteerror);
+	     launchProcess(new zipjs.Deflater(), reader, writer, 0, reader.size, ondeflateappend, onprogress, ondeflateend, onreaderror, onwriteerror);
 	 return worker;
      }
 
@@ -651,7 +658,7 @@ goog.provide('files.zipjs');
 	 }
      }
 
-     function readCommonHeader(entry, data, index, centralDirectory) {
+     function readCommonHeader(entry, data, index, centralDirectory, onerror) {
 	 entry.version = data.view.getUint16(index, true);
 	 entry.bitFlag = data.view.getUint16(index + 2, true);
 	 entry.compressionMethod = data.view.getUint16(index + 4, true);
@@ -942,7 +949,7 @@ goog.provide('files.zipjs');
 	 };
      }
 
-     obj.zip = {
+    zipjs = {
 	 Reader : Reader,
 	 Writer : Writer,
 	 BlobReader : BlobReader,
@@ -968,5 +975,6 @@ goog.provide('files.zipjs');
 	 workerScriptsPath : "js/utilities/zip.js/",
 	 useWebWorkers : false
      };
+    return zipjs;
 
- })(this);
+ })(window);

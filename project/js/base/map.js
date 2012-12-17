@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,7 +31,7 @@ base.Map = function(models, lightmapData) {
     this.bsp = null;
     /**
      * @const
-     * @type {Array<base.Model>}
+     * @type {Array.<base.Model>}
      */
     this.models = models;
     /**

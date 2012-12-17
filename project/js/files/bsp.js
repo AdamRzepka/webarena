@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -675,10 +674,10 @@ files.bsp.getCurvePoint3_ = function(c0, c1, c2, dist) {
 
     return base.Vec3.add(
         base.Vec3.add(
-            base.Vec3.scale(c0, (b*b), [0, 0, 0]),
-            base.Vec3.scale(c1, (2*b*dist), [0, 0, 0])
+            base.Vec3.scale(c0, (b*b), base.Vec3.create()),
+            base.Vec3.scale(c1, (2*b*dist), base.Vec3.create())
         ),
-        base.Vec3.scale(c2, (dist*dist), [0, 0, 0])
+        base.Vec3.scale(c2, (dist*dist), base.Vec3.create())
     );
 };
 
@@ -687,16 +686,16 @@ files.bsp.getCurvePoint3_ = function(c0, c1, c2, dist) {
 files.bsp.getCurvePoint2_ = function(c0, c1, c2, dist) {
     var b = 1.0 - dist;
 
-    var c30 = [c0[0], c0[1], 0];
-    var c31 = [c1[0], c1[1], 0];
-    var c32 = [c2[0], c2[1], 0];
+    var c30 = base.Vec3.create([c0[0], c0[1], 0]);
+    var c31 = base.Vec3.create([c1[0], c1[1], 0]);
+    var c32 = base.Vec3.create([c2[0], c2[1], 0]);
 
     var res = base.Vec3.add(
         base.Vec3.add(
-            base.Vec3.scale(c30, (b*b), [0, 0, 0]),
-            base.Vec3.scale(c31, (2*b*dist), [0, 0, 0])
+            base.Vec3.scale(c30, (b*b), base.Vec3.create()),
+            base.Vec3.scale(c31, (2*b*dist), base.Vec3.create())
         ),
-        base.Vec3.scale(c32, (dist*dist), [0, 0, 0])
+        base.Vec3.scale(c32, (dist*dist), base.Vec3.create())
     );
 
     return [res[0], res[1]];

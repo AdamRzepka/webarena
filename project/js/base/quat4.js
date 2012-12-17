@@ -29,6 +29,9 @@
 
 "use strict";
 
+goog.require('base.Vec3');
+goog.require('base.Mat3');
+goog.require('base.Mat4');
 goog.provide('base.Quat4');
 
 base.MatrixArray = Float32Array;
@@ -233,11 +236,11 @@ base.Quat4.multiply = function (quat, quat2, dest) {
 };
 
 /**
- * Transforms a base.vec3 with the given quaternion
+ * Transforms a base.Vec3 with the given quaternion
  *
  * @param {base.Quat4} quat base.Quat4 to transform the vector with
- * @param {base.vec3} vec base.vec3 to transform
- * @param {base.vec3} [dest] base.vec3 receiving operation result. If not specified result is written to vec
+ * @param {base.Vec3} vec base.Vec3 to transform
+ * @param {base.Vec3} [dest] base.Vec3 receiving operation result. If not specified result is written to vec
  *
  * @returns dest if specified, vec otherwise
  */
@@ -265,12 +268,12 @@ base.Quat4.multiplyVec3 = function (quat, vec, dest) {
  * Calculates a 3x3 matrix from the given base.Quat4
  *
  * @param {base.Quat4} quat base.Quat4 to create matrix from
- * @param {base.mat3} [dest] base.mat3 receiving operation result
+ * @param {base.Mat3} [dest] base.Mat3 receiving operation result
  *
- * @returns {base.mat3} dest if specified, a new base.mat3 otherwise
+ * @returns {base.Mat3} dest if specified, a new base.Mat3 otherwise
  */
 base.Quat4.toMat3 = function (quat, dest) {
-    if (!dest) { dest = base.mat3.create(); }
+    if (!dest) { dest = base.Mat3.create(); }
 
     var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
         x2 = x + x,
@@ -303,16 +306,25 @@ base.Quat4.toMat3 = function (quat, dest) {
 };
 
 /**
- * Calculates a 4x4 matrix from the given base.Quat4
+ * Creates a matrix from a quaternion rotation and vector translation
+ * This is equivalent to (but much faster than):
  *
- * @param {base.Quat4} quat base.Quat4 to create matrix from
- * @param {base.mat4} [dest] base.mat4 receiving operation result
+ *     base.Mat4.identity(dest);
+ *     base.Mat4.translate(dest, vec);
+ *     var quatMat = base.Mat4.create();
+ *     base.quat4.toMat4(quat, quatMat);
+ *     base.Mat4.multiply(dest, quatMat);
  *
- * @returns {base.mat4} dest if specified, a new base.mat4 otherwise
+ * @param {base.Quat4} quat Rotation quaternion
+ * @param {base.Vec3} vec Translation vector
+ * @param {base.Mat4} [dest] base.Mat4 receiving operation result. If not specified result is written to a new base.Mat4
+ *
+ * @returns {base.Mat4} dest if specified, a new base.Mat4 otherwise
  */
-base.Quat4.toMat4 = function (quat, dest) {
-    if (!dest) { dest = base.mat4.create(); }
+base.Mat4.toMat4 = function (quat, vec, dest) {
+    if (!dest) { dest = base.Mat4.create(); }
 
+    // Quaternion math
     var x = quat[0], y = quat[1], z = quat[2], w = quat[3],
         x2 = x + x,
         y2 = y + y,
@@ -332,20 +344,17 @@ base.Quat4.toMat4 = function (quat, dest) {
     dest[1] = xy + wz;
     dest[2] = xz - wy;
     dest[3] = 0;
-
     dest[4] = xy - wz;
     dest[5] = 1 - (xx + zz);
     dest[6] = yz + wx;
     dest[7] = 0;
-
     dest[8] = xz + wy;
     dest[9] = yz - wx;
     dest[10] = 1 - (xx + yy);
     dest[11] = 0;
-
-    dest[12] = 0;
-    dest[13] = 0;
-    dest[14] = 0;
+    dest[12] = vec[0];
+    dest[13] = vec[1];
+    dest[14] = vec[2];
     dest[15] = 1;
 
     return dest;

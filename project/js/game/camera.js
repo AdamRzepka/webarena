@@ -4,6 +4,9 @@ goog.require('base.Vec3');
 
 goog.provide('game.Camera');
 
+/**
+ * @constructor
+ */
 game.Camera = function(input, startPosition)
 {
     var self = this;

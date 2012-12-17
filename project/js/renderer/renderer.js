@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,7 +23,6 @@ goog.require('goog.debug.Logger.Level');
 goog.require('base');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
-goog.require('renderer.Mesh');
 goog.require('renderer.MaterialManager');
 goog.require('renderer.Sky');
 
@@ -62,7 +60,7 @@ renderer.Renderer = function(gl) {
     this.modelInstances_ = [];
     /**
      * @private
-     * @type {Array.<renderer.Mesh>}
+     * @type {Array.<base.Mesh>}
      */
     this.meshes_ = [];
     /**
@@ -179,7 +177,6 @@ renderer.Renderer.prototype.render = function () {
 /**
  * @public
  * @param {Array.<base.Model>} models
- * @param {base.GeometryData} geometryData
  * @param {base.Map.LightmapData} lightmapData
  */
 renderer.Renderer.prototype.registerMap = function (models, lightmapData) {
@@ -209,7 +206,7 @@ renderer.Renderer.prototype.registerMd3 = function (model) {
  * @public
  * @param {number} id of modelInstance
  * @param {number} modelBaseId id of model
- * @param {mat4} matrix
+ * @param {base.Mat4} matrix
  * @param {string} [skinName]
  */
 renderer.Renderer.prototype.registerModelInstance = function (id, modelBaseId, matrix, skinName) {
@@ -253,6 +250,10 @@ renderer.Renderer.prototype.registerModelInstance = function (id, modelBaseId, m
     this.insertModelInstance_(instance);
 };
 
+/**
+ * @public
+ * @param {base.Model} model
+ */
 renderer.Renderer.prototype.addMeshes = function (model) {
     var gl = this.gl_;
     var meshes = model.meshes;
@@ -288,8 +289,9 @@ renderer.Renderer.prototype.addMeshInstances = function (modelInstance) {
     
     for (i = 0; i < baseModel.meshes.length; ++i){
 	baseMesh = baseModel.meshes[i];
-	meshInstance = new renderer.MeshInstance(baseMesh, modelInstance,
-						 baseMesh.materials[skinId]);
+	meshInstance =
+	    new renderer.MeshInstance(baseMesh, modelInstance,
+				      /**@type{renderer.Material}*/(baseMesh.materials[skinId]));
 	this.meshInstances_.push(meshInstance);
     }
     
@@ -302,7 +304,7 @@ renderer.Renderer.prototype.addMeshInstances = function (modelInstance) {
 /**
  * @public
  * @param {Array.<number>} modelsInstancesIds
- * @param {Array.<mat4>} matrices
+ * @param {Array.<base.Mat4>} matrices
  * @param {Array.<number>} frames
  */
 renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrices, frames) {
@@ -354,7 +356,7 @@ renderer.Renderer.prototype.setModelsVisibility = function (modelsInstancesIds, 
 
 /**
  * @public
- * @param {mat4} cameraMatrix inversed view matrix
+ * @param {base.Mat4} cameraMatrix inversed view matrix
  */
 renderer.Renderer.prototype.updateCamera = function (cameraMatrix) {
     base.Mat4.inverse(cameraMatrix, this.viewMtx_);
@@ -400,8 +402,8 @@ renderer.Renderer.prototype.createBuffers_ = function (geometryData) {
 
 /**
  * @private
- * @param {base.Model}
- * Functions inserts model to proper position in this.models_ table
+ * @param {base.Model} model
+ * Function inserts model to proper position in this.models_ table
  */
 renderer.Renderer.prototype.insertModel_ = function(model) {
     var size = this.models_.length;
@@ -419,8 +421,8 @@ renderer.Renderer.prototype.insertModel_ = function(model) {
 
 /**
  * @private
- * @param {base.Model}
- * Functions inserts model to proper position in this.models_ table
+ * @param {base.ModelInstance} model
+ * Function inserts model to proper position in this.modelInstances_ table
  */
 renderer.Renderer.prototype.insertModelInstance_ = function(model) {
     var size = this.modelInstances_.length;
@@ -471,45 +473,73 @@ renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
     }
     
     // Set uniforms
-    gl.uniformMatrix4fv(shader.uniforms.modelViewMat, false, modelViewMat);
-    gl.uniformMatrix4fv(shader.uniforms.projectionMat, false, projectionMat);
+    gl.uniformMatrix4fv(shader.uniforms['modelViewMat'], false, modelViewMat);
+    gl.uniformMatrix4fv(shader.uniforms['projectionMat'], false, projectionMat);
 
     // Setup vertex attributes
-    gl.enableVertexAttribArray(shader.attribs.position);
-    gl.vertexAttribPointer(shader.attribs.position, 3, gl.FLOAT, false, vertexStride, 0);
+    gl.enableVertexAttribArray(shader.attribs['position']);
+    gl.vertexAttribPointer(shader.attribs['position'], 3, gl.FLOAT, false, vertexStride, 0);
 
-    if(shader.attribs.texCoord !== undefined) {
-        gl.enableVertexAttribArray(shader.attribs.texCoord);
-        gl.vertexAttribPointer(shader.attribs.texCoord, 2, gl.FLOAT, false,
+    if(shader.attribs['texCoord'] !== undefined) {
+        gl.enableVertexAttribArray(shader.attribs['texCoord']);
+        gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
 			       vertexStride, texOffset);
     }
 
-    if(shader.attribs.lightCoord !== undefined
+    if(shader.attribs['lightCoord'] !== undefined
        && vertexArrayLayout === base.GeometryData.Layout.BSP) {
-        gl.enableVertexAttribArray(shader.attribs.lightCoord);
-        gl.vertexAttribPointer(shader.attribs.lightCoord, 2, gl.FLOAT, false,
+        gl.enableVertexAttribArray(shader.attribs['lightCoord']);
+        gl.vertexAttribPointer(shader.attribs['lightCoord'], 2, gl.FLOAT, false,
 			       vertexStride, lightOffset);
     }
 
-    if(shader.attribs.normal !== undefined
+    if(shader.attribs['normal'] !== undefined
        && vertexArrayLayout !== base.GeometryData.Layout.SKY) {
-        gl.enableVertexAttribArray(shader.attribs.normal);
-        gl.vertexAttribPointer(shader.attribs.normal, 3, gl.FLOAT, false,
+        gl.enableVertexAttribArray(shader.attribs['normal']);
+        gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
 			       vertexStride, normalOffset);
     }
 
-    if(shader.attribs.color !== undefined
+    if(shader.attribs['color'] !== undefined
        && vertexArrayLayout === base.GeometryData.Layout.BSP) {
-        gl.enableVertexAttribArray(shader.attribs.color);
-        gl.vertexAttribPointer(shader.attribs.color, 4, gl.FLOAT, false,
+        gl.enableVertexAttribArray(shader.attribs['color']);
+        gl.vertexAttribPointer(shader.attribs['color'], 4, gl.FLOAT, false,
 			       vertexStride, colorOffset);
     }
     
     // @todo create separate shader whithout colour for md3 and delete this
-    if(shader.attribs.color !== undefined
+    if(shader.attribs['color'] !== undefined
        && vertexArrayLayout === base.GeometryData.Layout.MD3) {
-	gl.vertexAttrib4fv(shader.attribs.color, [1,1,1,1]);
+	gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
     }
 	
 
+};
+
+/**
+ * @constructor
+ * @param {base.Mesh} baseMesh
+ * @param {base.ModelInstance} modelInstance
+ * @param {renderer.Material} material
+ */
+renderer.MeshInstance = function(baseMesh, modelInstance, material) {
+    /**
+     * @const
+     * @type {base.Mesh}
+     */
+    this.baseMesh = baseMesh;
+    /**
+     * @type {boolean}
+     */
+    this.culled = false;
+    /**
+     * @const
+     * @type {base.ModelInstance}
+     */
+    this.modelInstance = modelInstance;
+    /**
+     * @const
+     * @type {renderer.Material}
+     */
+    this.material = material;
 };

@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -57,19 +56,19 @@ goog.provide('files.ShaderScriptLoader');
 //
 
 files.ShaderScriptLoader = {
-    /** @type Object.<base.ShaderScript> */
+    /** @type Array.<base.ShaderScript> */
     shaderScripts: []
 };
 
 /**
- * @param {files.ResourceManager} rm
+ * @param {Object.<string, string>} scripts
  */
-files.ShaderScriptLoader.loadAll = function(rm) {
+files.ShaderScriptLoader.loadAll = function(scripts) {
     var shaderFile;
 
-    for (shaderFile in rm.scripts) {
-	if (rm.scripts.hasOwnProperty(shaderFile)) {
-	    files.ShaderScriptLoader.load(shaderFile, rm.getScript(shaderFile));
+    for (shaderFile in scripts) {
+	if (scripts.hasOwnProperty(shaderFile)) {
+	    files.ShaderScriptLoader.load(shaderFile, scripts[shaderFile]);
 	}
     }
 };
@@ -180,7 +179,7 @@ files.ShaderScriptLoader.parseShader = function(name, tokens) {
                     case 'underwater': shader.sort = 8; break;
                     case 'additive': shader.sort = 9; break;
                     case 'nearest': shader.sort = 16; break;
-                    default: shader.sort = parseInt(sort); break;
+                    default: shader.sort = parseInt(sort, 10); break;
                 };
                 break;
 
@@ -405,29 +404,31 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
     var shader = new files.ShaderBuilder();
     var i;
 
-    shader.addLines(['// source material: ' + stageShader.name]);
+    if (goog.DEBUG) {
+	shader.addLines(['// source material: ' + stageShader.name]);
+    }
     
     shader.addAttribs({
-        position: 'vec3',
-        normal: 'vec3',
-        color: 'vec4'
+        'position': 'vec3',
+        'normal': 'vec3',
+        'color': 'vec4'
     });
 
     shader.addVaryings({
-        vTexCoord: 'vec2',
-        vColor: 'vec4'
+        'vTexCoord': 'vec2',
+        'vColor': 'vec4'
     });
 
     shader.addUniforms({
-        modelViewMat: 'mat4',
-        projectionMat: 'mat4',
-        time: 'float'
+        'modelViewMat': 'mat4',
+        'projectionMat': 'mat4',
+        'time': 'float'
     });
 
     if(stage.isLightmap) {
-        shader.addAttribs({ lightCoord: 'vec2' });
+        shader.addAttribs({ 'lightCoord': 'vec2' });
     } else {
-        shader.addAttribs({ texCoord: 'vec2' });
+        shader.addAttribs({ 'texCoord': 'vec2' });
     }
 
     shader.addLines(['vec3 defPosition = position;']);
@@ -520,8 +521,8 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
 
     switch(stage.alphaGen) {
         case 'lightingspecular':
-            shader.addAttribs({ lightCoord: 'vec2' });
-            shader.addVaryings({ vLightCoord: 'vec2' });
+            shader.addAttribs({ 'lightCoord': 'vec2' });
+            shader.addVaryings({ 'vLightCoord': 'vec2' });
             shader.addLines([ 'vLightCoord = lightCoord;' ]);
             break;
         default:
@@ -540,16 +541,18 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
 files.ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
     var shader = new files.ShaderBuilder();
 
-    shader.addLines(['// source material: ' + stageShader.name]);
+    if (goog.DEBUG) {
+	shader.addLines(['// source material: ' + stageShader.name]);
+    }
     
     shader.addVaryings({
-        vTexCoord: 'vec2',
-        vColor: 'vec4'
+        'vTexCoord': 'vec2',
+        'vColor': 'vec4'
     });
 
     shader.addUniforms({
-        texture: 'sampler2D',
-        time: 'float'
+        'texture': 'sampler2D',
+        'time': 'float'
     });
 
     shader.addLines(['vec4 texColor = texture2D(texture, vTexCoord.st);']);
@@ -574,11 +577,11 @@ files.ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
         case 'lightingspecular':
             // For now files.ShaderScriptLoader is VERY special cased. May not work well with all instances of lightingSpecular
             shader.addUniforms({
-                lightmap: 'sampler2D'
+                'lightmap': 'sampler2D'
             });
             shader.addVaryings({
-                vLightCoord: 'vec2',
-                vLight: 'float'
+                'vLightCoord': 'vec2',
+                'vLight': 'float'
             });
             shader.addLines([
                 'vec4 light = texture2D(lightmap, vLightCoord.st);',
@@ -625,6 +628,7 @@ files.ShaderScriptLoader.buildFragmentShader = function(stageShader, stage) {
 //
 /**
  * @private
+ * @constructor
  */
 files.ShaderScriptTokenizer = function (src) {
     // Strip out comments
@@ -679,6 +683,7 @@ files.ShaderScriptTokenizer.prototype.prev = function() {
 
 /**
  * @private
+ * @constructor
  */
 files.ShaderBuilder = function () {
     this.attrib = {};
@@ -766,6 +771,9 @@ precision highp float; \n\
 // q3-centric functions
 /**
  * @private
+ * @param {string} name
+ * @param {*} [wf]
+ * @param {string} [timeVar]
  */
 files.ShaderBuilder.prototype.addWaveform = function(name, wf, timeVar) {
     if(!wf) {

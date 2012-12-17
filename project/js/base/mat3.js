@@ -144,45 +144,11 @@ base.Mat3.transpose = function (mat, dest) {
 };
 
 /**
- * Copies the elements of a base.Mat3 into the upper 3x3 elements of a base.mat4
- *
- * @param {base.Mat3} mat base.Mat3 containing values to copy
- * @param {base.mat4} [dest] base.mat4 receiving copied values
- *
- * @returns {base.mat4} dest if specified, a new base.mat4 otherwise
- */
-base.Mat3.toMat4 = function (mat, dest) {
-    if (!dest) { dest = base.mat4.create(); }
-
-    dest[15] = 1;
-    dest[14] = 0;
-    dest[13] = 0;
-    dest[12] = 0;
-
-    dest[11] = 0;
-    dest[10] = mat[8];
-    dest[9] = mat[7];
-    dest[8] = mat[6];
-
-    dest[7] = 0;
-    dest[6] = mat[5];
-    dest[5] = mat[4];
-    dest[4] = mat[3];
-
-    dest[3] = 0;
-    dest[2] = mat[2];
-    dest[1] = mat[1];
-    dest[0] = mat[0];
-
-    return dest;
-};
-
-/**
  * Returns a string representation of a base.Mat3
  *
  * @param {base.Mat3} mat base.Mat3 to represent as a string
  *
- * @param {string} String representation of mat
+ * @return {string} String representation of mat
  */
 base.Mat3.str = function (mat) {
     return '[' + mat[0] + ', ' + mat[1] + ', ' + mat[2] +

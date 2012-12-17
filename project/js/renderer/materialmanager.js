@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -59,6 +58,7 @@ goog.provide('renderer.MaterialManager');
 
 /**
  * @constructor
+ * @extends {base.Material}
  */
 renderer.Material = function (shader, defaultTexture, lightningType) {
     /**
@@ -87,7 +87,7 @@ renderer.Stage = function () {
     /**
      * @type {string}
      */
-    this.map = null;
+    this.map = '';
     /**
      * @type {WebGLTexture}
      */
@@ -95,15 +95,15 @@ renderer.Stage = function () {
     /**
      * @type {number}
      */
-    this.blendSrc = null;
+    this.blendSrc = -1;
     /**
      * @type {number}
      */
-    this.blendDest = null;
+    this.blendDest = -1;
     /**
      * @type {number}
      */
-    this.depthFunc = null;
+    this.depthFunc = -1;
     /**
      * @type {renderer.ShaderProgram}
      */
@@ -117,11 +117,11 @@ renderer.Shader = function () {
     /**
      * @type {number}
      */
-    this.cull = null;
+    this.cull = -1;
     /**
      * @type {number}
      */
-    this.sort = null;
+    this.sort = -1;
     /**
      * @type {boolean}
      */
@@ -129,13 +129,13 @@ renderer.Shader = function () {
     /**
      * @type {number}
      */
-    this.blend = null;
+    this.blend = -1;
     /**
      * @type {string}
      */
-    this.name = null;
+    this.name = '';
     /**
-     * @type {Array.<rendrer.Stage>}
+     * @type {Array.<renderer.Stage>}
      */
     this.stages = [];
 };
@@ -153,7 +153,7 @@ renderer.ShaderProgram = function (attribs, uniforms, glProgram) {
      */
     this.attribs = attribs;
     /**
-     * @type {Object.<string,number>}
+     * @type {Object.<string,WebGLUniformLocation>}
      * Uniforms locations
      */
     this.uniforms = uniforms;
@@ -189,7 +189,7 @@ renderer.MaterialManager = function(gl) {
 
     /**
      * @private
-     * @type {Object.<string, renderer.Material}
+     * @type {Object.<string, renderer.Material>}
      * Cache for materials
      */
     this.materials = {};
@@ -246,7 +246,7 @@ renderer.MaterialManager.prototype.logger =
 
 /**
  * @public
- * @param {Object.<string, base.ShaderScript>} shaderScripts
+ * @param {Array.<base.ShaderScript>} shaderScripts
  * @param {Object.<string, string>} images Map of image paths and blob URLs to images
  */
 renderer.MaterialManager.prototype.buildShaders = function (shaderScripts, images) {
@@ -297,7 +297,7 @@ renderer.MaterialManager.prototype.buildLightmap = function (lightmapData) {
 /**
  * @public
  * @param {string} name
- * @param {base.LightningType} lightningtype
+ * @param {base.LightningType} lightningType
  * @return {renderer.Material}
  */
 renderer.MaterialManager.prototype.getMaterial = function (name, lightningType) {
@@ -513,6 +513,9 @@ renderer.MaterialManager.prototype.setStageTexture = function(
 
 /**
  * @private
+ * @param {WebGLRenderingContext} gl
+ * @param {string} url
+ * @param {function(WebGLTexture)} [onload]
  */
 renderer.MaterialManager.prototype.loadTextureUrl = function(gl, url, onload) {
     var image = new Image(),
@@ -594,9 +597,10 @@ renderer.MaterialManager.prototype.setShader = function(shader) {
 renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage, time) {
     var gl = this.gl;
     var stage = shaderStage;
-    if(!stage) {
-        stage = this.defaultShader.stages[0];
-    }
+    goog.asserts.assert(goog.isDefAndNotNull(stage));
+    // if(!stage) {
+    //     stage = this.defaultShader.stages[0];
+    // }
 
     if(stage.animFreq) {
         // Texture animation seems like a natural place for setInterval, but that approach has proved error prone.
@@ -631,17 +635,17 @@ renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage
     if(!texture) { texture = this.defaultTexture; }
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1i(program.uniforms.texture, 0);
+    gl.uniform1i(program.uniforms['texture'], 0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
     if(program.uniforms.lightmap) {
         gl.activeTexture(gl.TEXTURE1);
-        gl.uniform1i(program.uniforms.lightmap, 1);
+        gl.uniform1i(program.uniforms['lightmap'], 1);
         gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
     }
 
     if(program.uniforms.time) {
-        gl.uniform1f(program.uniforms.time, time);
+        gl.uniform1f(program.uniforms['time'], time);
     }
 
     return program;
@@ -655,7 +659,7 @@ renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage
 renderer.MaterialManager.prototype.bindTexture = function (texture, program) {
     var gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1i(program.uniforms.texture, 0);
+    gl.uniform1i(program.uniforms['texture'], 0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
 };
 
@@ -715,14 +719,14 @@ renderer.MaterialManager.prototype.compileShaderProgram = function(vertexSrc, fr
         return null;
     }
 
-    attribCount = gl.getProgramParameter(glProgram, gl.ACTIVE_ATTRIBUTES);
+    attribCount = /**@type{number}*/(gl.getProgramParameter(glProgram, gl.ACTIVE_ATTRIBUTES));
     attribs = {};
     for (i = 0; i < attribCount; i++) {
         attrib = gl.getActiveAttrib(glProgram, i);
         attribs[attrib.name] = gl.getAttribLocation(glProgram, attrib.name);
     }
 
-    uniformCount = gl.getProgramParameter(glProgram, gl.ACTIVE_UNIFORMS);
+    uniformCount = /**@type{number}*/(gl.getProgramParameter(glProgram, gl.ACTIVE_UNIFORMS));
     uniforms = {};
     for (i = 0; i < uniformCount; i++) {
         uniform = gl.getActiveUniform(glProgram, i);

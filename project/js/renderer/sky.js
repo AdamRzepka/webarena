@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,14 +19,11 @@
 
 goog.require('goog.asserts');
 goog.require('base.Mat4');
-goog.require('renderer.Mesh');
 goog.provide('renderer.Sky');
 
-renderer.SkyParams = function () {
-    this.textures = [];
-    this.cloudHeight = 0;
-};
-
+/**
+ * @constructor
+ */
 renderer.Sky = function() {
     this.model = null;
     this.modelInstance = null;

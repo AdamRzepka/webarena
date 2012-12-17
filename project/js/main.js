@@ -1,3 +1,21 @@
+/**
+ * @license
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 'use strict';
 
 goog.require('goog.debug.FancyWindow');
@@ -42,7 +60,7 @@ function initWebGL(canvas) {
     return gl;
 }
 
-var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
         window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
 
 
@@ -52,9 +70,11 @@ function main() {
     var canvas = document.getElementById('glcanvas');
 
     var gl = initWebGL(canvas);
-    var debugWindow = new goog.debug.FancyWindow('main');
-    debugWindow.setEnabled(true);
-    debugWindow.init();
+    if (goog.DEBUG) {
+	var debugWindow = new goog.debug.FancyWindow('main');
+	debugWindow.setEnabled(true);
+	debugWindow.init();
+    }
 
     var map = getQueryVariable('map');
 
@@ -69,21 +89,32 @@ function main() {
     var timeAcc = 0;
 
     var weaponMtx = base.Mat4.identity();
-    var weaponOff = [10, -10, -4];
+    var weaponOff = base.Vec3.create([10, -10, -4]);
     var weaponId = -1;
-    var weaponRot = [0, 0, -1, 0,
-		     -1, 0, 0, 0,
-		     0, 1, 0, 0,
-		     0, 0, 0, 1];
-    
+    var weaponRot = base.Mat4.create([0, 0, -1, 0,
+				      -1, 0, 0, 0,
+				      0, 1, 0, 0,
+				      0, 0, 0, 1]);
+    var fpsCounter = 0;
+    var fpsTime = 0;
     function update() {
 	timeAcc += Date.now() - lastTime;
+	fpsTime += Date.now() - lastTime;
+
 	while (timeAcc > 15) {
 	    timeAcc -= 15;
 	    camera.update();
 	    input.clearInput();
 	}
 	lastTime = Date.now();
+
+	++fpsCounter;
+	if (fpsTime > 1000) {
+	    fpsTime -= 1000;
+	    document.getElementById('fps').innerHTML = fpsCounter;
+	    fpsCounter = 0;
+	}
+	
 	render.updateCamera(camera.getCameraMatrix());
 	base.Mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
 	base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
@@ -95,7 +126,7 @@ function main() {
     rm.load([map, "lightning"], function () {
 	render = new renderer.Renderer(gl);
 
-	files.ShaderScriptLoader.loadAll(rm);
+	files.ShaderScriptLoader.loadAll(rm.getScripts());
 	render.buildShaders(files.ShaderScriptLoader.shaderScripts, rm.getTextures());
 	
 	var map = files.bsp.load(rm.getMap());
@@ -119,3 +150,4 @@ function main() {
     });
 }
 
+goog.exportSymbol('main', main);

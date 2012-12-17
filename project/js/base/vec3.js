@@ -38,6 +38,7 @@ goog.provide('base.Vec3');
 base.MatrixArray = Float32Array;
 
 /** @typedef Float32Array*/ base.Vec3 = {};
+/** @typedef Float32Array*/ base.Vec4 = {};
 
 /**
  * Creates a new instance of a base.Vec3 using the default array type
@@ -333,41 +334,6 @@ base.Vec3.dist = function (vec, vec2) {
     return Math.sqrt(x*x + y*y + z*z);
 };
 
-/**
- * Projects the specified base.Vec3 from screen space into object space
- * Based on the <a href="http://webcvs.freedesktop.org/mesa/Mesa/src/glu/mesa/project.c?revision=1.4&view=markup">Mesa gluUnProject implementation</a>
- *
- * @param {base.Vec3} vec Screen-space vector to project
- * @param {base.mat4} view View matrix
- * @param {base.mat4} proj Projection matrix
- * @param {vec4} viewport Viewport as given to gl.viewport [x, y, width, height]
- * @param {base.Vec3} [dest] base.Vec3 receiving unprojected result. If not specified result is written to vec
- *
- * @returns {base.Vec3} dest if specified, vec otherwise
- */
-base.Vec3.unproject = function (vec, view, proj, viewport, dest) {
-    if (!dest) { dest = vec; }
-
-    var m = base.mat4.create();
-    var v = new base.MatrixArray(4);
-
-    v[0] = (vec[0] - viewport[0]) * 2.0 / viewport[2] - 1.0;
-    v[1] = (vec[1] - viewport[1]) * 2.0 / viewport[3] - 1.0;
-    v[2] = 2.0 * vec[2] - 1.0;
-    v[3] = 1.0;
-
-    base.mat4.multiply(proj, view, m);
-    if(!base.mat4.inverse(m)) { return null; }
-
-    base.mat4.multiplyVec4(m, v);
-    if(v[3] === 0.0) { return null; }
-
-    dest[0] = v[0] / v[3];
-    dest[1] = v[1] / v[3];
-    dest[2] = v[2] / v[3];
-
-    return dest;
-};
 
 /**
  * Returns a string representation of a vector

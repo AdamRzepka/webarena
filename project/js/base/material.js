@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
@@ -42,6 +41,9 @@ base.Material = function (name, shaderScript) {
     this.shaderScript = shaderScript;
 };
 
+/**
+ * @constructor
+ */
 base.ShaderScript = function () {
     /**
      * @const
@@ -80,7 +82,7 @@ base.ShaderScript = function () {
     this.sort = 0;
     /**
      * @const
-     * @type {Array.<?>}
+     * @type {Array.<Object>}
      */
     this.vertexDeforms = [];
     /**
@@ -90,12 +92,15 @@ base.ShaderScript = function () {
     this.stages = [];
 };
 
+/**
+ * @constructor
+ */
 base.ShaderScriptStage = function () {
     /**
      * @const
      * @type {string}
      */
-    this.map = null;
+    this.map = '';
     /**
      * @const
      * @type {boolean}
@@ -148,12 +153,12 @@ base.ShaderScriptStage = function () {
     this.hasBlendFunc = false;
     /**
      * @const
-     * @type {Array.<?>}
+     * @type {Array.<*>}
      */
     this.tcMods = [];
     /**
      * @const
-     * @type {Array.<?>}
+     * @type {Array.<*>}
      */
     this.animMaps = [];
     /**
@@ -178,7 +183,7 @@ base.ShaderScriptStage = function () {
     this.isLightmap = false;
     /**
      * @const
-     * @type {{string,string}}
+     * @type {{vertex: string, fragment: string}}
      */
-    this.shaderSrc = null;
+    this.shaderSrc = {vertex: '', fragment: ''};
 };

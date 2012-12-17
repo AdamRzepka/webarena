@@ -1,6 +1,5 @@
 /**
- * @license
- * Copyright (C) 2012 Adam Rzepka
+ * copyright (C) 2012 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,19 +96,22 @@ files.ResourceManager.prototype.load = function (archives, callback) {
 /**
  * @public
  * @param {string} path
- * @return {string} Blob url to texture image
+ * @return {?string} Blob url to texture image
  */
 files.ResourceManager.prototype.getTexture = function (path) {
     var texture = this.textures[path];
-    if (texture === undefined)
-        throw 'Texture ' + path + ' not loaded.';
+    if (texture === undefined) {
+	this.logger.log(goog.debug.Logger.Level.SEVERE,
+			'Texture ' + path + ' not loaded.');
+	return null;
+    }
     else
         return texture;
 };
 
 /**
  * @public
- * @return {Array.<string>}
+ * @return {Object.<string,string>}
  */
 files.ResourceManager.prototype.getTextures = function () {
     return this.textures;
@@ -118,12 +120,12 @@ files.ResourceManager.prototype.getTextures = function () {
 /**
  * @public
  * @param {string} path
- * @return {ArrayBuffer}
+ * @return {?ArrayBuffer}
  */
 files.ResourceManager.prototype.getModel = function (path) {
     var model = this.models[path];
     if (model === undefined) {
-	this.logger.log(goog.debug.Logger.Level.Severe,
+	this.logger.log(goog.debug.Logger.Level.SEVERE,
 			'Model ' + path + ' not loaded.');
 	return null;
     }
@@ -135,12 +137,12 @@ files.ResourceManager.prototype.getModel = function (path) {
 /**
  * @public
  * @param {string} path
- * @return {string}
+ * @return {?string}
  */
 files.ResourceManager.prototype.getScript = function (path) {
     var script = this.scripts[path];
     if (script === undefined) {
-	this.logger.log(goog.debug.Logger.Level.Severe,
+	this.logger.log(goog.debug.Logger.Level.SEVERE,
 			'Script ' + path + ' not loaded.');
 	return null;
     }
@@ -151,7 +153,7 @@ files.ResourceManager.prototype.getScript = function (path) {
 
 /**
  * @public
- * @return {Array.<string>}
+ * @return {Object.<string,string>}
  */
 files.ResourceManager.prototype.getScripts = function () {
     return this.scripts;
@@ -160,12 +162,12 @@ files.ResourceManager.prototype.getScripts = function () {
 /**
  * @public
  * @param {string} path
- * @return {string}
+ * @return {?string}
  */
 files.ResourceManager.prototype.getConfigFile = function (path) {
     var file = this.configFiles[path];
     if (file === undefined) {
-	this.logger.log(goog.debug.Logger.Level.Severe,
+	this.logger.log(goog.debug.Logger.Level.SEVERE,
 			'File ' + path + ' not loaded.');
 	return null;
     }
@@ -175,11 +177,11 @@ files.ResourceManager.prototype.getConfigFile = function (path) {
 
 /**
  * @public
- * @return {ArrayBuffer}
+ * @return {?ArrayBuffer}
  */
 files.ResourceManager.prototype.getMap = function () {
     if (this.map === null){
-	this.logger.log(goog.debug.Logger.Level.Severe,
+	this.logger.log(goog.debug.Logger.Level.SEVERE,
 		'Map not loaded.');
 	return null;
     }
@@ -206,10 +208,11 @@ files.ResourceManager.prototype.reportLoadedFile = function () {
 
 /**
  * @private
+ * @suppress {checkTypes|undefinedNames}
  */
 files.ResourceManager.prototype.loadArchive = function (archive) {
     var self = this;
-    zip.createReader(new zip.HttpReader(this.basedir + archive + '.zip'),
+    files.zipjs.createReader(new files.zipjs.HttpReader(this.basedir + archive + '.zip'),
 		     function (reader) {
 			 reader.getEntries(
 			     function (entries) {
@@ -224,6 +227,7 @@ files.ResourceManager.prototype.loadArchive = function (archive) {
 
 /**
  * @private
+ * @suppress {checkTypes|undefinedNames}
  */
 files.ResourceManager.prototype.loadEntry = function (entry) {
     var self = this;
@@ -231,7 +235,7 @@ files.ResourceManager.prototype.loadEntry = function (entry) {
     var ext = filename.slice(filename.lastIndexOf('.') + 1);
     switch (ext) {
     case 'png': case 'jpg':
-	entry.getData(new zip.BlobWriter('image/' + ((ext === 'png') ? 'png' : 'jpeg')),
+	entry.getData(new files.zipjs.BlobWriter('image/' + ((ext === 'png') ? 'png' : 'jpeg')),
 		      function(blob) {
                           var url = ('URL' in window) ? window.URL.createObjectURL(blob) :
                               window.webkitURL.createObjectURL(blob);
@@ -240,20 +244,20 @@ files.ResourceManager.prototype.loadEntry = function (entry) {
 		      });
 	break;
     case 'shader':
-	entry.getData(new zip.TextWriter(), function(text) {
+	entry.getData(new files.zipjs.TextWriter(), function(text) {
 			  self.scripts[filename] = text;
 			  self.reportLoadedFile();
 		      });
 	break;
     case 'md3':
-	entry.getData(new zip.ArrayBufferWriter(), function(arrayBuffer) {
+	entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
 			  self.models[filename] = arrayBuffer;
 			  self.reportLoadedFile();
 		      });
 	break;
     case 'bsp':
 	if (!self.map) {
-   	    entry.getData(new zip.ArrayBufferWriter(), function(arrayBuffer) {
+   	    entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
 			      self.map = arrayBuffer;
 			      self.reportLoadedFile();
 			  });
@@ -262,7 +266,7 @@ files.ResourceManager.prototype.loadEntry = function (entry) {
 	    self.reportLoadedFile();
 	break;
     default:
-        entry.getData(new zip.TextWriter(), function(text) {
+        entry.getData(new files.zipjs.TextWriter(), function(text) {
                           self.configFiles[filename] = text;
                           self.reportLoadedFile();
                       });

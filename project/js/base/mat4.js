@@ -29,6 +29,8 @@
 
 "use strict";
 
+goog.require('base.Vec3');
+goog.require('base.Mat3');
 goog.provide('base.Mat4');
 
 base.MatrixArray = Float32Array;
@@ -43,7 +45,7 @@ base.MatrixArray = Float32Array;
  * Creates a new instance of a base.Mat4 using the default array type
  * Any javascript array-like object containing at least 16 numeric elements can serve as a base.Mat4
  *
- * @param {base.Mat4} [mat] base.Mat4 containing values to initialize with
+ * @param {base.Mat4|Array.<number>} [mat] base.Mat4 containing values to initialize with
  *
  * @returns {base.Mat4} New base.Mat4
  */
@@ -103,7 +105,7 @@ base.Mat4.set = function (mat, dest) {
 /**
  * Sets a base.Mat4 to an identity matrix
  *
- * @param {base.Mat4} dest base.Mat4 to set
+ * @param {base.Mat4} [dest] base.Mat4 to set
  *
  * @returns {base.Mat4} dest
  */
@@ -288,15 +290,49 @@ base.Mat4.toRotationMat = function (mat, dest) {
 };
 
 /**
- * Copies the upper 3x3 elements of a base.Mat4 into a base.mat3
+ * Copies the elements of a base.Mat3 into the upper 3x3 elements of a base.mat4
+ *
+ * @param {base.Mat3} mat base.Mat3 containing values to copy
+ * @param {base.Mat4} [dest] base.mat4 receiving copied values
+ *
+ * @returns {base.Mat4} dest if specified, a new base.mat4 otherwise
+ */
+base.Mat4.fromMat3 = function (mat, dest) {
+    if (!dest) { dest = base.Mat4.create(); }
+
+    dest[15] = 1;
+    dest[14] = 0;
+    dest[13] = 0;
+    dest[12] = 0;
+
+    dest[11] = 0;
+    dest[10] = mat[8];
+    dest[9] = mat[7];
+    dest[8] = mat[6];
+
+    dest[7] = 0;
+    dest[6] = mat[5];
+    dest[5] = mat[4];
+    dest[4] = mat[3];
+
+    dest[3] = 0;
+    dest[2] = mat[2];
+    dest[1] = mat[1];
+    dest[0] = mat[0];
+
+    return dest;
+};
+
+/**
+ * Copies the upper 3x3 elements of a base.Mat4 into a base.Mat3
  *
  * @param {base.Mat4} mat base.Mat4 containing values to copy
- * @param {base.mat3} [dest] base.mat3 receiving copied values
+ * @param {base.Mat3} [dest] base.Mat3 receiving copied values
  *
- * @returns {base.mat3} dest is specified, a new base.mat3 otherwise
+ * @returns {base.Mat3} dest is specified, a new base.Mat3 otherwise
  */
 base.Mat4.toMat3 = function (mat, dest) {
-    if (!dest) { dest = base.mat3.create(); }
+    if (!dest) { dest = base.Mat3.create(); }
 
     dest[0] = mat[0];
     dest[1] = mat[1];
@@ -312,14 +348,14 @@ base.Mat4.toMat3 = function (mat, dest) {
 };
 
 /**
- * Calculates the inverse of the upper 3x3 elements of a base.Mat4 and copies the result into a base.mat3
+ * Calculates the inverse of the upper 3x3 elements of a base.Mat4 and copies the result into a base.Mat3
  * The resulting matrix is useful for calculating transformed normals
  *
  * Params:
  * @param {base.Mat4} mat base.Mat4 containing values to invert and copy
- * @param {base.mat3} [dest] base.mat3 receiving values
+ * @param {base.Mat3} [dest] base.Mat3 receiving values
  *
- * @returns {base.mat3} dest is specified, a new base.mat3 otherwise, null if the matrix cannot be inverted
+ * @returns {base.Mat3} dest is specified, a new base.Mat3 otherwise, null if the matrix cannot be inverted
  */
 base.Mat4.toInverseMat3 = function (mat, dest) {
     // Cache the matrix values (makes for huge speed increases!)
@@ -337,7 +373,7 @@ base.Mat4.toInverseMat3 = function (mat, dest) {
     if (!d) { return null; }
     id = 1 / d;
 
-    if (!dest) { dest = base.mat3.create(); }
+    if (!dest) { dest = base.Mat3.create(); }
 
     dest[0] = b01 * id;
     dest[1] = (-a22 * a01 + a02 * a21) * id;
@@ -396,14 +432,14 @@ base.Mat4.multiply = function (mat, mat2, dest) {
 };
 
 /**
- * Transforms a base.vec3 with the given matrix
+ * Transforms a base.Vec3 with the given matrix
  * 4th vector component is implicitly '1'
  *
  * @param {base.Mat4} mat base.Mat4 to transform the vector with
- * @param {base.vec3} vec base.vec3 to transform
- * @param {base.vec3} [dest] base.vec3 receiving operation result. If not specified result is written to vec
+ * @param {base.Vec3} vec base.Vec3 to transform
+ * @param {base.Vec3} [dest] base.Vec3 receiving operation result. If not specified result is written to vec
  *
- * @returns {base.vec3} dest if specified, vec otherwise
+ * @returns {base.Vec3} dest if specified, vec otherwise
  */
 base.Mat4.multiplyVec3 = function (mat, vec, dest) {
     if (!dest) { dest = vec; }
@@ -421,10 +457,11 @@ base.Mat4.multiplyVec3 = function (mat, vec, dest) {
  * Transforms a vec4 with the given matrix
  *
  * @param {base.Mat4} mat base.Mat4 to transform the vector with
- * @param {vec4} vec vec4 to transform
- * @param {vec4} [dest] vec4 receiving operation result. If not specified result is written to vec
+ * @param {base.Vec4} vec vec4 to transform
+ * @param {base.Vec4} [dest] vec4 receiving operation result.
+ * If not specified result is written to vec
  *
- * @returns {vec4} dest if specified, vec otherwise
+ * @returns {base.Vec4} dest if specified, vec otherwise
  */
 base.Mat4.multiplyVec4 = function (mat, vec, dest) {
     if (!dest) { dest = vec; }
@@ -443,7 +480,7 @@ base.Mat4.multiplyVec4 = function (mat, vec, dest) {
  * Translates a matrix by the given vector
  *
  * @param {base.Mat4} mat base.Mat4 to translate
- * @param {base.vec3} vec base.vec3 specifying the translation
+ * @param {base.Vec3} vec base.Vec3 specifying the translation
  * @param {base.Mat4} [dest] base.Mat4 receiving operation result. If not specified result is written to mat
  *
  * @returns {base.Mat4} dest if specified, mat otherwise
@@ -481,7 +518,7 @@ base.Mat4.translate = function (mat, vec, dest) {
  * Scales a matrix by the given vector
  *
  * @param {base.Mat4} mat base.Mat4 to scale
- * @param {base.vec3} vec base.vec3 specifying the scale for each axis
+ * @param {base.Vec3} vec base.Vec3 specifying the scale for each axis
  * @param {base.Mat4} [dest] base.Mat4 receiving operation result. If not specified result is written to mat
  *
  * @returns {base.Mat4} dest if specified, mat otherwise
@@ -530,7 +567,7 @@ base.Mat4.scale = function (mat, vec, dest) {
  *
  * @param {base.Mat4} mat base.Mat4 to rotate
  * @param {number} angle Angle (in radians) to rotate
- * @param {base.vec3} axis base.vec3 representing the axis to rotate around
+ * @param {base.Vec3} axis base.Vec3 representing the axis to rotate around
  * @param {base.Mat4} [dest] base.Mat4 receiving operation result. If not specified result is written to mat
  *
  * @returns {base.Mat4} dest if specified, mat otherwise
@@ -833,9 +870,9 @@ base.Mat4.ortho = function (left, right, bottom, top, near, far, dest) {
 /**
  * Generates a look-at matrix with the given eye position, focal point, and up axis
  *
- * @param {base.vec3} eye Position of the viewer
- * @param {base.vec3} center Point the viewer is looking at
- * @param {base.vec3} up base.vec3 pointing "up"
+ * @param {base.Vec3} eye Position of the viewer
+ * @param {base.Vec3} center Point the viewer is looking at
+ * @param {base.Vec3} up base.Vec3 pointing "up"
  * @param {base.Mat4} [dest] base.Mat4 frustum matrix will be written into
  *
  * @returns {base.Mat4} dest if specified, a new base.Mat4 otherwise
@@ -858,7 +895,7 @@ base.Mat4.lookAt = function (eye, center, up, dest) {
         return base.Mat4.identity(dest);
     }
 
-    //base.vec3.direction(eye, center, z);
+    //base.Vec3.direction(eye, center, z);
     z0 = eyex - centerx;
     z1 = eyey - centery;
     z2 = eyez - centerz;
@@ -869,7 +906,7 @@ base.Mat4.lookAt = function (eye, center, up, dest) {
     z1 *= len;
     z2 *= len;
 
-    //base.vec3.normalize(base.vec3.cross(up, z, x));
+    //base.Vec3.normalize(base.Vec3.cross(up, z, x));
     x0 = upy * z2 - upz * z1;
     x1 = upz * z0 - upx * z2;
     x2 = upx * z1 - upy * z0;
@@ -885,7 +922,7 @@ base.Mat4.lookAt = function (eye, center, up, dest) {
         x2 *= len;
     }
 
-    //base.vec3.normalize(base.vec3.cross(z, x, y));
+    //base.Vec3.normalize(base.Vec3.cross(z, x, y));
     y0 = z1 * x2 - z2 * x1;
     y1 = z2 * x0 - z0 * x2;
     y2 = z0 * x1 - z1 * x0;
@@ -932,8 +969,8 @@ base.Mat4.lookAt = function (eye, center, up, dest) {
  *     base.quat4.toMat4(quat, quatMat);
  *     base.Mat4.multiply(dest, quatMat);
  *
- * @param {base.quat4} quat Rotation quaternion
- * @param {base.vec3} vec Translation vector
+ * @param {base.Quat4} quat Rotation quaternion
+ * @param {base.Vec3} vec Translation vector
  * @param {base.Mat4} [dest] base.Mat4 receiving operation result. If not specified result is written to a new base.Mat4
  *
  * @returns {base.Mat4} dest if specified, a new base.Mat4 otherwise
@@ -973,6 +1010,42 @@ base.Mat4.fromRotationTranslation = function (quat, vec, dest) {
     dest[13] = vec[1];
     dest[14] = vec[2];
     dest[15] = 1;
+
+    return dest;
+};
+
+/**
+ * Projects the specified base.Vec3 from screen space into object space
+ * Based on the <a href="http://webcvs.freedesktop.org/mesa/Mesa/src/glu/mesa/project.c?revision=1.4&view=markup">Mesa gluUnProject implementation</a>
+ *
+ * @param {base.Vec3} vec Screen-space vector to project
+ * @param {base.Mat4} view View matrix
+ * @param {base.Mat4} proj Projection matrix
+ * @param {base.Vec4} viewport Viewport as given to gl.viewport [x, y, width, height]
+ * @param {base.Vec3} [dest] base.Vec3 receiving unprojected result. If not specified result is written to vec
+ *
+ * @returns {base.Vec3} dest if specified, vec otherwise
+ */
+base.Mat4.unproject = function (vec, view, proj, viewport, dest) {
+    if (!dest) { dest = vec; }
+
+    var m = base.Mat4.create();
+    var v = new base.MatrixArray(4);
+
+    v[0] = (vec[0] - viewport[0]) * 2.0 / viewport[2] - 1.0;
+    v[1] = (vec[1] - viewport[1]) * 2.0 / viewport[3] - 1.0;
+    v[2] = 2.0 * vec[2] - 1.0;
+    v[3] = 1.0;
+
+    base.Mat4.multiply(proj, view, m);
+    if(!base.Mat4.inverse(m)) { return null; }
+
+    base.Mat4.multiplyVec4(m, v);
+    if(v[3] === 0.0) { return null; }
+
+    dest[0] = v[0] / v[3];
+    dest[1] = v[1] / v[3];
+    dest[2] = v[2] / v[3];
 
     return dest;
 };
