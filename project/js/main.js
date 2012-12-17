@@ -111,7 +111,7 @@ function main() {
 	++fpsCounter;
 	if (fpsTime > 1000) {
 	    fpsTime -= 1000;
-	    document.getElementById('fps').innerHTML = fpsCounter;
+	    document.getElementById('fps').textContent = fpsCounter;
 	    fpsCounter = 0;
 	}
 	

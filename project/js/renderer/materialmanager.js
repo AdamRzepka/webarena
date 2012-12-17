@@ -638,7 +638,7 @@ renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage
     gl.uniform1i(program.uniforms['texture'], 0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
-    if(program.uniforms.lightmap) {
+    if(program.uniforms['lightmap']) {
         gl.activeTexture(gl.TEXTURE1);
         gl.uniform1i(program.uniforms['lightmap'], 1);
         gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
