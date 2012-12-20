@@ -977,4 +977,4 @@ files.zipjs = (function(obj) {
      };
     return zipjs;
 
- })(window);
+ })(this);

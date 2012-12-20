@@ -48,10 +48,13 @@
 
 'use strict';
 
+goog.require('goog');
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.Logger.Level');
 
 goog.require('base.Mat4');
+goog.require('base.Material');
+	     
 goog.provide('renderer.Material');
 
 goog.provide('renderer.MaterialManager');

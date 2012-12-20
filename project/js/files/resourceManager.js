@@ -30,9 +30,10 @@ goog.provide('files.ResourceManager');
 files.ResourceManager = function() {
     /**
      * @public
+     * @const
      * @type {string}
      */
-    this.basedir = 'resources/';
+    this.basedir = (COMPILED ? '/resources/' : '../../resources/');
     /**
      * @private
      * @type {Object.<string, string>}
@@ -237,8 +238,10 @@ files.ResourceManager.prototype.loadEntry = function (entry) {
     case 'png': case 'jpg':
 	entry.getData(new files.zipjs.BlobWriter('image/' + ((ext === 'png') ? 'png' : 'jpeg')),
 		      function(blob) {
-                          var url = ('URL' in window) ? window.URL.createObjectURL(blob) :
-                              window.webkitURL.createObjectURL(blob);
+                          // var url = ('URL' in window) ? window.URL.createObjectURL(blob) :
+                          //     window.webkitURL.createObjectURL(blob);
+			   // @todo there must be better way than data URL
+			  var url = (new FileReaderSync()).readAsDataURL(blob);
 			  self.textures[filename.replace(/\.(jpg|png)$/, '')] = url;
 			  self.reportLoadedFile();
 		      });
