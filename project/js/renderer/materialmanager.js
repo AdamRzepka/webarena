@@ -48,7 +48,6 @@
 
 'use strict';
 
-goog.require('goog');
 goog.require('goog.debug.Logger');
 goog.require('goog.debug.Logger.Level');
 

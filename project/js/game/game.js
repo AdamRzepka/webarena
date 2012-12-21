@@ -5,7 +5,10 @@ if (typeof COMPILED == 'undefined') {
       CLOSURE_BASE_PATH + 'base.js',
       CLOSURE_BASE_PATH + 'deps.js',
       '../../deps.js');
-} 
+}
+// else if (COMPILED) {
+//     importScripts('base.js');
+// }
 
 goog.require('base');
 goog.require('base.Mat3');
@@ -18,6 +21,9 @@ goog.require('renderer.Renderer');
 goog.provide('game');
 //goog.require('game.Camera');
 
+// var postMessage = function(msg) {
+//     self.postMessage(msg, null);
+// };
 
 game.init = function () {
     var rm = new files.ResourceManager();

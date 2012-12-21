@@ -97,6 +97,7 @@ function main() {
 				      0, 0, 0, 1]);
     var fpsCounter = 0;
     var fpsTime = 0;
+    var worker;
     function update() {
 	timeAcc += Date.now() - lastTime;
 	fpsTime += Date.now() - lastTime;
@@ -124,8 +125,13 @@ function main() {
     }
 
     render = new renderer.Renderer(gl);
-    
-    var worker = new Worker('js/game/game.js');
+
+    if (COMPILED) {
+	worker = new Worker('initworker.js');
+    } else {
+	worker = new Worker('js/game/game.js');
+    }
+	
     worker.onmessage = function (event) {
 	var msg = event.data;
 	switch (msg.type) {

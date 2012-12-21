@@ -2,14 +2,28 @@
 {
     "id": "webarena",
     "paths": "project/js",
-    "inputs": "project/js/main.js",
+    "modules": {
+	"base": {
+	    "inputs" : "project/js/base/base.js",
+	    "deps": []
+	},
+	"main": {
+	    "inputs": "project/js/main.js",
+	    "deps": "base"
+	},
+	"game": {
+	    "inputs": "project/js/game/game.js",
+	    "deps": "base"
+	}
+    },
+    "module-output-path": "release/%s.js",
+    "externs": ["tools/externs.js"],
     "mode": "ADVANCED",
     "level": "VERBOSE",
-    "debug": false,
-    "pretty-print": false,
-    "output-file": "release/main.js",
+    "debug": true,
+    "pretty-print": true,
     "define": {
-	"goog.DEBUG": false
+	"goog.DEBUG": true
     },
     "checks": {
     // acceptable values are "ERROR", "WARNING", and "OFF"
