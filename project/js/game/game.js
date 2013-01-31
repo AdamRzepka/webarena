@@ -11,6 +11,8 @@ if (typeof COMPILED == 'undefined') {
 // }
 
 goog.require('base');
+goog.require('base.IRenderer');
+goog.require('base.workers.Broker');
 goog.require('base.Mat3');
 goog.require('files.ResourceManager');
 goog.require('files.bsp');
@@ -26,6 +28,8 @@ goog.provide('game');
 // };
 
 game.init = function () {
+    var broker = new base.workers.Broker('main');
+    var renderer = broker.createProxy('renderer', base.IRenderer);
     var rm = new files.ResourceManager();
     var mapName = 'oa_rpg3dm2';
     var weaponId;
@@ -33,24 +37,32 @@ game.init = function () {
     rm.load([mapName, "lightning"], function () {
 	var map, md3;
 	files.ShaderScriptLoader.loadAll(rm.getScripts());
-	postMessage({type: 'shaders', data: [files.ShaderScriptLoader.shaderScripts,
-					     rm.getTextures()]});
+        renderer.buildShaders(files.ShaderScriptLoader.shaderScripts,
+					     rm.getTextures());
+	//postMessage({type: 'shaders', data: [files.ShaderScriptLoader.shaderScripts,
+	//				     rm.getTextures()]});
 	
 	map = files.bsp.load(rm.getMap());
-	postMessage({type: 'map', data: [map.models, map.lightmapData]});
+        renderer.registerMap(map.models, map.lightmapData);
+	//postMessage({type: 'map', data: [map.models, map.lightmapData]});
 
 	map.models.forEach(function (model) {
-	    postMessage({type: 'instance', data: [base.ModelInstance.getNextId(),
-						  model.id,
-						  base.Mat4.identity()]});
+            renderer.registerModelInstance(base.ModelInstance.getNextId(),
+	                                   model.id,
+	                                   base.Mat4.identity());
+	    // postMessage({type: 'instance', data: [base.ModelInstance.getNextId(),
+	    //     				  model.id,
+	    //     				  base.Mat4.identity()]});
 	});
 	
 	md3 = files.md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
-	postMessage({type: 'md3', data: [md3]});
+        renderer.registerMd3(md3);
+	// postMessage({type: 'md3', data: [md3]});
 	weaponId = base.ModelInstance.getNextId();
-	postMessage({type: 'instance', data: [weaponId,
-					      md3.id,
-					      weaponMtx]});
+        renderer.registerModelInstance(weaponId, md3.id, weaponMtx);
+	 // postMessage({type: 'instance', data: [weaponId,
+	 //        			      md3.id,
+	 //        			      weaponMtx]});
 //	postMessage({type: 'camera', data: [base.Mat4.identity()]});
     });
 };

@@ -18,6 +18,7 @@
 
 'use strict';
 
+goog.require('goog');
 goog.require('goog.debug.FancyWindow');
 goog.require('base');
 goog.require('base.Mat4');
@@ -28,6 +29,7 @@ goog.require('base.Mat4');
 goog.require('renderer.Renderer');
 goog.require('InputHandler');
 goog.require('game.Camera');
+goog.require('base.workers.Broker');
 
 var DEFAULT_MAP = 'oa_rpg3dm2';
 
@@ -131,28 +133,9 @@ function main() {
     } else {
 	worker = new Worker('js/game/game.js');
     }
-	
-    worker.onmessage = function (event) {
-	var msg = event.data;
-	switch (msg.type) {
-	case 'shaders':
-	    render.buildShaders(msg.data[0], msg.data[1]);
-	    break;
-	case 'map':
-	    render.registerMap(msg.data[0], msg.data[1]);
-	    requestAnimationFrame(update);
-	    break;
-	case 'md3':
-	    render.registerMd3(msg.data[0]);
-	    break;
-	case 'instance':
-	    render.registerModelInstance.apply(render, msg.data);
-	    break;
-	default:
-	    goog.asserts.fail('Unknown message ' + msg.type);
-	};
-    };
-
+    var broker = new base.workers.Broker('game', worker);
+    broker.registerReceiver('renderer', render);
+    requestAnimationFrame(update);
     // rm.load([map, "lightning"], function () {
 
     // 	files.ShaderScriptLoader.loadAll(rm.getScripts());

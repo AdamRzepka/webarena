@@ -21,6 +21,7 @@ goog.require('goog.debug.Logger');
 goog.require('goog.debug.Logger.Level');
 
 goog.require('base');
+goog.require('base.IRenderer');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('renderer.MaterialManager');
@@ -30,6 +31,7 @@ goog.provide('renderer.Renderer');
 
 /**
  * @constructor
+ * @implements {base.IRenderer}
  * @param {WebGLRenderingContext} gl
  */
 renderer.Renderer = function(gl) {
