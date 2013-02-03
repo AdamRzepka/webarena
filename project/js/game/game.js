@@ -1,15 +1,24 @@
-if (typeof COMPILED == 'undefined') {
-  var CLOSURE_BASE_PATH = '../../closure/goog/';
-  importScripts(
-      CLOSURE_BASE_PATH + 'bootstrap/webworkers.js',
-      CLOSURE_BASE_PATH + 'base.js',
-      CLOSURE_BASE_PATH + 'deps.js',
-      '../../deps.js');
-}
-// else if (COMPILED) {
-//     importScripts('base.js');
-// }
+/**
+ * @license
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
+'use strict';
+
+goog.require('flags');
 goog.require('base');
 goog.require('base.IRenderer');
 goog.require('base.workers.Broker');
@@ -18,18 +27,20 @@ goog.require('files.ResourceManager');
 goog.require('files.bsp');
 goog.require('files.md3');
 goog.require('files.ShaderScriptLoader');
-goog.require('renderer.Renderer');
+if (!flags.GAME_WORKER) {
+    goog.require('renderer.Renderer');
+}
 
 goog.provide('game');
-//goog.require('game.Camera');
-
-// var postMessage = function(msg) {
-//     self.postMessage(msg, null);
-// };
 
 game.init = function () {
-    var broker = new base.workers.Broker('main');
-    var renderer = broker.createProxy('renderer', base.IRenderer);
+    var render;
+    if (flags.GAME_WORKER) {
+        var broker = new base.workers.Broker('main');
+        render = /**@type{base.IRenderer}*/broker.createProxy('renderer', base.IRenderer);
+    } else {
+        render = renderer.getInstance();
+    }
     var rm = new files.ResourceManager();
     var mapName = 'oa_rpg3dm2';
     var weaponId;
@@ -37,34 +48,23 @@ game.init = function () {
     rm.load([mapName, "lightning"], function () {
 	var map, md3;
 	files.ShaderScriptLoader.loadAll(rm.getScripts());
-        renderer.buildShaders(files.ShaderScriptLoader.shaderScripts,
+        render.buildShaders(files.ShaderScriptLoader.shaderScripts,
 					     rm.getTextures());
-	//postMessage({type: 'shaders', data: [files.ShaderScriptLoader.shaderScripts,
-	//				     rm.getTextures()]});
 	
 	map = files.bsp.load(rm.getMap());
-        renderer.registerMap(map.models, map.lightmapData);
-	//postMessage({type: 'map', data: [map.models, map.lightmapData]});
+        render.registerMap(map.models, map.lightmapData);
 
 	map.models.forEach(function (model) {
-            renderer.registerModelInstance(base.ModelInstance.getNextId(),
+            render.registerModelInstance(base.ModelInstance.getNextId(),
 	                                   model.id,
 	                                   base.Mat4.identity());
-	    // postMessage({type: 'instance', data: [base.ModelInstance.getNextId(),
-	    //     				  model.id,
-	    //     				  base.Mat4.identity()]});
 	});
 	
 	md3 = files.md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
-        renderer.registerMd3(md3);
-	// postMessage({type: 'md3', data: [md3]});
+        render.registerMd3(md3);
 	weaponId = base.ModelInstance.getNextId();
-        renderer.registerModelInstance(weaponId, md3.id, weaponMtx);
-	 // postMessage({type: 'instance', data: [weaponId,
-	 //        			      md3.id,
-	 //        			      weaponMtx]});
-//	postMessage({type: 'camera', data: [base.Mat4.identity()]});
+        render.registerModelInstance(weaponId, md3.id, weaponMtx);
     });
 };
 
-game.init();
+goog.exportSymbol('game.init', game.init);

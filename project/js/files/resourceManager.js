@@ -33,7 +33,7 @@ files.ResourceManager = function() {
      * @const
      * @type {string}
      */
-    this.basedir = (COMPILED ? '/resources/' : '../../resources/');
+    this.basedir = '/resources/';//(COMPILED ? '../resources/' : '/resources/');
     /**
      * @private
      * @type {Object.<string, string>}
@@ -241,9 +241,19 @@ files.ResourceManager.prototype.loadEntry = function (entry) {
                           // var url = ('URL' in window) ? window.URL.createObjectURL(blob) :
                           //     window.webkitURL.createObjectURL(blob);
 			   // @todo there must be better way than data URL
-			  var url = (new FileReaderSync()).readAsDataURL(blob);
-			  self.textures[filename.replace(/\.(jpg|png)$/, '')] = url;
-			  self.reportLoadedFile();
+                          if (typeof(FileReaderSync) !== 'undefined') {
+			      var url = (new FileReaderSync()).readAsDataURL(blob);
+			      self.textures[filename.replace(/\.(jpg|png)$/, '')] = url;
+			      self.reportLoadedFile();
+                          } else {
+                              var reader = new FileReader();
+                              reader.readAsDataURL(blob);
+                              reader.onload = function (evt) {
+			          self.textures[filename.replace(/\.(jpg|png)$/, '')] =
+                                      evt.target.result;
+			          self.reportLoadedFile();   
+                              };
+                          }
 		      });
 	break;
     case 'shader':

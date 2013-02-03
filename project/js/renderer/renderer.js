@@ -116,6 +116,8 @@ renderer.Renderer.prototype.buildShaders = function(shaderScripts, texturesUrls)
     this.materialManager_.buildShaders(shaderScripts, texturesUrls);
 };
 
+base.makeUnremovable(renderer.Renderer.prototype.buildShaders);
+
 /**
  * @public
  * Where the magic happens...
@@ -199,10 +201,18 @@ renderer.Renderer.prototype.registerMap = function (models, lightmapData) {
 
 };
 
+base.makeUnremovable(renderer.Renderer.prototype.registerMap);
+
+/**
+ * @public
+ * @param {base.Model} model
+ */
 renderer.Renderer.prototype.registerMd3 = function (model) {
     this.addMeshes(model);
     this.insertModel_(model);
 };
+
+base.makeUnremovable(renderer.Renderer.prototype.registerMd3);
 
 /**
  * @public
@@ -251,6 +261,8 @@ renderer.Renderer.prototype.registerModelInstance = function (id, modelBaseId, m
 
     this.insertModelInstance_(instance);
 };
+
+base.makeUnremovable(renderer.Renderer.prototype.registerModelInstance);
 
 /**
  * @public
@@ -332,6 +344,14 @@ renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrice
     }
 };
 
+base.makeUnremovable(renderer.Renderer.prototype.updateModels);
+
+/**
+ * @public
+ * @param {number} modelInstanceId
+ * @param {base.Mat4} matrix
+ * @param {number} frame
+ */
 renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, frame) {
      var model = this.modelInstances_[modelInstanceId];
      if (model === undefined) {
@@ -343,6 +363,8 @@ renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, fra
      model.setFrame(frame);
 };
 
+base.makeUnremovable(renderer.Renderer.prototype.updateModel);
+
 /**
  * @public
  * @param {Array.<number>} modelsInstancesIds
@@ -351,6 +373,8 @@ renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, fra
 renderer.Renderer.prototype.setModelsVisibility = function (modelsInstancesIds, visibilityArray) {
     // @todo
 };
+
+base.makeUnremovable(renderer.Renderer.prototype.setModelsVisibility);
 
 // renderer.Renderer.prototype.setMeshVisibility = function (objectId, meshId, visible) {
 //     // @todo
@@ -364,6 +388,8 @@ renderer.Renderer.prototype.updateCamera = function (cameraMatrix) {
     base.Mat4.inverse(cameraMatrix, this.viewMtx_);
     this.sky_.updateMatrix(cameraMatrix);
 };
+
+base.makeUnremovable(renderer.Renderer.prototype.updateCamera);
 
 /**
  * @private
@@ -544,4 +570,27 @@ renderer.MeshInstance = function(baseMesh, modelInstance, material) {
      * @type {renderer.Material}
      */
     this.material = material;
+};
+
+/**
+ * @private
+ * @type {renderer.Renderer}
+ */
+renderer.instance_ = null;
+/**
+ * @public
+ * @param {renderer.Renderer} inst
+ */
+renderer.initInstance = function (inst) {
+    goog.asserts.assert(!renderer.instance_);
+    renderer.instance_ = inst;
+};
+/**
+ * @public
+ * @return {renderer.Renderer}
+ */
+renderer.getInstance = function () {
+    goog.asserts.assert(renderer.instance_);
+    return renderer.instance_;
+    
 };

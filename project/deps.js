@@ -8,15 +8,16 @@ goog.addDependency('../../js/base/mat4.js', ['base.Mat4'], ['base.Mat3', 'base.V
 goog.addDependency('../../js/base/material.js', ['base.Material', 'base.ShaderScript'], []);
 goog.addDependency('../../js/base/quat4.js', ['base.Quat4'], ['base.Mat3', 'base.Mat4', 'base.Vec3']);
 goog.addDependency('../../js/base/vec3.js', ['base.Vec3'], []);
-goog.addDependency('../../js/base/workers/broker.js', ['base.workers.Broker'], ['goog', 'goog.array', 'goog.asserts']);
+goog.addDependency('../../js/base/workers/broker.js', ['base.workers.Broker'], ['goog.array', 'goog.asserts']);
 goog.addDependency('../../js/files/binaryfile.js', ['files.BinaryFile'], []);
 goog.addDependency('../../js/files/bsp.js', ['files.bsp'], ['base', 'base.Map', 'base.Mat4', 'base.Vec3', 'files.BinaryFile']);
 goog.addDependency('../../js/files/md3.js', ['files.md3'], ['base', 'files.BinaryFile', 'goog.asserts']);
 goog.addDependency('../../js/files/resourceManager.js', ['files.ResourceManager'], ['files.zipjs', 'goog.debug.Logger']);
 goog.addDependency('../../js/files/shaderscriptloader.js', ['files.ShaderScriptLoader'], ['base.ShaderScript']);
 goog.addDependency('../../js/files/zipjs/zip.js', ['files.zipjs'], []);
+goog.addDependency('../../js/flags.js', ['flags'], []);
 goog.addDependency('../../js/game/camera.js', ['game.Camera'], ['InputHandler', 'base.Mat4', 'base.Vec3']);
-goog.addDependency('../../js/game/game.js', ['game'], ['base', 'base.IRenderer', 'base.Mat3', 'base.workers.Broker', 'files.ResourceManager', 'files.ShaderScriptLoader', 'files.bsp', 'files.md3', 'renderer.Renderer']);
+goog.addDependency('../../js/game/game.js', ['game'], ['base', 'base.IRenderer', 'base.Mat3', 'base.workers.Broker', 'files.ResourceManager', 'files.ShaderScriptLoader', 'files.bsp', 'files.md3', 'flags', 'renderer.Renderer']);
 goog.addDependency('../../js/inputhandler.js', ['InputHandler'], []);
 goog.addDependency('../../js/renderer/materialmanager.js', ['renderer.Material', 'renderer.MaterialManager'], ['base.Mat4', 'base.Material', 'goog.debug.Logger', 'goog.debug.Logger.Level']);
 goog.addDependency('../../js/renderer/renderer.js', ['renderer.Renderer'], ['base', 'base.IRenderer', 'base.Mat4', 'base.Vec3', 'goog.debug.Logger', 'goog.debug.Logger.Level', 'renderer.MaterialManager', 'renderer.Sky']);

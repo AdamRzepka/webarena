@@ -1,3 +1,4 @@
+// bootstrap webworker with gamecode in debug mode
 if (typeof COMPILED == 'undefined') {
   var CLOSURE_BASE_PATH = '../../closure/goog/';
   importScripts(
@@ -8,3 +9,4 @@ if (typeof COMPILED == 'undefined') {
 }
 
 importScripts('game/game.js');
+game.init();

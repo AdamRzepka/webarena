@@ -167,12 +167,19 @@ files.zipjs = (function(obj) {
 	 }
 
 	 function readUint8Array(index, length, callback, onerror) {
-	     var reader = new FileReader();
-	     reader.onload = function(e) {
-		 callback(new Uint8Array(e.target.result));
-	     };
-	     reader.onerror = onerror;
-	     reader.readAsArrayBuffer(blobSlice(blob, index, length));
+             var reader;
+             if (typeof(FileReaderSync) !== 'undefined') {
+                 reader = new FileReaderSync();
+                 callback(new Uint8Array(reader.readAsArrayBuffer(
+                     blobSlice(blob, index, length))));
+             } else {
+	         reader = new FileReader();
+	         reader.onload = function(e) {
+		     callback(new Uint8Array(e.target.result));
+	         };
+	         reader.onerror = onerror;
+	         reader.readAsArrayBuffer(blobSlice(blob, index, length));
+             }
 	 }
 
 	 that.size = 0;
@@ -292,12 +299,18 @@ files.zipjs = (function(obj) {
 	 }
 
 	 function getData(callback) {
-	     var reader = new FileReader();
-	     reader.onload = function(e) {
-		 callback(e.target.result);
-	     };
-	     reader.onerror = monerror;
-	     reader.readAsText(blob, "x-user-defined");
+             var reader;
+             if (typeof(FileReaderSync) !== 'undefined') {
+                 reader = new FileReaderSync();
+                 callback(reader.readAsText(blob, "x-user-defined"));
+             } else {
+	         reader = new FileReader();
+	         reader.onload = function(e) {
+		     callback(e.target.result);
+	         };
+	         reader.onerror = monerror;
+	         reader.readAsText(blob, "x-user-defined");
+             }
 	 }
 
 	 that.init = init;
@@ -413,12 +426,19 @@ files.zipjs = (function(obj) {
      	 }
 
      	 function getData(callback) {
-             var reader = new FileReader();
-             reader.onload = function(e){
-	         callback(e.target.result);
-	     };
-	     reader.onerror = monerror;
-     	     reader.readAsArrayBuffer(blob);
+             var reader;
+             if (typeof FileReaderSync != 'undefined') {
+                 reader = new FileReaderSync();
+                 callback(reader.readAsArrayBuffer(
+                     blob));
+             } else {
+                 reader = new FileReader();
+                 reader.onload = function(e){
+	             callback(e.target.result);
+	         };
+	         reader.onerror = monerror;
+     	         reader.readAsArrayBuffer(blob);
+             }
      	 }
 
      	 that.init = init;

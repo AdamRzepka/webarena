@@ -18,18 +18,18 @@
 
 'use strict';
 
-goog.require('goog');
 goog.require('goog.debug.FancyWindow');
+goog.require('flags');
 goog.require('base');
 goog.require('base.Mat4');
-// goog.require('files.ResourceManager');
-// goog.require('files.bsp');
-// goog.require('files.md3');
-// goog.require('files.ShaderScriptLoader');
 goog.require('renderer.Renderer');
 goog.require('InputHandler');
 goog.require('game.Camera');
 goog.require('base.workers.Broker');
+
+if (!flags.GAME_WORKER) {
+    goog.require('game');
+}
 
 var DEFAULT_MAP = 'oa_rpg3dm2';
 
@@ -46,7 +46,6 @@ function getQueryVariable(variable) {
 }
 
 function initWebGL(canvas) {
-    // Initialize the global variable gl to null.
     var gl = null;
 
     try {
@@ -63,12 +62,12 @@ function initWebGL(canvas) {
 }
 
 window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-        window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+    window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
+    window.oRequestAnimationFrame;
 
-
-var render;
 
 function main() {
+    var render;
     var canvas = document.getElementById('glcanvas');
 
     var gl = initWebGL(canvas);
@@ -119,47 +118,22 @@ function main() {
 	}
 	
 	render.updateCamera(camera.getCameraMatrix());
-//	base.Mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
-//	base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
-//	render.updateModel(weaponId, weaponMtx, 0);
 	render.render();
 	requestAnimationFrame(update);
     }
 
     render = new renderer.Renderer(gl);
+    renderer.initInstance(render);
 
-    if (COMPILED) {
-	worker = new Worker('initworker.js');
-    } else {
-	worker = new Worker('js/game/game.js');
+    if (flags.GAME_WORKER) {
+        worker = new Worker('js/initworker.js');
+        var broker = new base.workers.Broker('game', worker);
+        broker.registerReceiver('renderer', render);
     }
-    var broker = new base.workers.Broker('game', worker);
-    broker.registerReceiver('renderer', render);
+    else {
+        game.init();
+    }
     requestAnimationFrame(update);
-    // rm.load([map, "lightning"], function () {
-
-    // 	files.ShaderScriptLoader.loadAll(rm.getScripts());
-    // 	render.buildShaders(files.ShaderScriptLoader.shaderScripts, rm.getTextures());
-	
-    // 	var map = files.bsp.load(rm.getMap());
-    // 	render.registerMap(map.models, map.lightmapData);
-    // 	map.models.forEach(function (model) {
-    // 	    render.registerModelInstance(base.ModelInstance.getNextId(),
-    // 					 model.id,
-    // 					 base.Mat4.identity());
-    // 	});
-	
-    // 	var md3 = files.md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
-    // 	render.registerMd3(md3);
-    // 	weaponId = base.ModelInstance.getNextId();
-    // 	render.registerModelInstance(weaponId,
-    // 				     md3.id,
-    // 				     weaponMtx);
-    // 	render.updateCamera(base.Mat4.identity());
-    // 	setTimeout(function() {
-    // 	    requestAnimationFrame(update);
-    // 	}, 1);
-    // });
 }
 
 goog.exportSymbol('main', main);

@@ -341,3 +341,16 @@ base.GeometryData.Layout = {
     SKY: 2,
     SIZE: 3
 };
+
+/**
+ * @public
+ * @param {function(...)} fun
+ * Forces compiler not to remove specific function during dead code removing;
+ */
+base.makeUnremovable = function (fun) {
+    var dummy = 1;
+    ++dummy;
+    if (dummy == 0) {
+        fun.apply(goog.global); // it'll never be called
+    }
+};

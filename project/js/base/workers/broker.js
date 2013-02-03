@@ -23,7 +23,6 @@
  * broadcast some events accross workers.
  */
 
-goog.require('goog');
 goog.require('goog.asserts');
 goog.require('goog.array');
 
@@ -55,7 +54,7 @@ base.workers.Broker = function (name, worker) {
     this.nextId_ = 0;
     /**
      * @private
-     * @type {Array.<function(*)>}
+     * @type {Array.<function(*)|null>}
      */
     this.pendingCallbacks_ = [];
     /**
@@ -80,7 +79,7 @@ base.workers.Broker.MAX_PENDING_CALLBACKS = 256;
 /**
  * @public
  * @param {string} name correspons with name in createProxy
- * @param {*} obj
+ * @param {Object} obj
  * Registers proxy call receiver.
  */
 base.workers.Broker.prototype.registerReceiver = function (name, obj) {
@@ -91,8 +90,8 @@ base.workers.Broker.prototype.registerReceiver = function (name, obj) {
 /**
  * @public
  * @param {string} name correspons with name in registerReceiver
- * @param {*} intface common interface for proxy and receiver
- * @return {*}
+ * @param {Object} intface common interface for proxy and receiver
+ * @return {Object}
  * Creates local stub for cros-worker function calls.
  * Interface passed here must have property _CROSS_WORKER_ = true.
  * All cross-worker functions must have property _CROSS_WORKER_ = true
@@ -104,7 +103,7 @@ base.workers.Broker.prototype.createProxy = function (name, intface) {
     var proxy = {};
     var proto = intface.prototype;
 
-    goog.asserts.assert(intface._CROSS_WORKER_);
+//    goog.asserts.assert(proto._CROSS_WORKER_);
     
     for( prop in proto ) {
         if (proto.hasOwnProperty(prop) && goog.isFunction(proto[prop])
