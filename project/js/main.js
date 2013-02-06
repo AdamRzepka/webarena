@@ -22,9 +22,8 @@ goog.require('goog.debug.FancyWindow');
 goog.require('flags');
 goog.require('base');
 goog.require('base.Mat4');
+goog.require('base.IInputHandler');
 goog.require('renderer.Renderer');
-goog.require('InputHandler');
-goog.require('game.Camera');
 goog.require('base.workers.Broker');
 
 if (!flags.GAME_WORKER) {
@@ -61,9 +60,28 @@ function initWebGL(canvas) {
     return gl;
 }
 
+function initInput(broker) {
+    var inputBuffer = broker.createProxy('base.IInputHandler', base.IInputHandler);
+    document.onkeydown = function (ev) {
+        inputBuffer.onKeyDown(ev.keyCode);
+    };
+    document.onkeyup = function (ev) {
+        inputBuffer.onKeyUp(ev.keyCode);
+    };
+    document.onmousedown = function (ev) {
+        inputBuffer.onKeyDown(ev.button);
+    };
+    document.onmouseup = function (ev) {
+        inputBuffer.onKeyUp(ev.button);
+    };
+    document.onmousemove = function (ev) {
+        inputBuffer.onMouseMove(ev.clientX, ev.clientY);
+    };    
+}
+
 window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
     window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
-    window.oRequestAnimationFrame;
+    window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
 
 
 function main() {
@@ -71,43 +89,22 @@ function main() {
     var canvas = document.getElementById('glcanvas');
 
     var gl = initWebGL(canvas);
+    var map = getQueryVariable('map') || DEFAULT_MAP;
+
+    var lastTime = Date.now();
+    var fpsCounter = 0;
+    var fpsTime = 0;
+    var worker;
+    var broker;
+
     if (goog.DEBUG) {
 	var debugWindow = new goog.debug.FancyWindow('main');
 	debugWindow.setEnabled(true);
 	debugWindow.init();
     }
 
-    var map = getQueryVariable('map');
-
-    if (map === null)
-        map = DEFAULT_MAP;
-
-//    var rm = new files.ResourceManager();
-    var input = new InputHandler();
-    var camera = new game.Camera(input, [0, 0, 0]);
-
-    var lastTime = Date.now();
-    var timeAcc = 0;
-
-    var weaponMtx = base.Mat4.identity();
-    var weaponOff = base.Vec3.create([10, -10, -4]);
-    var weaponId = -1;
-    var weaponRot = base.Mat4.create([0, 0, -1, 0,
-				      -1, 0, 0, 0,
-				      0, 1, 0, 0,
-				      0, 0, 0, 1]);
-    var fpsCounter = 0;
-    var fpsTime = 0;
-    var worker;
     function update() {
-	timeAcc += Date.now() - lastTime;
-	fpsTime += Date.now() - lastTime;
-
-	while (timeAcc > 15) {
-	    timeAcc -= 15;
-	    camera.update();
-	    input.clearInput();
-	}
+        fpsTime += Date.now() - lastTime;
 	lastTime = Date.now();
 
 	++fpsCounter;
@@ -116,23 +113,27 @@ function main() {
 	    document.getElementById('fps').textContent = fpsCounter;
 	    fpsCounter = 0;
 	}
-	
-	render.updateCamera(camera.getCameraMatrix());
+
 	render.render();
 	requestAnimationFrame(update);
     }
 
     render = new renderer.Renderer(gl);
-    renderer.initInstance(render);
 
     if (flags.GAME_WORKER) {
         worker = new Worker('js/initworker.js');
-        var broker = new base.workers.Broker('game', worker);
-        broker.registerReceiver('renderer', render);
+        broker = new base.workers.Broker('game', worker);
     }
     else {
+        broker = new base.workers.FakeBroker('game');
+    }
+
+    broker.registerReceiver('base.IRenderer', render);
+
+    if (!flags.GAME_WORKER) {
         game.init();
     }
+    initInput(broker);
     requestAnimationFrame(update);
 }
 

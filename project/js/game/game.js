@@ -27,6 +27,8 @@ goog.require('files.ResourceManager');
 goog.require('files.bsp');
 goog.require('files.md3');
 goog.require('files.ShaderScriptLoader');
+goog.require('game.InputBuffer');
+goog.require('game.Camera');
 if (!flags.GAME_WORKER) {
     goog.require('renderer.Renderer');
 }
@@ -35,12 +37,15 @@ goog.provide('game');
 
 game.init = function () {
     var render;
+    var broker;
+    var input = new game.InputBuffer();
     if (flags.GAME_WORKER) {
-        var broker = new base.workers.Broker('main');
-        render = /**@type{base.IRenderer}*/broker.createProxy('renderer', base.IRenderer);
+        broker = new base.workers.Broker('main', self);
     } else {
-        render = renderer.getInstance();
+        broker = new base.workers.FakeBroker('main');
     }
+    broker.registerReceiver('base.IInputHandler', input);
+    render = /**@type{base.IRenderer}*/broker.createProxy('base.IRenderer', base.IRenderer);
     var rm = new files.ResourceManager();
     var mapName = 'oa_rpg3dm2';
     var weaponId;
@@ -64,7 +69,26 @@ game.init = function () {
         render.registerMd3(md3);
 	weaponId = base.ModelInstance.getNextId();
         render.registerModelInstance(weaponId, md3.id, weaponMtx);
+
+        var camera = new game.Camera(input, base.Vec3.create([0,0,0]));
+        var weaponOff = base.Vec3.create([10, -10, -4]);
+        var weaponRot = base.Mat4.create([0, 0, -1, 0,
+        			          -1, 0, 0, 0,
+        			          0, 1, 0, 0,
+        			          0, 0, 0, 1]);
+        function update () {
+            input.step();
+            
+            camera.update();
+            render.updateCamera(camera.getCameraMatrix());
+
+            base.Mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
+	    base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
+	    render.updateModel(weaponId, weaponMtx, 0);
+        };
+        setInterval(update, 16);
     });
 };
+
 
 goog.exportSymbol('game.init', game.init);

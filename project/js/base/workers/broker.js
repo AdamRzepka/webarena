@@ -27,22 +27,29 @@ goog.require('goog.asserts');
 goog.require('goog.array');
 
 goog.provide('base.workers.Broker');
+goog.provide('base.workers.FakeBroker');
 
 /**
  * @constructor
  * @param {string} name human friendly name of the worker.
- * @param {Worker} [worker] if we are in worker, this argument should be empty.
+ * @param {Worker|DedicatedWorkerGlobalScope|Window} worker if we are in worker, this argument should be self.
  */
 base.workers.Broker = function (name, worker) {
-    goog.asserts.assert(worker || self); // if we are inside worker, self shall be defined
+    goog.asserts.assert(worker); // if we are inside worker, self shall be defined
     /**
      * @private
      * @const
-     * @type {function(Object)}
+     * @type {Worker|DedicatedWorkerGlobalScope|Window}
      */
-    this.postMessage_ = worker ? goog.bind(worker.postMessage, worker)
-        : self.postMessage;
-    /**
+    this.worker_ = worker;
+    // /**
+    //  * @private
+    //  * @const
+    //  * @type {function(Object)}
+    //  */
+    // this.postMessage_ = worker ? goog.bind(worker.postMessage, worker)
+    //     : self.postMessage;
+    /**0
      * @const
      * @type {string}
      */
@@ -63,11 +70,7 @@ base.workers.Broker = function (name, worker) {
      */
     this.callReceivers_ = [];
 
-    if (worker) {
-        worker.onmessage = goog.bind(this.onMessage_, this);
-    } else {
-        self.onmessage = goog.bind(this.onMessage_, this);
-    }
+    this.worker_.onmessage = goog.bind(this.onMessage_, this);
 };
 
 /**
@@ -90,7 +93,7 @@ base.workers.Broker.prototype.registerReceiver = function (name, obj) {
 /**
  * @public
  * @param {string} name correspons with name in registerReceiver
- * @param {Object} intface common interface for proxy and receiver
+ * @param {function(...)} intface common interface for proxy and receiver
  * @return {Object}
  * Creates local stub for cros-worker function calls.
  * Interface passed here must have property _CROSS_WORKER_ = true.
@@ -127,7 +130,6 @@ base.workers.Broker.prototype.createProxy = function (name, intface) {
     }
     return proxy;
 };
-
 /**
  * @private
  * @enum
@@ -138,7 +140,6 @@ base.workers.Broker.MessageTypes = {
     FUNCTION_CALLBACK: 2,
     ARBITRARY: 3
 };
-
 /**
  * @private
  */
@@ -170,8 +171,8 @@ base.workers.Broker.prototype.sendProxyCall = function (proxyName, funName, args
         goog.asserts.assert(!this.pendingCallbacks_[id]);
         this.pendingCallbacks_[id] = callback;
     }
-    var post = this.postMessage_;
-    post({
+//    var post = this.postMessage_;
+    this.worker_.postMessage({
         type: base.workers.Broker.MessageTypes.FUNCTION_CALL,
         id: id,
         proxyName: proxyName,
@@ -192,8 +193,8 @@ base.workers.Broker.prototype.onProxyCall = function (id, receiverName, funName,
 
     if (withCallback) {
         args.push (function () {
-            var post = that.postMessage_;
-            post({
+//            var post = that.postMessage_;
+            that.worker_.postMessage({
                 type: base.workers.Broker.MessageTypes.FUNCTION_CALLBACK,
                 id: id,
                 args: goog.array.clone(arguments)
@@ -215,4 +216,31 @@ base.workers.Broker.prototype.onProxyCallback = function (id, args) {
     goog.asserts.assert(cb);
     
     cb(args);
+};
+
+/**
+ * @constructor
+ * @param {string} name
+ */
+base.workers.FakeBroker = function (name) {
+    this.callReceivers_ = [];
+};
+/**
+ * @public
+ * @param {string} name
+ * @param {function(...)} intface
+ */
+base.workers.FakeBroker.prototype.createProxy = function (name, intface) {
+    goog.asserts.assert(this.callReceivers_[name]);
+    return this.callReceivers_[name];
+};
+/**
+ * @public
+ * @param {string} name correspons with name in createProxy
+ * @param {Object} obj
+ * Registers proxy call receiver.
+ */
+base.workers.FakeBroker.prototype.registerReceiver = function (name, obj) {
+    goog.asserts.assert(!this.callReceivers_[name]);
+    this.callReceivers_[name] = obj;
 };

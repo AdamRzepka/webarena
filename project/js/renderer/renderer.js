@@ -571,26 +571,3 @@ renderer.MeshInstance = function(baseMesh, modelInstance, material) {
      */
     this.material = material;
 };
-
-/**
- * @private
- * @type {renderer.Renderer}
- */
-renderer.instance_ = null;
-/**
- * @public
- * @param {renderer.Renderer} inst
- */
-renderer.initInstance = function (inst) {
-    goog.asserts.assert(!renderer.instance_);
-    renderer.instance_ = inst;
-};
-/**
- * @public
- * @return {renderer.Renderer}
- */
-renderer.getInstance = function () {
-    goog.asserts.assert(renderer.instance_);
-    return renderer.instance_;
-    
-};

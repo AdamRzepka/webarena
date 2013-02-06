@@ -1,11 +1,32 @@
-goog.require('InputHandler');
+/**
+ * Copyright (C) 2012 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+'use strict';
+
 goog.require('base.Mat4');
 goog.require('base.Vec3');
+goog.require('game.InputBuffer');
 
 goog.provide('game.Camera');
 
 /**
  * @constructor
+ * @param {game.InputBuffer} input
+ * @param {base.Vec3} startPosition
  */
 game.Camera = function(input, startPosition)
 {
@@ -20,44 +41,46 @@ game.Camera = function(input, startPosition)
     self.camMtx = base.Mat4.identity();
     base.Mat4.rotateX(self.camMtx, Math.PI / 2.0);
     base.Mat4.translate(self.camMtx, self.position);
-
 };
 
+/**
+ * @public
+ */
 game.Camera.prototype.update = function()
 {
     var dirty = false;
     var dir = base.Vec3.create([0.0, 0.0, 0.0]);
 
-    if (this.input.keyPressed("W"))
+    if (this.input.getAction(game.InputBuffer.Action.UP))
     {
 	dir[2] -= this.speed;
 	dirty = true;
     }
 
-    if (this.input.keyPressed("S"))
+    if (this.input.getAction(game.InputBuffer.Action.DOWN))
     {
 	dir[2] += this.speed;
 	dirty = true;
     }
 
-    if (this.input.keyPressed("A"))
+    if (this.input.getAction(game.InputBuffer.Action.LEFT))
     {
 	dir[0] -= this.speed;
 	dirty = true;
     }
 
-    if (this.input.keyPressed("D"))
+    if (this.input.getAction(game.InputBuffer.Action.RIGHT))
     {
 	dir[0] += this.speed;
 	dirty = true;
     }
-    if (this.input.mouseDown)
+    if (this.input.getAction(game.InputBuffer.Action.FIRE))
     {
 	var globalRot = base.Mat4.identity();
-	base.Mat4.rotateZ(globalRot, -this.input.mouseDeltaXY.x / 50.0);
+	base.Mat4.rotateZ(globalRot, -this.input.getCursor().dx / 50.0);
 	this.rotation = base.Mat4.multiply(globalRot, this.rotation);
 	var localRot = base.Mat4.identity();
-	base.Mat4.rotateX(localRot, -this.input.mouseDeltaXY.y / 50.0);
+	base.Mat4.rotateX(localRot, -this.input.getCursor().dy / 50.0);
 	base.Mat4.multiply(this.rotation, localRot);
 
 	dirty = true;
@@ -80,6 +103,10 @@ game.Camera.prototype.update = function()
     }
 };
 
+/**
+ * @public
+ * @return {base.Mat4}
+ */
 game.Camera.prototype.getCameraMatrix = function () {
     return this.camMtx;
 };
