@@ -390,8 +390,7 @@ files.bsp.readNodes_ = function(lump, src) {
     for(var i = 0; i < count; ++i) {
         elements.push(/**@type{base.Bsp.Node}*/{
             plane: src.readLong(),
-            childA: src.readLong(),
-            childB: src.readLong(),
+            children: [src.readLong(), src.readLong()],
             aabbMin: base.Vec3.create([ src.readLong(), src.readLong(), src.readLong() ]),
             aabbMax: base.Vec3.create([ src.readLong(), src.readLong(), src.readLong() ])
         });

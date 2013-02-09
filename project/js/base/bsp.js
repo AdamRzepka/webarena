@@ -63,7 +63,187 @@ base.Bsp = function () {
     this.brushSides = [];
 };
 
-base.Bsp.prototype.trace = function (from, to, radius, output) {
+/**
+ * @typedef {allSolid: boolean,
+             startSolid: boolean,
+             fraction: number,
+             endPos: base.Vec3,
+             plane: base.Bsp.Plane}
+ */
+base.Bsp.TraceOutput;
+
+/**
+ * @public
+ * @param {base.Vec3} start
+ * @param {base.Vec3} end
+ * @param {number} [radius]
+ * @return {base.BspTraceOutput}
+ */
+base.Bsp.prototype.trace = function(start, end, radius) {
+    var i;
+    var output = {
+        allSolid: false,
+        startSolid: false,
+        fraction: 1.0,
+        endPos: end,
+        plane: null
+    };
+    
+    if(!radius) { radius = 0; }
+    
+    this.traceNode(0, 0, 1, start, end, radius, output);
+    
+    if(output.fraction != 1.0) { // collided with something
+        for (i = 0; i < 3; i++) {
+            output.endPos[i] = start[i] + output.fraction * (end[i] - start[i]);
+        }
+    }
+    
+    return output;
+};
+
+/**
+ * @const
+ * @type {number}
+ */
+base.Bsp.TRACE_OFFSET = 0.03125;
+
+/**
+ * @private
+ * @param {number} nodeIdx
+ * @param {number} startFraction
+ * @param {number} endFraction
+ * @param {base.Vec3} start
+ * @param {base.Vec3} end
+ * @param {number} radius
+ * @param {{allSolid: boolean,
+             startSolid: boolean,
+             fraction: number,
+             endPos: base.Vec3,
+             plane: base.Bsp.Plane}} output
+ */
+base.Bsp.prototype.traceNode = function(nodeIdx, startFraction, endFraction, start, end, radius, output) {
+    var i,
+        leaf, brush, surface,
+        node, plane, startDist, endDist,
+        side, fraction1, fraction2, middleFraction, middle,
+        iDist;
+    if (nodeIdx < 0) { // Leaf node?
+        leaf = this.leaves[-(nodeIdx + 1)];
+        for (i = 0; i < leaf.leafBrushesCount; i++) {
+            brush = this.brushes[this.leafBrushes[leaf.firstLeafBrush + i]];
+            if (brush.brushSidesCount > 0 && brush.flags & base.Bsp.BrushFlags.SOLID) {
+                this.traceBrush(brush, start, end, radius, output);
+            }
+        }
+        return;
+    }
+    
+    // Tree node
+    node = this.nodes[nodeIdx];
+    plane = this.planes[node.plane];
+    
+    startDist = base.Vec3.dot(plane.normal, start) - plane.distance;
+    endDist = base.Vec3.dot(plane.normal, end) - plane.distance;
+    
+    if (startDist >= radius && endDist >= radius) {
+        this.traceNode(node.children[0], startFraction, endFraction, start, end, radius, output );
+    } else if (startDist < -radius && endDist < -radius) {
+        this.traceNode(node.children[1], startFraction, endFraction, start, end, radius, output );
+    } else {
+        middle = base.Vec3.create([0, 0, 0]);
+
+        if (startDist < endDist) {
+            side = 1; // back
+            iDist = 1 / (startDist - endDist);
+            fraction1 = (startDist - radius + base.Bsp.TRACE_OFFSET) * iDist;
+            fraction2 = (startDist + radius + base.Bsp.TRACE_OFFSET) * iDist;
+        } else if (startDist > endDist) {
+            side = 0; // front
+            iDist = 1 / (startDist - endDist);
+            fraction1 = (startDist + radius + base.Bsp.TRACE_OFFSET) * iDist;
+            fraction2 = (startDist - radius - base.Bsp.TRACE_OFFSET) * iDist;
+        } else {
+            side = 0; // front
+            fraction1 = 1;
+            fraction2 = 0;
+        }
+        
+        if (fraction1 < 0) fraction1 = 0;
+        else if (fraction1 > 1) fraction1 = 1;
+        if (fraction2 < 0) fraction2 = 0;
+        else if (fraction2 > 1) fraction2 = 1;
+        
+        middleFraction = startFraction + (endFraction - startFraction) * fraction1;
+        
+        for (i = 0; i < 3; i++) {
+            middle[i] = start[i] + fraction1 * (end[i] - start[i]);
+        }
+        
+        this.traceNode(node.children[side], startFraction, middleFraction, start, middle, radius, output );
+        
+        middleFraction = startFraction + (endFraction - startFraction) * fraction2;
+        
+        for (i = 0; i < 3; i++) {
+            middle[i] = start[i] + fraction2 * (end[i] - start[i]);
+        }
+        
+        this.traceNode(node.children[side===0?1:0], middleFraction, endFraction, middle, end, radius, output );
+    }
+};
+
+base.Bsp.prototype.traceBrush = function(brush, start, end, radius, output) {
+    var startFraction = -1;
+    var endFraction = 1;
+    var startsOut = false;
+    var endsOut = false;
+    var collisionPlane = null;
+    var i, brushSide, plane, startDist, endDist, fraction;
+    
+    for (i = 0; i < brush.brushSideCount; i++) {
+        brushSide = this.brushSides[brush.firstBrushSide + i];
+        plane = this.planes[brushSide.plane];
+        
+        startDist = base.Vec3.dot( start, plane.normal ) - (plane.distance + radius);
+        endDist = base.Vec3dot( end, plane.normal ) - (plane.distance + radius);
+
+        if (startDist > 0) startsOut = true;
+        if (endDist > 0) endsOut = true;
+
+        // make sure the trace isn't completely on one side of the brush
+        if (startDist > 0 && endDist > 0) { return; }
+        if (startDist <= 0 && endDist <= 0) { continue; }
+
+        if (startDist > endDist) { // line is entering into the brush
+            fraction = (startDist - base.Bsp.TRACE_OFFSET) / (startDist - endDist);
+            if (fraction > startFraction) {
+                startFraction = fraction;
+                collisionPlane = plane;
+            }
+        } else { // line is leaving the brush
+            fraction = (startDist + base.Bsp.TRACE_OFFSET) / (startDist - endDist);
+            if (fraction < endFraction)
+                endFraction = fraction;
+        }
+    }
+    
+    if (startsOut === false) {
+        output.startSolid = true;
+        if (endsOut === false)
+            output.allSolid = true;
+        return;
+    }
+
+    if (startFraction < endFraction) {
+        if (startFraction > -1 && startFraction < output.fraction) {
+            output.plane = collisionPlane;
+            if (startFraction < 0)
+                startFraction = 0;
+            output.fraction = startFraction;
+        }
+    }
+    
+    return;
 };
 
 // Flags taken from surfaceflags.h in quake 3 code
@@ -223,12 +403,11 @@ base.Bsp.Plane = function (normal, distance) {
 /**
  * @constructor
  * @param {number} plane
- * @param {number} childA
- * @param {number} childB
+ * @param {Array.<number>} children
  * @param {base.Vec3} aabbMin
  * @param {base.Vec3} aabbMax
  */ 
-base.Bsp.Node = function (plane, childA, childB, aabbMin, aabbMax) {
+base.Bsp.Node = function (plane, children, aabbMin, aabbMax) {
     /**
      * @public
      * @const
@@ -238,15 +417,9 @@ base.Bsp.Node = function (plane, childA, childB, aabbMin, aabbMax) {
     /**
      * @public
      * @const
-     * @type {number}
+     * @type {Array.<number>}
      */
-    this.childA = childA;
-    /**
-     * @public
-     * @const
-     * @type {number}
-     */
-    this.childB = childB;
+    this.children = children;
     /**
      * @public
      * @const
