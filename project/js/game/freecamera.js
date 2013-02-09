@@ -21,14 +21,14 @@ goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('game.InputBuffer');
 
-goog.provide('game.Camera');
+goog.provide('game.FreeCamera');
 
 /**
  * @constructor
  * @param {game.InputBuffer} input
  * @param {base.Vec3} startPosition
  */
-game.Camera = function(input, startPosition)
+game.FreeCamera = function(input, startPosition)
 {
     var self = this;
 
@@ -46,7 +46,7 @@ game.Camera = function(input, startPosition)
 /**
  * @public
  */
-game.Camera.prototype.update = function()
+game.FreeCamera.prototype.update = function()
 {
     var dirty = false;
     var dir = base.Vec3.create([0.0, 0.0, 0.0]);
@@ -107,6 +107,6 @@ game.Camera.prototype.update = function()
  * @public
  * @return {base.Mat4}
  */
-game.Camera.prototype.getCameraMatrix = function () {
+game.FreeCamera.prototype.getCameraMatrix = function () {
     return this.camMtx;
 };

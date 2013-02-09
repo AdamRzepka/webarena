@@ -28,7 +28,7 @@ goog.require('files.bsp');
 goog.require('files.md3');
 goog.require('files.ShaderScriptLoader');
 goog.require('game.InputBuffer');
-goog.require('game.Camera');
+goog.require('game.FreeCamera');
 if (!flags.GAME_WORKER) {
     goog.require('renderer.Renderer');
 }
@@ -70,7 +70,7 @@ game.init = function () {
 	weaponId = base.ModelInstance.getNextId();
         render.registerModelInstance(weaponId, md3.id, weaponMtx);
 
-        var camera = new game.Camera(input, base.Vec3.create([0,0,0]));
+        var camera = new game.FreeCamera(input, base.Vec3.create([0,0,0]));
         var weaponOff = base.Vec3.create([10, -10, -4]);
         var weaponRot = base.Mat4.create([0, 0, -1, 0,
         			          -1, 0, 0, 0,
