@@ -68,7 +68,9 @@ files.bsp.load = function(map) {
 // Parses the BSP file
 files.bsp.parse_ = function(src) {
 
-    var shaders, lightmapData, verts, meshVerts, faces, models, compiledMap;
+    var shaders, lightmapData, verts, meshVerts, faces, models,
+        planes, nodes, leaves, leafFaces, leafBrushes, brushes,
+        brushSides, compiledMap;
     var header = files.bsp.readHeader_(src);
     
     if(header.tag != 'IBSP' && header.version != 46) { // Check for appropriate format
@@ -86,19 +88,20 @@ files.bsp.parse_ = function(src) {
     faces = files.bsp.readFaces_(header.lumps[13], src);
     models = files.bsp.readModels_(header.lumps[7], src);
 
+    // Load bsp components
+    planes = files.bsp.readPlanes_(header.lumps[2], src);
+    nodes = files.bsp.readNodes_(header.lumps[3], src);
+    leaves = files.bsp.readLeaves_(header.lumps[4], src);
+    leafFaces = files.bsp.readLeafFaces_(header.lumps[5], src);
+    leafBrushes = files.bsp.readLeafBrushes_(header.lumps[6], src);
+    brushes = files.bsp.readBrushes_(header.lumps[8], src);
+    brushSides = files.bsp.readBrushSides_(header.lumps[9], src);
+
     compiledMap = files.bsp.compileMap_(verts, faces, meshVerts, lightmapData, shaders);
 
     return compiledMap;
     
-    // Load bsp components
     // not needed for now
-    // var planes = files.bsp.readPlanes_(header.lumps[2], src);
-    // var nodes = files.bsp.readNodes_(header.lumps[3], src);
-    // var leaves = files.bsp.readLeaves_(header.lumps[4], src);
-    // var leafFaces = files.bsp.readLeafFaces_(header.lumps[5], src);
-    // var leafBrushes = files.bsp.readLeafBrushes_(header.lumps[6], src);
-    // var brushes = files.bsp.readBrushes_(header.lumps[8], src);
-    // var brushSides = files.bsp.readBrushSides_(header.lumps[9], src);
     // var visData = files.bsp.readVisData_(header.lumps[16], src);
     // var visBuffer = visData.buffer;
     // var visSize = visData.size;
