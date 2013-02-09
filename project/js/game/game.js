@@ -76,6 +76,9 @@ game.init = function () {
         			          -1, 0, 0, 0,
         			          0, 1, 0, 0,
         			          0, 0, 0, 1]);
+        // test
+        var out = map.bsp.trace(base.Vec3.create([43,168,338]),
+                                base.Vec3.create([43,1000,338]));
         function update () {
             input.step();
             

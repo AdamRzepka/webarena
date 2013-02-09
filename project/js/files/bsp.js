@@ -98,7 +98,7 @@ files.bsp.parse_ = function(src) {
     bspBuilder.addBrushes(files.bsp.readBrushes_(header.lumps[8], src, shaders));
     bspBuilder.addBrushSides(files.bsp.readBrushSides_(header.lumps[9], src, shaders));
     
-    compiledModels = files.bsp.compileMap_(verts, faces, meshVerts, lightmapData, shaders);
+    compiledModels = files.bsp.compileMapModels_(verts, faces, meshVerts, lightmapData, shaders);
 
     map = new base.Map(compiledModels, lightmapData, bspBuilder.getBsp());
 
@@ -445,7 +445,7 @@ files.bsp.readLeafFaces_ = function(lump, src) {
 // Read all Brushes
 /**
  * @private
- * @return {Array<base.Bsp.Brush>}
+ * @return {Array.<base.Bsp.Brush>}
  */
 files.bsp.readBrushes_ = function(lump, src, shaders) {
     var count = lump.length / 12;
@@ -454,7 +454,7 @@ files.bsp.readBrushes_ = function(lump, src, shaders) {
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
         elements.push(/**@type{base.Bsp.Brush}*/{
-            firstbrushSide: src.readLong(),
+            firstBrushSide: src.readLong(),
             brushSidesCount: src.readLong(),
             flags: shaders[src.readLong()].contents
         });

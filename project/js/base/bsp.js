@@ -64,11 +64,7 @@ base.Bsp = function () {
 };
 
 /**
- * @typedef {allSolid: boolean,
-             startSolid: boolean,
-             fraction: number,
-             endPos: base.Vec3,
-             plane: base.Bsp.Plane}
+ * @typedef {{allSolid: boolean, startSolid: boolean, fraction: number, endPos: base.Vec3, plane: base.Bsp.Plane}}
  */
 base.Bsp.TraceOutput;
 
@@ -77,7 +73,7 @@ base.Bsp.TraceOutput;
  * @param {base.Vec3} start
  * @param {base.Vec3} end
  * @param {number} [radius]
- * @return {base.BspTraceOutput}
+ * @return {base.Bsp.TraceOutput}
  */
 base.Bsp.prototype.trace = function(start, end, radius) {
     var i;
@@ -116,11 +112,7 @@ base.Bsp.TRACE_OFFSET = 0.03125;
  * @param {base.Vec3} start
  * @param {base.Vec3} end
  * @param {number} radius
- * @param {{allSolid: boolean,
-             startSolid: boolean,
-             fraction: number,
-             endPos: base.Vec3,
-             plane: base.Bsp.Plane}} output
+ * @param {base.Bsp.TraceOutput} output
  */
 base.Bsp.prototype.traceNode = function(nodeIdx, startFraction, endFraction, start, end, radius, output) {
     var i,
@@ -200,12 +192,12 @@ base.Bsp.prototype.traceBrush = function(brush, start, end, radius, output) {
     var collisionPlane = null;
     var i, brushSide, plane, startDist, endDist, fraction;
     
-    for (i = 0; i < brush.brushSideCount; i++) {
+    for (i = 0; i < brush.brushSidesCount; i++) {
         brushSide = this.brushSides[brush.firstBrushSide + i];
         plane = this.planes[brushSide.plane];
         
         startDist = base.Vec3.dot( start, plane.normal ) - (plane.distance + radius);
-        endDist = base.Vec3dot( end, plane.normal ) - (plane.distance + radius);
+        endDist = base.Vec3.dot( end, plane.normal ) - (plane.distance + radius);
 
         if (startDist > 0) startsOut = true;
         if (endDist > 0) endsOut = true;
@@ -326,14 +318,14 @@ base.Bsp.Builder.prototype.addPlanes = function (planes) {
 };
 /**
  * @public
- * @param {Array.<base.Bsp.Node>} Nodes
+ * @param {Array.<base.Bsp.Node>} nodes
  */
 base.Bsp.Builder.prototype.addNodes = function (nodes) {
     this.bsp.nodes = nodes;    
 };
 /**
  * @public
- * @param {Array.<base.Bsp.Leaf>} Leaves
+ * @param {Array.<base.Bsp.Leaf>} leaves
  */
 base.Bsp.Builder.prototype.addLeaves = function (leaves) {
     this.bsp.leaves = leaves;
@@ -524,7 +516,7 @@ base.Bsp.Brush = function (firstBrushSide, brushSidesCount, flags) {
 /**
  * @constructor
  * @param {number} plane
- * @param {number flags see base.Bsp.SurfaceFlags
+ * @param {number} flags see base.Bsp.SurfaceFlags
  */
 base.Bsp.BrushSide = function (plane, flags) {
     /**
