@@ -18,6 +18,7 @@
 'use strict';
 
 goog.require('base');
+goog.require('goog.asserts');
 
 goog.provide('base.Bsp');
 
@@ -26,13 +27,43 @@ goog.provide('base.Bsp');
  * @private
  */
 base.Bsp = function () {
+    /**
+     * @private
+     * @type {Array.<base.Bsp.Plane>}
+     */
     this.planes = [];
+    /**
+     * @private
+     * @type {Array.<base.Bsp.Node>}
+     */
     this.nodes = [];
+    /**
+     * @private
+     * @type {Array.<base.Bsp.Leaf>}
+     */
     this.leaves = [];
+    /**
+     * @private
+     * @type {Array.<number>}
+     */
     this.leafFaces = [];
-    this.leafBrushes = [];
+    /**
+     * @private
+     * @type {Array.<number>}
+     */
+    this.leafBrushes = [];/**
+     * @private
+     * @type {Array.<base.Bsp.Brush>}
+     */
     this.brushes = [];
+    /**
+     * @private
+     * @type {Array.<base.Bsp.BrushSide>}
+     */
     this.brushSides = [];
+};
+
+base.Bsp.prototype.trace = function (from, to, radius, output) {
 };
 
 // Flags taken from surfaceflags.h in quake 3 code
@@ -99,15 +130,76 @@ base.Bsp.SurfaceFlags = {
 /**
  * @constructor
  */
-base.Bsp.Builder = function () {};
-base.Bsp.Builder.prototype.addPlanes = function () {};
-base.Bsp.Builder.prototype.addNodes = function () {};
-base.Bsp.Builder.prototype.addLeaves = function () {};
-base.Bsp.Builder.prototype.addLeafFaces = function () {};
-base.Bsp.Builder.prototype.addLeafBrushes = function () {};
-base.Bsp.Builder.prototype.addBrushes = function () {};
-base.Bsp.Builder.prototype.addBrushSides = function () {};
-base.Bsp.Builder.prototype.getBsp = function () {};
+base.Bsp.Builder = function () {
+    /**
+     * @private
+     * @type {base.Bsp}
+     */
+    this.bsp = new base.Bsp();
+};
+/**
+ * @public
+ * @param {Array.<base.Bsp.Plane>} planes
+ */
+base.Bsp.Builder.prototype.addPlanes = function (planes) {
+    this.bsp.planes = planes;
+};
+/**
+ * @public
+ * @param {Array.<base.Bsp.Node>} Nodes
+ */
+base.Bsp.Builder.prototype.addNodes = function (nodes) {
+    this.bsp.nodes = nodes;    
+};
+/**
+ * @public
+ * @param {Array.<base.Bsp.Leaf>} Leaves
+ */
+base.Bsp.Builder.prototype.addLeaves = function (leaves) {
+    this.bsp.leaves = leaves;
+};
+/**
+ * @public
+ * @param {Array.<number>} leafFaces
+ */
+base.Bsp.Builder.prototype.addLeafFaces = function (leafFaces) {
+    this.bsp.leafFaces = leafFaces;
+};
+/**
+ * @public
+ * @param {Array.<number>} leafBrushes
+ */
+base.Bsp.Builder.prototype.addLeafBrushes = function (leafBrushes) {
+    this.bsp.leafBrushes = leafBrushes;
+};
+/**
+ * @public
+ * @param {Array.<base.Bsp.Brush>} brushes
+ */
+base.Bsp.Builder.prototype.addBrushes = function (brushes) {
+    this.bsp.brushes = brushes;
+};
+/**
+ * @public
+ * @param {Array.<base.Bsp.BrushSide>} brushSides
+ */
+base.Bsp.Builder.prototype.addBrushSides = function (brushSides) {
+    this.bsp.brushSides = brushSides;
+};
+/**
+ * @public
+ * @return {base.Bsp}
+ */
+base.Bsp.Builder.prototype.getBsp = function () {
+    goog.asserts.assert(this.bsp.planes.length);
+    goog.asserts.assert(this.bsp.nodes.length);
+    goog.asserts.assert(this.bsp.leaves.length);
+    goog.asserts.assert(this.bsp.leafFaces.length);
+    goog.asserts.assert(this.bsp.leafBrushes.length);
+    goog.asserts.assert(this.bsp.brushes.length);
+    goog.asserts.assert(this.bsp.brushSides.length);
+    return this.bsp;
+};
 
 /**
  * @constructor

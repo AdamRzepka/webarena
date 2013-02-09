@@ -52,6 +52,7 @@ goog.require('base');
 goog.require('base.Vec3');
 goog.require('base.Mat4');
 goog.require('base.Map');
+goog.require('base.Bsp');
 
 goog.provide('files.bsp');
 
@@ -69,8 +70,7 @@ files.bsp.load = function(map) {
 files.bsp.parse_ = function(src) {
 
     var shaders, lightmapData, verts, meshVerts, faces, models,
-        planes, nodes, leaves, leafFaces, leafBrushes, brushes,
-        brushSides, compiledMap;
+        compiledModels, map, bspBuilder;
     var header = files.bsp.readHeader_(src);
     
     if(header.tag != 'IBSP' && header.version != 46) { // Check for appropriate format
@@ -89,17 +89,20 @@ files.bsp.parse_ = function(src) {
     models = files.bsp.readModels_(header.lumps[7], src);
 
     // Load bsp components
-    planes = files.bsp.readPlanes_(header.lumps[2], src);
-    nodes = files.bsp.readNodes_(header.lumps[3], src);
-    leaves = files.bsp.readLeaves_(header.lumps[4], src);
-    leafFaces = files.bsp.readLeafFaces_(header.lumps[5], src);
-    leafBrushes = files.bsp.readLeafBrushes_(header.lumps[6], src);
-    brushes = files.bsp.readBrushes_(header.lumps[8], src);
-    brushSides = files.bsp.readBrushSides_(header.lumps[9], src);
+    bspBuilder = new base.Bsp.Builder();
+    bspBuilder.addPlanes(files.bsp.readPlanes_(header.lumps[2], src));
+    bspBuilder.addNodes(files.bsp.readNodes_(header.lumps[3], src));
+    bspBuilder.addLeaves(files.bsp.readLeaves_(header.lumps[4], src));
+    bspBuilder.addLeafFaces(files.bsp.readLeafFaces_(header.lumps[5], src));
+    bspBuilder.addLeafBrushes(files.bsp.readLeafBrushes_(header.lumps[6], src));
+    bspBuilder.addBrushes(files.bsp.readBrushes_(header.lumps[8], src, shaders));
+    bspBuilder.addBrushSides(files.bsp.readBrushSides_(header.lumps[9], src, shaders));
+    
+    compiledModels = files.bsp.compileMap_(verts, faces, meshVerts, lightmapData, shaders);
 
-    compiledMap = files.bsp.compileMap_(verts, faces, meshVerts, lightmapData, shaders);
+    map = new base.Map(compiledModels, lightmapData, bspBuilder.getBsp());
 
-    return compiledMap;
+    return map;
     
     // not needed for now
     // var visData = files.bsp.readVisData_(header.lumps[16], src);
@@ -355,15 +358,18 @@ files.bsp.readFaces_ = function(lump, src) {
 };
 
 // Read all Plane structures
-/** @private*/
+/**
+ * @private
+ * @return {Array.<base.Bsp.Plane>}
+ */
 files.bsp.readPlanes_ = function(lump, src) {
     var count = lump.length / 16;
     var elements = [];
 
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
-        elements.push({
-            normal: [ src.readFloat(), src.readFloat(), src.readFloat() ],
+        elements.push(/**@type{base.Bsp.Plane}*/{
+            normal: base.Vec3.create([ src.readFloat(), src.readFloat(), src.readFloat() ]),
             distance: src.readFloat()
         });
     }
@@ -372,18 +378,22 @@ files.bsp.readPlanes_ = function(lump, src) {
 };
 
 // Read all Node structures
-/** @private*/
+/**
+ * @private
+ * @return {Array.<base.Bsp.Node>}
+ */
 files.bsp.readNodes_ = function(lump, src) {
     var count = lump.length / 36;
     var elements = [];
 
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
-        elements.push({
+        elements.push(/**@type{base.Bsp.Node}*/{
             plane: src.readLong(),
-            children: [ src.readLong(), src.readLong() ],
-            min: [ src.readLong(), src.readLong(), src.readLong() ],
-            max: [ src.readLong(), src.readLong(), src.readLong() ]
+            childA: src.readLong(),
+            childB: src.readLong(),
+            aabbMin: base.Vec3.create([ src.readLong(), src.readLong(), src.readLong() ]),
+            aabbMax: base.Vec3.create([ src.readLong(), src.readLong(), src.readLong() ])
         });
     }
 
@@ -391,22 +401,25 @@ files.bsp.readNodes_ = function(lump, src) {
 };
 
 // Read all Leaf structures
-/** @private*/
+/**
+ * @private
+ * @return {Array.<base.Bsp.Leaf>}
+ */
 files.bsp.readLeaves_ = function(lump, src) {
     var count = lump.length / 48;
     var elements = [];
 
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
-        elements.push({
+        elements.push(/**@type{base.Bsp.Leaf}*/{
             cluster: src.readLong(),
             area: src.readLong(),
-            min: [ src.readLong(), src.readLong(), src.readLong() ],
-            max: [ src.readLong(), src.readLong(), src.readLong() ],
-            leafFace: src.readLong(),
-            leafFaceCount: src.readLong(),
-            leafBrush: src.readLong(),
-            leafBrushCount: src.readLong()
+            aabbMin: base.Vec3.create([ src.readLong(), src.readLong(), src.readLong() ]),
+            aabbMax: base.Vec3.create([ src.readLong(), src.readLong(), src.readLong() ]),
+            firstLeafFace: src.readLong(),
+            leafFacesCount: src.readLong(),
+            firstLeafBrush: src.readLong(),
+            leafBrushesCount: src.readLong()
         });
     }
 
@@ -414,7 +427,10 @@ files.bsp.readLeaves_ = function(lump, src) {
 };
 
 // Read all Leaf Faces
-/** @private*/
+/**
+ * @private
+ * @return {Array.<number>}
+ */
 files.bsp.readLeafFaces_ = function(lump, src) {
     var count = lump.length / 4;
     var elements = [];
@@ -428,17 +444,20 @@ files.bsp.readLeafFaces_ = function(lump, src) {
 };
 
 // Read all Brushes
-/** @private*/
-files.bsp.readBrushes_ = function(lump, src) {
+/**
+ * @private
+ * @return {Array<base.Bsp.Brush>}
+ */
+files.bsp.readBrushes_ = function(lump, src, shaders) {
     var count = lump.length / 12;
     var elements = [];
 
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
-        elements.push({
-            brushSide: src.readLong(),
-            brushSideCount: src.readLong(),
-            shader: src.readLong()
+        elements.push(/**@type{base.Bsp.Brush}*/{
+            firstbrushSide: src.readLong(),
+            brushSidesCount: src.readLong(),
+            flags: shaders[src.readLong()].contents
         });
     }
 
@@ -446,7 +465,10 @@ files.bsp.readBrushes_ = function(lump, src) {
 };
 
 // Read all Leaf Brushes
-/** @private*/
+/**
+ * @private
+ * @return {Array.<number>}
+ */
 files.bsp.readLeafBrushes_ = function(lump, src) {
     var count = lump.length / 4;
     var elements = [];
@@ -460,16 +482,20 @@ files.bsp.readLeafBrushes_ = function(lump, src) {
 };
 
 // Read all Brush Sides
-/** @private*/
-files.bsp.readBrushSides_ = function(lump, src) {
+/**
+ * @private
+ * @return {Array.<base.Bsp.BrushSide>}
+ */
+
+files.bsp.readBrushSides_ = function(lump, src, shaders) {
     var count = lump.length / 8;
     var elements = [];
 
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
-        elements.push({
+        elements.push(/**@type{base.Bsp.BrushSide}*/{
             plane: src.readLong(),
-            shader: src.readLong()
+            flags: shaders[src.readLong()].flags
         });
     }
 
@@ -540,7 +566,7 @@ files.bsp.colorToVec_ = function(color) {
 //
 
 /** @private*/
-files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders) {
+files.bsp.compileMapModels_ = function(verts, faces, meshVerts, lightmapData, shaders) {
 
     // Find associated shaders for all clusters
     var i, j, k, face, shader, lightmap, vert, texSize;
@@ -650,8 +676,7 @@ files.bsp.compileMap_ = function(verts, faces, meshVerts, lightmapData, shaders)
 
     var model = new base.Model(base.Model.getNextId(), meshes, 1, []);
 
-    return new base.Map([model],
-			lightmapData);
+    return [model];
 };
 
 

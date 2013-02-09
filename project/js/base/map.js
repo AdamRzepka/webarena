@@ -18,6 +18,7 @@
 'use strict';
 
 goog.require('base');
+goog.require('base.Bsp');
 
 goog.provide('base.Map');
 
@@ -26,9 +27,9 @@ goog.provide('base.Map');
  * @constructor
  * @param {Array.<base.Model>} models
  * @param {base.Map.Lightmap} lightmapData
+ * @param {base.Bsp} bsp
  */
-base.Map = function(models, lightmapData) {
-    this.bsp = null;
+base.Map = function(models, lightmapData, bsp) {
     /**
      * @const
      * @type {Array.<base.Model>}
@@ -39,6 +40,11 @@ base.Map = function(models, lightmapData) {
      * @type {base.Map.Lightmap}
      */
     this.lightmapData = lightmapData;
+    /**
+     * @const
+     * @type {base.Bsp}
+     */
+    this.bsp = bsp;
 };
 
 /**
