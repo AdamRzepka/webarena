@@ -18,8 +18,9 @@ goog.addDependency('../../js/files/resourceManager.js', ['files.ResourceManager'
 goog.addDependency('../../js/files/shaderscriptloader.js', ['files.ShaderScriptLoader'], ['base.ShaderScript']);
 goog.addDependency('../../js/files/zipjs/zip.js', ['files.zipjs'], []);
 goog.addDependency('../../js/flags.js', ['flags'], []);
-goog.addDependency('../../js/game/camera.js', ['game.Camera'], ['base.Mat4', 'base.Vec3', 'game.InputBuffer']);
-goog.addDependency('../../js/game/game.js', ['game'], ['base', 'base.IRenderer', 'base.Mat3', 'base.workers.Broker', 'files.ResourceManager', 'files.ShaderScriptLoader', 'files.bsp', 'files.md3', 'flags', 'game.Camera', 'game.InputBuffer', 'renderer.Renderer']);
+goog.addDependency('../../js/game/charactercontroller.js', ['game.CharacterController'], ['base.Bsp', 'base.Vec3', 'game.InputBuffer']);
+goog.addDependency('../../js/game/freecamera.js', ['game.FreeCamera'], ['base.Mat4', 'base.Vec3', 'game.InputBuffer']);
+goog.addDependency('../../js/game/game.js', ['game'], ['base', 'base.IRenderer', 'base.Mat3', 'base.workers.Broker', 'files.ResourceManager', 'files.ShaderScriptLoader', 'files.bsp', 'files.md3', 'flags', 'game.CharacterController', 'game.FreeCamera', 'game.InputBuffer', 'renderer.Renderer']);
 goog.addDependency('../../js/game/inputbuffer.js', ['game.InputBuffer'], ['base.IInputHandler']);
 goog.addDependency('../../js/renderer/materialmanager.js', ['renderer.Material', 'renderer.MaterialManager'], ['base.Mat4', 'base.Material', 'goog.debug.Logger', 'goog.debug.Logger.Level']);
 goog.addDependency('../../js/renderer/renderer.js', ['renderer.Renderer'], ['base', 'base.IRenderer', 'base.Mat4', 'base.Vec3', 'goog.debug.Logger', 'goog.debug.Logger.Level', 'renderer.MaterialManager', 'renderer.Sky']);

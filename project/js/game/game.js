@@ -29,6 +29,7 @@ goog.require('files.md3');
 goog.require('files.ShaderScriptLoader');
 goog.require('game.InputBuffer');
 goog.require('game.FreeCamera');
+goog.require('game.CharacterController');
 if (!flags.GAME_WORKER) {
     goog.require('renderer.Renderer');
 }
@@ -76,16 +77,19 @@ game.init = function () {
         			          -1, 0, 0, 0,
         			          0, 1, 0, 0,
         			          0, 0, 0, 1]);
-        // test
-        var out = map.bsp.trace(base.Vec3.create([43,168,338]),
-                                base.Vec3.create([43,1000,338]));
+        var characterController = new game.CharacterController(map.bsp, input);
+        characterController.respawn(base.Vec3.createVal(2.124504804611206,
+                                                        247.24835205078125,
+                                                        276.1741943359375), 0);
+        render.updateCamera(characterController.getCameraMatrix());
         function update () {
             input.step();
-            
-            camera.update();
-            render.updateCamera(camera.getCameraMatrix());
 
-            base.Mat4.translate(camera.getCameraMatrix(), weaponOff, weaponMtx);
+            characterController.update();
+//            camera.update();
+            render.updateCamera(characterController.getCameraMatrix());
+
+            base.Mat4.translate(characterController.getCameraMatrix(), weaponOff, weaponMtx);
 	    base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
 	    render.updateModel(weaponId, weaponMtx, 0);
         };

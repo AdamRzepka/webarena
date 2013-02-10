@@ -68,6 +68,7 @@ base.Bsp = function () {
  */
 base.Bsp.TraceOutput;
 
+// From q3bsp, B. Jones
 /**
  * @public
  * @param {base.Vec3} start

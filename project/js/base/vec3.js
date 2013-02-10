@@ -61,6 +61,23 @@ base.Vec3.create = function (vec) {
 
     return dest;
 };
+/**
+ * Creates a new instance of a base.Vec3 using values
+ * @param {number} x
+ * @param {number} y
+ * @param {number} z
+ * @returns {base.Vec3} New base.Vec3
+ */
+base.Vec3.createVal = function (x, y, z) {
+    var dest = new base.MatrixArray(3);
+
+    dest[0] = x;
+    dest[1] = y;
+    dest[2] = z;
+
+    return dest;
+};
+
 
 /**
  * Copies the values of one base.Vec3 to another
@@ -76,6 +93,37 @@ base.Vec3.set = function (vec, dest) {
     dest[2] = vec[2];
 
     return dest;
+};
+
+/**
+ * Copies the values of one base.Vec3 to another
+ *
+ * @param {base.Vec3} vec
+ * @param {number} x
+ * @param {number} y
+ * @param {number} z
+ * @returns {base.Vec3} vec
+ */
+base.Vec3.setValues = function (vec, x, y, z) {
+    vec[0] = x;
+    vec[1] = y;
+    vec[2] = z;
+
+    return vec;
+};
+
+/**
+ * Copies the values of one base.Vec3 to another
+ *
+ * @param {base.Vec3} vec
+ * @returns {base.Vec3} vec
+ */
+base.Vec3.setZero = function (vec) {
+    vec[0] = 0;
+    vec[1] = 0;
+    vec[2] = 0;
+
+    return vec;
 };
 
 /**
