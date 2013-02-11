@@ -30,6 +30,7 @@ goog.require('files.ShaderScriptLoader');
 goog.require('game.InputBuffer');
 goog.require('game.FreeCamera');
 goog.require('game.CharacterController');
+goog.require('game.globals');
 if (!flags.GAME_WORKER) {
     goog.require('renderer.Renderer');
 }
@@ -93,7 +94,7 @@ game.init = function () {
 	    base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
 	    render.updateModel(weaponId, weaponMtx, 0);
         };
-        setInterval(update, 16);
+        setInterval(update, game.globals.TIME_STEP);
     });
 };
 

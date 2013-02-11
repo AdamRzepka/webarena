@@ -97,7 +97,7 @@ function main() {
     var worker;
     var broker;
 
-    if (goog.DEBUG) {
+    if (flags.DEBUG_WINDOW) {
 	var debugWindow = new goog.debug.FancyWindow('main');
 	debugWindow.setEnabled(true);
 	debugWindow.init();
