@@ -219,22 +219,20 @@ game.CharacterController.prototype.update = function () {
     if (this.input.getAction(game.InputBuffer.Action.RIGHT)) {
 	dir[0] += 1;
     }
-    if (this.input.getAction(game.InputBuffer.Action.FIRE)) {
-        this.zAngle -= this.input.getCursor().dx / 75.0;
-        if (this.zAngle > 2 * Math.PI) {
-            this.zAngle -= 2 * Math.PI;
-        }
-        if (this.zAngle < 0) {
-            this.zAngle += 2 * Math.PI;
-        }
+    this.zAngle -= this.input.getCursor().dx / 75.0;
+    if (this.zAngle > 2 * Math.PI) {
+        this.zAngle -= 2 * Math.PI;
+    }
+    if (this.zAngle < 0) {
+        this.zAngle += 2 * Math.PI;
+    }
 
-        this.xAngle -= this.input.getCursor().dy / 75.0;
-        if (this.xAngle > Math.PI) {
-            this.xAngle = Math.PI;
-        }
-        if (this.xAngle < 0) {
-            this.xAngle = 0;
-        }
+    this.xAngle -= this.input.getCursor().dy / 75.0;
+    if (this.xAngle > Math.PI) {
+        this.xAngle = Math.PI;
+    }
+    if (this.xAngle < 0) {
+        this.xAngle = 0;
     }
 
     base.Mat4.identity(this.camMtx);

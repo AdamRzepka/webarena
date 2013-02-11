@@ -129,9 +129,13 @@ base.makeUnremovable(game.InputBuffer.prototype.onKeyDown);
  * Called by DOM event handler
  */
 game.InputBuffer.prototype.onMouseMove = function (x, y) {
-    this.nextCursor_.dx += (x - this.nextCursor_.x);
-    this.nextCursor_.dy += (y - this.nextCursor_.y);
-    this.nextCursor_.x = x;
-    this.nextCursor_.y = y;
+    // this.nextCursor_.dx += (x - this.nextCursor_.x);
+    // this.nextCursor_.dy += (y - this.nextCursor_.y);
+    // this.nextCursor_.x = x;
+    // this.nextCursor_.y = y;
+    this.nextCursor_.dx += x;
+    this.nextCursor_.dy += y;
+    this.nextCursor_.x = 0;
+    this.nextCursor_.y = 0;
 };
 base.makeUnremovable(game.InputBuffer.prototype.onMouseMove);

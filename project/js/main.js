@@ -62,21 +62,75 @@ function initWebGL(canvas) {
 
 function initInput(broker) {
     var inputBuffer = broker.createProxy('base.IInputHandler', base.IInputHandler);
-    document.onkeydown = function (ev) {
+    var capturing = false;
+    var locked = false;
+    var tryLock = true;
+    var focused = true;
+    var lastX = 0, lastY = 0;
+    var elem = document.getElementById('glcanvas');
+    elem.requestMouseLock = elem.requestMouseLock ||
+        elem.mozRequestPointerLock ||
+        elem.webkitRequestPointerLock;
+    
+    document.addEventListener('keydown', function (ev) {
         inputBuffer.onKeyDown(ev.keyCode);
-    };
-    document.onkeyup = function (ev) {
+    }, false);
+
+    document.addEventListener('keyup', function (ev) {
         inputBuffer.onKeyUp(ev.keyCode);
-    };
-    document.onmousedown = function (ev) {
+    }, false);
+
+    elem.addEventListener('mousedown', function (ev) {
+        if (!locked) {
+            if (tryLock) {
+                elem.requestMouseLock();
+                tryLock = false;
+            } else {
+                capturing = true;
+            }
+        }
         inputBuffer.onKeyDown(ev.button);
-    };
-    document.onmouseup = function (ev) {
+    }, false);
+
+    document.addEventListener('mouseup', function (ev) {
+        capturing = false;
         inputBuffer.onKeyUp(ev.button);
-    };
-    document.onmousemove = function (ev) {
-        inputBuffer.onMouseMove(ev.clientX, ev.clientY);
-    };    
+    }, false);
+
+    document.addEventListener('mousemove', function (ev) {
+        var dx = ev.movementX || ev.webkitMovementX || ev.mozMovementX ||
+                ev.clientX - lastX;
+        var dy = ev.movementY || ev.webkitMovementY || ev.mozMovementY ||
+                ev.clientY - lastY;
+
+        lastX = ev.clientX;
+        lastY = ev.clientY;
+
+        if (capturing || locked) {
+            inputBuffer.onMouseMove(dx, dy);
+        }
+    }, false);
+
+    function pointerLockChange() {
+        if (document.mozPointerLockElement === elem ||
+            document.webkitPointerLockElement === elem) {
+            locked = true;
+        } else {
+            locked = false;
+            tryLock = true;
+        }
+    }
+    document.addEventListener('pointerlockchange', pointerLockChange, false);
+    document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
+    document.addEventListener('mozpointerlockchange', pointerLockChange, false);
+
+    function pointerLockError() {
+        locked = false;
+        tryLock = true;
+    }
+    document.addEventListener('pointerlockerror', pointerLockError, false);
+    document.addEventListener('webkitpointerlockerror', pointerLockError, false);
+    document.addEventListener('mozpointerlockerror', pointerLockError, false);
 }
 
 window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
