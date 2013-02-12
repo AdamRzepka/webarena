@@ -39,14 +39,14 @@ game.InputBuffer = function () {
     // cursor position is buffered
     /**
      * @private
-     * @type {{x: number, y: number, dx: number, dy: number}}
+     * @type {{dx: number, dy: number}}
      */
-    this.cursor_ = {x: 0, y: 0, dx: 0, dy: 0};
+    this.cursor_ = {dx: 0, dy: 0};
     /**
      * @private
-     * @type {{x: number, y: number, dx: number, dy: number}}
+     * @type {{dx: number, dy: number}}
      */
-    this.nextCursor_ = {x: 0, y: 0, dx: 0, dy: 0};
+    this.nextCursor_ = {dx: 0, dy: 0};
 };
 
 /**
@@ -68,9 +68,7 @@ game.InputBuffer.Action = {
  * Call this at the beginning of each game step.
  */
 game.InputBuffer.prototype.step = function () {
-    this.cursor_.x = this.nextCursor_.x;
     this.cursor_.dx = this.nextCursor_.dx;
-    this.cursor_.y = this.nextCursor_.y;
     this.cursor_.dy = this.nextCursor_.dy;
     this.nextCursor_.dx = this.nextCursor_.dy = 0;
 };
@@ -92,7 +90,7 @@ game.InputBuffer.prototype.hasActionStarted = function (action) {
 };
 /**
  * @public
- * @return {{x: number, y: number, dx: number, dy: number}}
+ * @return {{dx: number, dy: number}}
  */
 game.InputBuffer.prototype.getCursor = function () {
     return this.cursor_;
@@ -124,18 +122,12 @@ base.makeUnremovable(game.InputBuffer.prototype.onKeyDown);
 
 /**
  * @public
- * @param {number} x
- * @param {number} y
+ * @param {number} dx
+ * @param {number} dy
  * Called by DOM event handler
  */
-game.InputBuffer.prototype.onMouseMove = function (x, y) {
-    // this.nextCursor_.dx += (x - this.nextCursor_.x);
-    // this.nextCursor_.dy += (y - this.nextCursor_.y);
-    // this.nextCursor_.x = x;
-    // this.nextCursor_.y = y;
-    this.nextCursor_.dx += x;
-    this.nextCursor_.dy += y;
-    this.nextCursor_.x = 0;
-    this.nextCursor_.y = 0;
+game.InputBuffer.prototype.onMouseMove = function (dx, dy) {
+    this.nextCursor_.dx += dx;
+    this.nextCursor_.dy += dy;
 };
 base.makeUnremovable(game.InputBuffer.prototype.onMouseMove);
