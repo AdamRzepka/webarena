@@ -187,7 +187,7 @@ game.CharacterController.PLAYER_RADIUS = 10.0;
  * @const
  * @type{number}
  */
-game.CharacterController.SCALE = 150;
+game.CharacterController.SCALE = 90;
 
 /**
  * @public

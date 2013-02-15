@@ -31,27 +31,24 @@ goog.require('game.InputBuffer');
 goog.require('game.FreeCamera');
 goog.require('game.CharacterController');
 goog.require('game.globals');
-if (!flags.GAME_WORKER) {
-    goog.require('renderer.Renderer');
-}
 
 goog.provide('game');
 
-game.init = function () {
+/**
+ * @param {base.workers.IBroker} broker
+ */
+game.init = function (broker) {
     var render;
-    var broker;
     var input = new game.InputBuffer();
-    if (flags.GAME_WORKER) {
-        broker = new base.workers.Broker('main', self);
-    } else {
-        broker = new base.workers.FakeBroker('main');
-    }
-    broker.registerReceiver('base.IInputHandler', input);
-    render = /**@type{base.IRenderer}*/broker.createProxy('base.IRenderer', base.IRenderer);
     var rm = new files.ResourceManager();
     var mapName = 'oa_rpg3dm2';
     var weaponId;
     var weaponMtx = base.Mat4.identity();
+    
+    broker.registerReceiver('base.IInputHandler', input);
+    
+    render = /**@type{base.IRenderer}*/broker.createProxy('base.IRenderer', base.IRenderer);
+    
     rm.load([mapName, "lightning"], function () {
 	var map, md3;
 	files.ShaderScriptLoader.loadAll(rm.getScripts());
@@ -92,7 +89,7 @@ game.init = function () {
 
             base.Mat4.translate(characterController.getCameraMatrix(), weaponOff, weaponMtx);
 	    base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
-	    render.updateModel(weaponId, weaponMtx, 0);
+	    //render.updateModel(weaponId, weaponMtx, 0);
         };
         setInterval(update, game.globals.TIME_STEP);
     });

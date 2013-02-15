@@ -125,8 +125,9 @@ function initInput(broker) {
     document.addEventListener('mozpointerlockchange', pointerLockChange, false);
 
     function pointerLockError() {
+        // Failed to lock pointer. Run in capture mode
         locked = false;
-        tryLock = true;
+        tryLock = false;
     }
     document.addEventListener('pointerlockerror', pointerLockError, false);
     document.addEventListener('webkitpointerlockerror', pointerLockError, false);
@@ -136,7 +137,6 @@ function initInput(broker) {
 window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
     window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
     window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
-
 
 function main() {
     var render;
@@ -165,10 +165,14 @@ function main() {
 	if (fpsTime > 1000) {
 	    fpsTime -= 1000;
 	    document.getElementById('fps').textContent = fpsCounter;
+            // document.getElementById('time').textContent =
+            //     base.workers.Broker.sumTime / base.workers.Broker.countTime;
+            // base.workers.Broker.sumTime = base.workers.Broker.countTime = 0;
 	    fpsCounter = 0;
 	}
 
 	render.render();
+//        setTimeout(update, 200);
 	requestAnimationFrame(update);
     }
 
@@ -185,7 +189,7 @@ function main() {
     broker.registerReceiver('base.IRenderer', render);
 
     if (!flags.GAME_WORKER) {
-        game.init();
+        game.init(broker);
     }
     initInput(broker);
     requestAnimationFrame(update);

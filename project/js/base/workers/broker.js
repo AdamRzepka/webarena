@@ -26,11 +26,35 @@
 goog.require('goog.asserts');
 goog.require('goog.array');
 
+goog.provide('base.workers.IBroker');
 goog.provide('base.workers.Broker');
 goog.provide('base.workers.FakeBroker');
 
 /**
+ * @interface
+ */
+base.workers.IBroker = function () {
+};
+/**
+ * @public
+ * @param {string} name
+ * @param {Object} intface
+ * @return {Object}
+ */
+base.workers.IBroker.prototype.createProxy = function (name, intface) {
+};
+/**
+ * @public
+ * @param {string} name correspons with name in createProxy
+ * @param {Object} obj
+ * Registers proxy call receiver.
+ */
+base.workers.IBroker.prototype.registerReceiver = function (name, obj) {
+};
+
+/**
  * @constructor
+ * @implements {base.workers.IBroker}
  * @param {string} name human friendly name of the worker.
  * @param {Worker|DedicatedWorkerGlobalScope|Window} worker if we are in worker, this argument should be self.
  */
@@ -93,7 +117,7 @@ base.workers.Broker.prototype.registerReceiver = function (name, obj) {
 /**
  * @public
  * @param {string} name correspons with name in registerReceiver
- * @param {function(...)} intface common interface for proxy and receiver
+ * @param {Object} intface common interface for proxy and receiver
  * @return {Object}
  * Creates local stub for cros-worker function calls.
  * Interface passed here must have property _CROSS_WORKER_ = true.
@@ -140,24 +164,33 @@ base.workers.Broker.MessageTypes = {
     FUNCTION_CALLBACK: 2,
     ARBITRARY: 3
 };
+
+
+base.workers.Broker.sumTime = 0;
+base.workers.Broker.countTime = 0;
 /**
  * @private
  */
 base.workers.Broker.prototype.onMessage_ = function (event) {
+    var time = Date.now();
     var msg = event.data;
     switch (msg.type) {
-    case base.workers.Broker.MessageTypes.EVENT:
-        break;
     case base.workers.Broker.MessageTypes.FUNCTION_CALL:
         this.onProxyCall(msg.id, msg.proxyName, msg.functionName, msg.args, msg.withCallback);
         break;
     case base.workers.Broker.MessageTypes.FUNCTION_CALLBACK:
         this.onProxyCallback(msg.id, msg.args);
         break;
+    case base.workers.Broker.MessageTypes.EVENT:
+        break;
     case base.workers.Broker.MessageTypes.ARBITRARY:
         break;        
     }
+    var delta = Date.now() - msg.timestamp;
+    base.workers.Broker.sumTime += delta;
+    ++base.workers.Broker.countTime;
 };
+
 
 /**
  * @private
@@ -178,7 +211,8 @@ base.workers.Broker.prototype.sendProxyCall = function (proxyName, funName, args
         proxyName: proxyName,
         functionName: funName,
         args: args,
-        withCallback: withCallback
+        withCallback: withCallback,
+        timestamp: Date.now()
     });
 };
 
@@ -220,7 +254,11 @@ base.workers.Broker.prototype.onProxyCallback = function (id, args) {
 
 /**
  * @constructor
+ * @implements {base.workers.IBroker}
  * @param {string} name
+ * Fake broker provides unified interface for single threaded version. Currently it has
+ * a bit different semantic than Broker. Receiver must be registered before createProxy
+ * call (not before any proxy function calls as in Broker). The reason is performance.
  */
 base.workers.FakeBroker = function (name) {
     this.callReceivers_ = [];
@@ -228,7 +266,8 @@ base.workers.FakeBroker = function (name) {
 /**
  * @public
  * @param {string} name
- * @param {function(...)} intface
+ * @param {Object} intface
+ * @return {Object}
  */
 base.workers.FakeBroker.prototype.createProxy = function (name, intface) {
     goog.asserts.assert(this.callReceivers_[name]);
@@ -244,3 +283,5 @@ base.workers.FakeBroker.prototype.registerReceiver = function (name, obj) {
     goog.asserts.assert(!this.callReceivers_[name]);
     this.callReceivers_[name] = obj;
 };
+
+goog.exportSymbol('base.workers.Broker', base.workers.Broker);

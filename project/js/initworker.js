@@ -7,6 +7,9 @@ if (typeof COMPILED == 'undefined') {
       CLOSURE_BASE_PATH + 'deps.js',
       '../../deps.js');
 }
-
+goog.require('base.workers.Broker');
 importScripts('game/game.js');
-game.init();
+(function () {
+    var broker = new base.workers.Broker('main', self);
+    game.init(broker);
+})();

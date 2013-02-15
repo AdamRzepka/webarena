@@ -28,8 +28,7 @@
     "debug": false,
     "pretty-print": false,
     "define": {
-	"goog.DEBUG": false,
-        "flags.GAME_WORKER": true
+	"goog.DEBUG": false
     },
     "checks": {
     // acceptable values are "ERROR", "WARNING", and "OFF"

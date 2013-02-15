@@ -3,7 +3,7 @@ goog.provide('flags');
 /**
  * @define {boolean}
  */
-flags.GAME_WORKER = true;
+flags.GAME_WORKER = false;
 
 /**
  * @define {boolean}
