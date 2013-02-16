@@ -24,3 +24,8 @@ goog.provide('game.globals');
  * @type {number}
  */
 game.globals.TIME_STEP = 1/60;
+/**
+ * @const
+ * @type {number}
+ */
+game.globals.TIME_STEP_MS = game.globals.TIME_STEP * 1000;

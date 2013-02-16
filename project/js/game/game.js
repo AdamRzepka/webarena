@@ -84,14 +84,14 @@ game.init = function (broker) {
             input.step();
 
             characterController.update();
-//            camera.update();
+            //            camera.update();
             render.updateCamera(characterController.getCameraMatrix());
 
             base.Mat4.translate(characterController.getCameraMatrix(), weaponOff, weaponMtx);
 	    base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
-	    //render.updateModel(weaponId, weaponMtx, 0);
+	    render.updateModel(weaponId, weaponMtx, 0);
         };
-        setInterval(update, game.globals.TIME_STEP);
+        setInterval(update, game.globals.TIME_STEP_MS);
     });
 };
 

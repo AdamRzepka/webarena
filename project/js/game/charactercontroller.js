@@ -176,18 +176,18 @@ game.CharacterController.STEP_SIZE = 18;
  * @const
  * @type{number}
  */
-game.CharacterController.GRAVITY = 200.0;
+game.CharacterController.GRAVITY = 400.0;
 
 /**
  * @const
  * @type{number}
  */
-game.CharacterController.PLAYER_RADIUS = 10.0;
+game.CharacterController.PLAYER_RADIUS = 20.0;
 /**
  * @const
  * @type{number}
  */
-game.CharacterController.SCALE = 90;
+game.CharacterController.SCALE = 250;
 
 /**
  * @public
