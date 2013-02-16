@@ -28,8 +28,9 @@ goog.provide('base.Map');
  * @param {Array.<base.Model>} models
  * @param {base.Map.Lightmap} lightmapData
  * @param {base.Bsp} bsp
+ * @param {Array.<Object>} entities
  */
-base.Map = function(models, lightmapData, bsp) {
+base.Map = function(models, lightmapData, bsp, entities) {
     /**
      * @const
      * @type {Array.<base.Model>}
@@ -45,6 +46,11 @@ base.Map = function(models, lightmapData, bsp) {
      * @type {base.Bsp}
      */
     this.bsp = bsp;
+    /**
+     * @const
+     * @type {Object.<string, Array.<Object>>}
+     */
+    this.entities = entities;
 };
 
 /**
@@ -99,4 +105,11 @@ base.Map.LightmapData = function(lightmaps, size) {
      * @type {number}
      */
     this.size = size;
+};
+
+base.Map.prototype.getSpawnPoints = function() {
+    return this.entities['info_player_deathmatch'] || null;
+    // return this.entities.filter(function (ent) {
+    //    return ent['classname'] == 'info_player_deathmatch'; 
+    // });
 };

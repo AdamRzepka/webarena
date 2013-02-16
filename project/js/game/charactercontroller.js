@@ -219,7 +219,7 @@ game.CharacterController.prototype.update = function () {
     if (this.input.getAction(game.InputBuffer.Action.RIGHT)) {
 	dir[0] += 1;
     }
-    this.zAngle -= this.input.getCursor().dx / 75.0;
+    this.zAngle -= this.input.getCursor().dx / 200.0;
     if (this.zAngle > 2 * Math.PI) {
         this.zAngle -= 2 * Math.PI;
     }
@@ -227,7 +227,7 @@ game.CharacterController.prototype.update = function () {
         this.zAngle += 2 * Math.PI;
     }
 
-    this.xAngle -= this.input.getCursor().dy / 75.0;
+    this.xAngle -= this.input.getCursor().dy / 200.0;
     if (this.xAngle > Math.PI) {
         this.xAngle = Math.PI;
     }

@@ -69,7 +69,7 @@ files.bsp.load = function(map) {
 // Parses the BSP file
 files.bsp.parse_ = function(src) {
 
-    var shaders, lightmapData, verts, meshVerts, faces, models,
+    var entities, shaders, lightmapData, verts, meshVerts, faces, models,
         compiledModels, map, bspBuilder;
     var header = files.bsp.readHeader_(src);
     
@@ -78,7 +78,7 @@ files.bsp.parse_ = function(src) {
     }
 
     // Read map entities
-    // files.bsp.readEntities_(header.lumps[0], src);
+    entities = files.bsp.readEntities_(header.lumps[0], src);
 
     // Load visual map components
     shaders = files.bsp.readShaders_(header.lumps[1], src);
@@ -100,7 +100,7 @@ files.bsp.parse_ = function(src) {
     
     compiledModels = files.bsp.compileMapModels_(verts, faces, meshVerts, lightmapData, shaders);
 
-    map = new base.Map(compiledModels, lightmapData, bspBuilder.getBsp());
+    map = new base.Map(compiledModels, lightmapData, bspBuilder.getBsp(), entities);
 
     return map;
     
@@ -132,49 +132,49 @@ files.bsp.readHeader_ = function(src) {
     return header;
 };
 
-// // Read all entity structures
-// /** @private*/
-// files.bsp.readEntities_ = function(lump, src) {
-//     src.seek(lump.offset);
-//     var entities = src.readString(lump.length);
+// Read all entity structures
+/** @private*/
+files.bsp.readEntities_ = function(lump, src) {
+    src.seek(lump.offset);
+    var entities = src.readString(lump.length);
 
-//     var elements = {
-//         targets: {}
-//     };
+    var elements = {
+        'targets': {}
+    };
 
-//     entities.replace(/\{([^}]*)\}/mg, function($0, entitySrc) {
-//         var entity = {
-//             classname: 'unknown'
-//         };
-//         entitySrc.replace(/"(.+)" "(.+)"$/mg, function($0, key, value) {
-//             switch(key) {
-//                 case 'origin':
-//                     value.replace(/(.+) (.+) (.+)/, function($0, x, y, z) {
-//                         entity[key] = [
-//                             parseFloat(x),
-//                             parseFloat(y),
-//                             parseFloat(z)
-//                         ];
-//                     });
-//                     break;
-//                 case 'angle':
-//                     entity[key] = parseFloat(value);
-//                     break;
-//                 default:
-//                     entity[key] = value;
-//                     break;
-//             }
-//         });
+    entities.replace(/\{([^}]*)\}/mg, function($0, entitySrc) {
+        var entity = {
+            'classname': 'unknown'
+        };
+        entitySrc.replace(/"(.+)" "(.+)"$/mg, function($0, key, value) {
+            switch(key) {
+                case 'origin':
+                    value.replace(/(.+) (.+) (.+)/, function($0, x, y, z) {
+                        entity[key] = base.Vec3.createVal(
+                            parseFloat(x),
+                            parseFloat(y),
+                            parseFloat(z)
+                        );
+                    });
+                    break;
+                case 'angle':
+                    entity[key] = parseFloat(value);
+                    break;
+                default:
+                    entity[key] = value;
+                    break;
+            }
+        });
 
-//         if(entity['targetname']) {
-//             elements.targets[entity['targetname']] = entity;
-//         }
+        if(entity['targetname']) {
+            elements['targets'][entity['targetname']] = entity;
+        }
 
-//         if(!elements[entity.classname]) { elements[entity.classname] = []; }
-//         elements[entity.classname].push(entity);
-//     });
-
-// };
+        if(!elements[entity['classname']]) { elements[entity['classname']] = []; }
+        elements[entity['classname']].push(entity);
+    });
+    return elements;
+};
 
 // Read all shader structures
 /** @private*/

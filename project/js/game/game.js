@@ -41,7 +41,7 @@ game.init = function (broker) {
     var render;
     var input = new game.InputBuffer();
     var rm = new files.ResourceManager();
-    var mapName = 'oa_rpg3dm2';
+    var mapName = 'aggressor';
     var weaponId;
     var weaponMtx = base.Mat4.identity();
     
@@ -75,10 +75,13 @@ game.init = function (broker) {
         			          -1, 0, 0, 0,
         			          0, 1, 0, 0,
         			          0, 0, 0, 1]);
+        
         var characterController = new game.CharacterController(map.bsp, input);
-        characterController.respawn(base.Vec3.createVal(2.124504804611206,
-                                                        247.24835205078125,
-                                                        276.1741943359375), 0);
+        var spawnPoints = map.getSpawnPoints();
+        var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+        
+        characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
+            spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
         render.updateCamera(characterController.getCameraMatrix());
         function update () {
             input.step();
