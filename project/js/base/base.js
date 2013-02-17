@@ -80,6 +80,12 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
     this.skins = (skins && skins[0]) ? skins : ['__default__'];  // If skins are not defined explicitly, we create default skin
 
 };
+/**
+ * @public
+ * @const
+ * @type {string}
+ */
+base.Model.defaultSkin = '__default__';
 
 /**
  * @public
@@ -150,23 +156,29 @@ base.ModelInstance = function(id, baseModel, skinId) {
      */
     this.skinId = skinId;
     /**
-     * Model matrix. This shouldn't be modified directly by game worker.
+     * Model matrix.
      * @private
      * @type {base.Mat4}
      */
     this.matrix_ = base.Mat4.identity();
     /**
-     * Current frame. This shouldn't be modified directly by game worker.
+     * Current frame.
      * @private
      * @type {number}
      */
     this.frame_ = 0;
     /**
-     * This shouldn't be modified directly by game worker.
      * @private
      * @type {boolean}
      */
     this.visibility_ = true;
+    /**
+     * Indicates that sync with renderer is necessary for this instance.
+     * @private
+     * @type {boolean}
+     */
+    this.dirty_ = false;
+
 };
 
 /**
@@ -191,7 +203,6 @@ base.ModelInstance.prototype.getMatrix = function () {
 /**
  * @public
  * @param {base.Mat4} matrix
- * This function shouldn't be called directly by game worker.
  */
 base.ModelInstance.prototype.setMatrix = function (matrix) {
     var det = 0;
@@ -201,6 +212,7 @@ base.ModelInstance.prototype.setMatrix = function (matrix) {
 	goog.asserts.assert(det !== 0 && det < 10e9 && det > -10e9); 
     }
     this.matrix_ = matrix;
+    this.dirty_ = true;
 };
 
 /**
@@ -214,11 +226,11 @@ base.ModelInstance.prototype.getFrame = function () {
 /**
  * @public
  * @param {number} frame
- * This function shouldn't be called directly by game worker.
  */
 base.ModelInstance.prototype.setFrame = function (frame) {
     goog.asserts.assert(frame >= 0 && frame < this.baseModel.framesCount);
     this.frame_ = frame;
+    this.dirty_ = true;
 };
 
 /**
@@ -232,12 +244,24 @@ base.ModelInstance.prototype.getVisibility = function () {
 /**
  * @public
  * @param {boolean} visibility
- * This function shouldn't be called directly by game worker.
  */
 base.ModelInstance.prototype.setVisibility = function (visibility) {
     this.visibility_ = visibility;
 };
 
+/**
+ * @public
+ * @return {boolean}
+ */
+base.ModelInstance.prototype.isDirty = function () {
+    return this.dirty;
+};
+/**
+ * @public
+ */
+base.ModelInstance.prototype.clear = function () {
+    this.dirty_ = false;
+};
 
 /**
  * This class corresponds to model surface. Note that we don't declare here
