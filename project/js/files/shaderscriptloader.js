@@ -247,7 +247,7 @@ files.ShaderScriptLoader.parseStage = function(shader, tokens) {
                 stage.animFreq = parseFloat(tokens.next());
                 var nextMap = tokens.next();
                 while(nextMap.match(/(\.jpg|\.tga)/)) {
-                    stage.animMaps.push(nextMap.replace(/(\.jpg|\.tga)/, '.png'));
+                    stage.animMaps.push(nextMap.replace(/(\.jpg|\.tga)/, ''));
                     nextMap = tokens.next();
                 }
                 tokens.prev();

@@ -192,6 +192,23 @@ files.ResourceManager.prototype.getMap = function () {
 
 /**
  * @public
+ * @param {RegExp} regexp
+ * @return {Object.<string, string>}
+ */
+files.ResourceManager.prototype.findConfigFiles = function (regexp) {
+    var key, file;
+    var result = {};
+    for( key in this.configFiles )
+    {
+        if (this.configFiles.hasOwnProperty(key) && regexp.test(key)) {
+            result[key] = this.configFiles[key];
+        }
+    }
+    return result;
+};
+
+/**
+ * @public
  */
 files.ResourceManager.prototype.releaseAll = function () {
     // TODO
@@ -214,16 +231,20 @@ files.ResourceManager.prototype.reportLoadedFile = function () {
 files.ResourceManager.prototype.loadArchive = function (archive) {
     var self = this;
     files.zipjs.createReader(new files.zipjs.HttpReader(this.basedir + archive + '.zip'),
-		     function (reader) {
-			 reader.getEntries(
-			     function (entries) {
-				 self.filesToLoad += entries.length;
-				 self.zipsToLoad--;
-				 for (var i = 0; i < entries.length; ++i) {
-				     self.loadEntry(entries[i]);
-				 }
-			     });
-		     });
+		             function (reader) {
+			         reader.getEntries(
+			             function (entries) {
+				         self.filesToLoad += entries.length;
+				         self.zipsToLoad--;
+				         for (var i = 0; i < entries.length; ++i) {
+				             self.loadEntry(entries[i]);
+				         }
+			             });
+		             },
+                            function () {
+                                self.logger.log(goog.debug.Logger.Level.SEVERE,
+			                        'Unable to load archive ' + archive);
+                            });
 };
 
 /**
@@ -258,9 +279,13 @@ files.ResourceManager.prototype.loadEntry = function (entry) {
 	break;
     case 'shader':
 	entry.getData(new files.zipjs.TextWriter(), function(text) {
-			  self.scripts[filename] = text;
-			  self.reportLoadedFile();
-		      });
+            if (self.scripts.hasOwnProperty(filename)) {
+                self.scripts[filename] += ('\n' + text);
+            } else {
+		self.scripts[filename] = text;
+            }
+	    self.reportLoadedFile();                
+	});
 	break;
     case 'md3':
 	entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {

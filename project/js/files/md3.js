@@ -25,10 +25,13 @@ goog.provide('files.md3');
 
 /**
  * @param {ArrayBuffer} arrayBuffer
+ * @param {Object.<string, string>} skinFiles
  */
-files.md3.load = function(arrayBuffer) {
+files.md3.load = function(arrayBuffer, skinFiles) {
 
-    var header,
+    var skins = [],
+        key,
+        header,
 	surfaces = [],
 	frames = [],
 	tags = [],
@@ -65,8 +68,11 @@ files.md3.load = function(arrayBuffer) {
 	var i, count;
 	var surfaceOffset = binaryFile.tell();
 
-	binaryFile.skip(72);
+        binaryFile.skip(4);
+	//binaryFile.skip(72);
 	surface = {
+            name: binaryFile.readString(64).replace(/[\0\s]*$/, ''),
+            flags: binaryFile.readLong(),
 	    framesCount: binaryFile.readLong(),
 	    shadersCount: binaryFile.readLong(),
 	    verticesCount: binaryFile.readLong(),
@@ -106,7 +112,7 @@ files.md3.load = function(arrayBuffer) {
 
     function parseShader_() {
 	return {
-	    name: binaryFile.readString(64).replace(/[\0\s]*$/, ''),
+	    name: binaryFile.readString(64).replace(/[\0\s]*$/, '').replace(/\.(jpg|tga)$/, ''),
 	    index: binaryFile.readLong()
 	};
     }
@@ -134,6 +140,7 @@ files.md3.load = function(arrayBuffer) {
 	    j = 0,
 	    k = 0,
 	    v = 0,
+            materials = [],
 	    surfCount = 0,
 	    count = 0,
 	    mesh,
@@ -146,7 +153,8 @@ files.md3.load = function(arrayBuffer) {
 	    framesData = [],
 	    vertex,
 	    frame,
-	    geometryData;
+	    geometryData,
+            skinNames;
 
 	meshes = [];
 	
@@ -161,6 +169,7 @@ files.md3.load = function(arrayBuffer) {
 	    
 	    count = surface.indices.length;
 	    verticesOffset = vertices[0].length;
+            materials = [];
 	    for (j = 0; j < count; ++j) {
 		indices.push(surface.indices[j] + verticesOffset);
 	    }
@@ -183,16 +192,30 @@ files.md3.load = function(arrayBuffer) {
 						     return new Float32Array(v);
 						 }),
 						 base.GeometryData.Layout.MD3);
-	    
+            materials.push(surface.shaders[0].name); // material from md3
+            for (k = 0; k < skins.length; ++k) {
+                materials.push(skins[k].skin[surface.name]);
+            }
+            // probably bug: indicesOffset shouldn't be 0?
 	    mesh = new base.Mesh(geometryData, indicesOffset, count,
-			    [surface.shaders[0].name], base.LightningType.LIGHT_DYNAMIC);
+			    materials, base.LightningType.LIGHT_DYNAMIC);
 	    meshes.push(mesh);
 	}
 
 	framesData = []; // @todo
-	
+
+        skinNames = [base.Model.DEFAULT_SKIN].concat(skins.map(function (s) {
+            return s.name;
+        }));
+        
 	model = new base.Model(base.Model.getNextId(), meshes, header.framesCount,
-			       framesData, tags);
+			       framesData, tags, skinNames);
+    }
+
+    for( key in skinFiles ) {
+        if (skinFiles.hasOwnProperty(key)) {
+            skins.push({name: key, skin: files.md3.loadSkin(skinFiles[key])});
+        }
     }
 
     header = parseHeader_();
@@ -215,4 +238,21 @@ files.md3.load = function(arrayBuffer) {
     buildModel_();
 
     return model;
+};
+
+/**
+ * @private
+ * @return {Object.<string,string>}
+ */
+files.md3.loadSkin = function (skinDesc) {
+    var i, tokens;
+    var result = {};
+    var lines = skinDesc.split('\r\n');
+    for (i = 0; i < lines.length; ++i) {
+        tokens = lines[i].split(',');
+        if (tokens.length === 2) {
+            result[tokens[0]] = tokens[1].replace(/\.(jpg|tga)$/, '');
+        }
+    }
+    return result;
 };

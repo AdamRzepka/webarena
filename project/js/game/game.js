@@ -31,6 +31,8 @@ goog.require('game.InputBuffer');
 goog.require('game.FreeCamera');
 goog.require('game.CharacterController');
 goog.require('game.globals');
+goog.require('game.ModelManager');
+goog.require('game.Player');
 
 goog.provide('game');
 
@@ -49,7 +51,7 @@ game.init = function (broker) {
     
     render = /**@type{base.IRenderer}*/broker.createProxy('base.IRenderer', base.IRenderer);
     
-    rm.load([mapName, "lightning"], function () {
+    rm.load([mapName, 'assassin', "lightning"], function () {
 	var map, md3;
 	files.ShaderScriptLoader.loadAll(rm.getScripts());
         render.buildShaders(files.ShaderScriptLoader.shaderScripts,
@@ -64,7 +66,7 @@ game.init = function (broker) {
 	                                   base.Mat4.identity());
 	});
 	
-	md3 = files.md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'));
+	md3 = files.md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'), {});
         render.registerMd3(md3);
 	weaponId = base.ModelInstance.getNextId();
         render.registerModelInstance(weaponId, md3.id, weaponMtx);
@@ -83,12 +85,19 @@ game.init = function (broker) {
         characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
             spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
         render.updateCamera(characterController.getCameraMatrix());
+
+        var modelManager = new game.ModelManager(render, rm);
+        var player = new game.Player(modelManager, rm, 'assassin', 'default');
         function update () {
             input.step();
 
-            characterController.update();
-            //            camera.update();
-            render.updateCamera(characterController.getCameraMatrix());
+            if (game.globals.freeCamera) {
+                camera.update();
+                render.updateCamera(camera.getCameraMatrix());
+            } else {
+                characterController.update();
+                render.updateCamera(characterController.getCameraMatrix());
+            }
 
             base.Mat4.translate(characterController.getCameraMatrix(), weaponOff, weaponMtx);
 	    base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);

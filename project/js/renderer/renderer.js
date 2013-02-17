@@ -235,7 +235,7 @@ renderer.Renderer.prototype.registerModelInstance = function (id, modelBaseId, m
 	return;
     }
 
-    skinId = baseModel.skins.indexOf(skinName || base.Model.defaultSkin);
+    skinId = baseModel.skins.indexOf(skinName || base.Model.DEFAULT_SKIN);
     if (skinId === -1) { // default skin
 	skinId = 0;
 	this.logger_.log(goog.debug.Logger.Level.WARNING,

@@ -77,7 +77,7 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
      * @const
      * @type {Array.<string>}
      */
-    this.skins = (skins && skins[0]) ? skins : ['__default__'];  // If skins are not defined explicitly, we create default skin
+    this.skins = (skins && skins[0]) ? skins : [base.Model.DEFAULT_SKIN];  // If skins are not defined explicitly, we create default skin
 
 };
 /**
@@ -85,7 +85,7 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
  * @const
  * @type {string}
  */
-base.Model.defaultSkin = '__default__';
+base.Model.DEFAULT_SKIN = '__default__';
 
 /**
  * @public
@@ -254,7 +254,7 @@ base.ModelInstance.prototype.setVisibility = function (visibility) {
  * @return {boolean}
  */
 base.ModelInstance.prototype.isDirty = function () {
-    return this.dirty;
+    return this.dirty_;
 };
 /**
  * @public

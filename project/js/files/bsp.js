@@ -185,7 +185,7 @@ files.bsp.readShaders_ = function(lump, src) {
     src.seek(lump.offset);
     for(var i = 0; i < count; ++i) {
         var shader = {
-            shaderName: src.readString(64).replace(/[\0\s]*$/, ''),
+            shaderName: src.readString(64).replace(/[\0\s]*$/, '').replace(/\.(jpg|tga)$/, ''),
             flags: src.readLong(),
             contents: src.readLong(),
             shader: null,

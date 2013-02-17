@@ -97,11 +97,12 @@ game.ModelManager.prototype.makeInstance = function (modelPath, matrix, skinName
         if (!modelFile) {
             return null;
         }
-        this.models[modelPath] = model = files.md3.load(modelFile);
+        this.models[modelPath] = model = files.md3.load(modelFile,
+                                                        this.findSkinsForMd3_(modelPath));
         this.renderer.registerMd3(model);
     }
     matrix = matrix || base.Mat4.identity();
-    skinName = skinName || base.Model.defaultSkin;
+    skinName = skinName || base.Model.DEFAULT_SKIN;
     skinId = model.skins.indexOf(skinName);
     if (skinId === -1) {
         this.logger.log(goog.debug.Logger.Level.WARNING,
@@ -127,10 +128,30 @@ game.ModelManager.prototype.syncWithRenderer = function () {
         if (instance.isDirty()) {
             this.updateIds.push(instance.id);
             this.updateMatrices.push(instance.getMatrix());
-            this.updateFrames.push(instance.frame());
+            this.updateFrames.push(instance.getFrame());
             instance.clear();
         }
     }
     this.renderer.updateModels(this.updateIds, this.updateMatrices, this.updateFrames);
     this.updateIds.length = this.updateMatrices.length = this.updateFrames.length = 0;
+};
+
+/**
+ * @private
+ * @param {string} modelPath
+ * @return {Object.<string, string>}
+ */
+game.ModelManager.prototype.findSkinsForMd3_ = function (modelPath) {
+    var path, regexp, skins = {}, skinFiles, key, skinName;
+    path = modelPath.replace('.md3', '');
+    regexp = new RegExp(path + '_(.*)\\.skin');
+    skinFiles = this.rm.findConfigFiles(regexp);
+    // replace full paths with skin names
+    for( key in skinFiles ) {
+        if (skinFiles.hasOwnProperty(key)) {
+            skinName = regexp.exec(key)[1]; // get only skin name (eg. 'default', 'red')
+            skins[skinName] = skinFiles[key];
+        }
+    }
+    return skins;
 };

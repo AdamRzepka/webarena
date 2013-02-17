@@ -29,3 +29,7 @@ game.globals.TIME_STEP = 1/60;
  * @type {number}
  */
 game.globals.TIME_STEP_MS = game.globals.TIME_STEP * 1000;
+/**
+ * @type {boolean}
+ */
+game.globals.freeCamera = false;
