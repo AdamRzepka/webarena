@@ -40,7 +40,7 @@ def transform_image(path, out):
 
 def pack_files(files, baseoa, zipname):
     baseoa = baseoa + '/' #just in case
-    with zipfile.ZipFile(zipname, 'w') as archive:
+    with zipfile.ZipFile(zipname, 'w', zipfile.ZIP_STORED) as archive:
         for f in files:
             base, ext = os.path.splitext(f)
             if ext == '.tga':
@@ -59,11 +59,11 @@ def pack_files(files, baseoa, zipname):
                     print 'Warning: file not found:', f
                     continue
 
-            archive.write(baseoa + f, f)
+            archive.write(baseoa + f, f, zipfile.ZIP_STORED)
 
 def pack_bsp(bsp_file, baseoa, zipname):
-    print 'Packing', bsp_file
-    pack_files(bsp.get_files_for_bsp(bsp_file, baseoa), baseoa, zipname)
+     print 'Packing', bsp_file
+     pack_files(bsp.get_files_for_bsp(bsp_file, baseoa), baseoa, zipname)
 
 def pack_player(player_dir, baseoa, zipname):
      pack_files(bsp.get_files_for_player(player_dir, baseoa), baseoa, zipname)

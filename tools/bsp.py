@@ -209,16 +209,16 @@ def check_md3_surface(md3):
 def check_model_skins(md3_dir):
     try:
         skin_files = filter(lambda n: n[-5:] == '.skin', os.listdir(md3_dir))
-        skins = []
-        for skin_path in skin_files:
-            shaders = []
-            with open(md3_dir + '/' + skin_path, 'r') as f:
-                line = f.readline().strip()
-                while (line.find(',') != -1):
-                    shaders.append(line[line.find(',') + 1:])
-                    line = f.readline().strip()
-                skins.append((skin_path, shaders))
-        return skins
+        # skins = []
+        # for skin_path in skin_files:
+        #     shaders = []
+        #     with open(md3_dir + '/' + skin_path, 'r') as f:
+        #         line = f.readline().strip()
+        #         while (line.find(',') != -1):
+        #             shaders.append(line[line.find(',') + 1:])
+        #             line = f.readline().strip()
+        #         skins.append((skin_path, shaders))
+        return skin_files
     except OSError:
         print 'Directory', md3_dir, 'not found'
 
@@ -242,8 +242,10 @@ def get_files_for_player(player_dir, baseoa):
     models = ['lower', 'upper', 'head']
     files = [player_dir + m + '.md3' for m in models]
     files.append(player_dir + 'animation.cfg')
-    
+
+    # for now we are taking only default skin to minimize zip size
     skins = [player_dir + m + '_default.skin' for m in models]
+#    skins = [player_dir + s for s in check_model_skins(baseoa + player_dir)]
     files.extend(skins)
     for skin in skins:
         shaders_deps = get_files_for_shaders(get_shaders_for_skin(baseoa + skin),
