@@ -73,6 +73,11 @@ game.ModelManager = function (renderer, rm) {
      * @type {Array.<number>}
      */
     this.updateFrames = [];
+    /**
+     * @private
+     * @type {Array.<boolean>}
+     */
+    this.updateVisibility = [];
 };
 
 /**
@@ -129,11 +134,14 @@ game.ModelManager.prototype.syncWithRenderer = function () {
             this.updateIds.push(instance.id);
             this.updateMatrices.push(instance.getMatrix());
             this.updateFrames.push(instance.getFrame());
+            this.updateVisibility.push(instance.getVisibility());
             instance.clear();
         }
     }
     this.renderer.updateModels(this.updateIds, this.updateMatrices, this.updateFrames);
-    this.updateIds.length = this.updateMatrices.length = this.updateFrames.length = 0;
+    this.renderer.setModelsVisibility(this.updateIds, this.updateVisibility);
+    this.updateIds.length = this.updateMatrices.length = this.updateFrames.length
+        = this.updateVisibility.length = 0;
 };
 
 /**

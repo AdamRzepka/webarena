@@ -100,17 +100,23 @@ base.Model.getNextId = (function() {
 
 /**
  * @constructor
- * @param {Float32Array} aabb
+ * @param {Float32Array} aabbMin
+ * @param {Float32Array} aabbMax
  * @param {base.Vec3} origin
  * @param {number} radius
  * @param {Array.<base.Mat4>} [tags]
  */
-base.Model.FrameData = function(aabb, origin, radius, tags) {
+base.Model.FrameData = function(aabbMin, aabbMax, origin, radius, tags) {
     /*
      * @const
-     * @type {Float32Array}
+     * @type {base.Vec3}
      */
-    this.aabb = aabb;
+    this.aabbMin = aabbMin;
+    /*
+     * @const
+     * @type {base.Vec3}
+     */
+    this.aabbMax = aabbMax;
     /*
      * @const
      * @type {base.Vec3}
@@ -247,6 +253,7 @@ base.ModelInstance.prototype.getVisibility = function () {
  */
 base.ModelInstance.prototype.setVisibility = function (visibility) {
     this.visibility_ = visibility;
+    this.dirty_ = true;
 };
 
 /**

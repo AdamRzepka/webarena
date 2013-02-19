@@ -44,8 +44,6 @@ game.init = function (broker) {
     var input = new game.InputBuffer();
     var rm = new files.ResourceManager();
     var mapName = 'aggressor';
-    var weaponId;
-    var weaponMtx = base.Mat4.identity();
     
     broker.registerReceiver('base.IInputHandler', input);
     
@@ -66,19 +64,11 @@ game.init = function (broker) {
 	                                   base.Mat4.identity());
 	});
 	
-	md3 = files.md3.load(rm.getModel('models/weapons2/lightning/lightning.md3'), {});
-        render.registerMd3(md3);
-	weaponId = base.ModelInstance.getNextId();
-        render.registerModelInstance(weaponId, md3.id, weaponMtx);
-
         var camera = new game.FreeCamera(input, base.Vec3.create([0,0,0]));
-        var weaponOff = base.Vec3.create([10, -10, -4]);
-        var weaponRot = base.Mat4.create([0, 0, -1, 0,
-        			          -1, 0, 0, 0,
-        			          0, 1, 0, 0,
-        			          0, 0, 0, 1]);
         
-        var characterController = new game.CharacterController(map.bsp, input);
+        var modelManager = new game.ModelManager(render, rm);
+        var player = new game.Player(modelManager, rm, 'assassin', 'default');
+        var characterController = new game.CharacterController(map.bsp, input, player);
         var spawnPoints = map.getSpawnPoints();
         var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
         
@@ -86,22 +76,21 @@ game.init = function (broker) {
             spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
         render.updateCamera(characterController.getCameraMatrix());
 
-        var modelManager = new game.ModelManager(render, rm);
-        var player = new game.Player(modelManager, rm, 'assassin', 'default');
         function update () {
             input.step();
 
-            if (game.globals.freeCamera) {
+            if (game.globals.freeCameraControl || game.globals.freeCamera) {
                 camera.update();
-                render.updateCamera(camera.getCameraMatrix());
             } else {
                 characterController.update();
-                render.updateCamera(characterController.getCameraMatrix());
             }
+            if (game.globals.freeCameraView || game.globals.freeCamera) {
+                render.updateCamera(camera.getCameraMatrix());
+            } else {
+                render.updateCamera(characterController.getCameraMatrix());
+            }                
 
-            base.Mat4.translate(characterController.getCameraMatrix(), weaponOff, weaponMtx);
-	    base.Mat4.multiply(weaponMtx, weaponRot, weaponMtx);
-	    render.updateModel(weaponId, weaponMtx, 0);
+            modelManager.syncWithRenderer();
         };
         setInterval(update, game.globals.TIME_STEP_MS);
     });

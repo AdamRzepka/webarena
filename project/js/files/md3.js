@@ -34,9 +34,10 @@ files.md3.load = function(arrayBuffer, skinFiles) {
         header,
 	surfaces = [],
 	frames = [],
-	tags = [],
+        tagNames = [],
 	model,
 	i = 0,
+        j = 0,
 	binaryFile = new files.BinaryFile(arrayBuffer);
 
     // local functions
@@ -55,12 +56,44 @@ files.md3.load = function(arrayBuffer, skinFiles) {
 	};
     }
 
+    function parseTagNames_() {
+        var i;
+        var result = [];
+        for (i = 0; i < header.tagsCount; ++i) {
+            result.push(binaryFile.readString(64).replace(/[\0\s]*$/, ''));
+            binaryFile.skip(48); // skip transformation for now
+        }
+        return result;
+    };
+
     function parseTag_() {
-	return null;
+        var mtx, rot, origin;
+        binaryFile.skip(64); // name already parsed
+        origin = binaryFile.readFloatArray(3);
+        rot = binaryFile.readFloatArray(9);
+        mtx = base.Mat4.fromMat3(base.Mat3.create(rot));
+        mtx[12] = origin[0];
+        mtx[13] = origin[1];
+        mtx[14] = origin[2];
+        return mtx;
     }
 
     function parseFrame_() {
-	return null;
+	var result = {
+            aabbMin: base.Vec3.createVal(binaryFile.readFloat(),
+                                         binaryFile.readFloat(),
+                                         binaryFile.readFloat()),
+            aabbMax: base.Vec3.createVal(binaryFile.readFloat(),
+                                         binaryFile.readFloat(),
+                                         binaryFile.readFloat()),
+            origin: base.Vec3.createVal(binaryFile.readFloat(),
+                                        binaryFile.readFloat(),
+                                        binaryFile.readFloat()),
+            radius: binaryFile.readFloat(),
+            tags: [] // will be filled later
+        };
+        binaryFile.skip(16); // skip frame name
+        return result;
     }
 
     function parseSurface_() {
@@ -150,7 +183,6 @@ files.md3.load = function(arrayBuffer, skinFiles) {
 	    verticesOffset = 0,
 	    indices = [],
 	    vertices = [],
-	    framesData = [],
 	    vertex,
 	    frame,
 	    geometryData,
@@ -201,15 +233,13 @@ files.md3.load = function(arrayBuffer, skinFiles) {
 			    materials, base.LightningType.LIGHT_DYNAMIC);
 	    meshes.push(mesh);
 	}
-
-	framesData = []; // @todo
-
+        
         skinNames = [base.Model.DEFAULT_SKIN].concat(skins.map(function (s) {
             return s.name;
         }));
         
 	model = new base.Model(base.Model.getNextId(), meshes, header.framesCount,
-			       framesData, tags, skinNames);
+			       frames, tagNames, skinNames);
     }
 
     for( key in skinFiles ) {
@@ -231,8 +261,12 @@ files.md3.load = function(arrayBuffer, skinFiles) {
     }
 
     binaryFile.seek(header.tagsOffset);
-    for (i = header.tagsCount; i > 0; --i) {
-	frames.push(parseTag_());
+    tagNames = parseTagNames_();
+    binaryFile.seek(header.tagsOffset);
+    for (i = 0; i < header.framesCount; ++i) {
+        for (j = 0; j < header.tagsCount; ++j) {
+	    frames[i].tags.push(parseTag_());
+        }
     }
 
     buildModel_();

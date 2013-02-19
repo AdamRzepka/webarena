@@ -54,14 +54,17 @@ goog.require('base.Vec3');
 goog.require('base.Bsp');
 goog.require('game.globals');
 goog.require('game.InputBuffer');
+goog.require('game.Player');
+
 goog.provide('game.CharacterController');
 
 /**
  * @constructor
  * @param {base.Bsp} bsp
  * @param {game.InputBuffer} input
+ * @param {game.Player} player
  */
-game.CharacterController = function(bsp, input) {
+game.CharacterController = function(bsp, input, player) {
     /**
      * @const
      * @private
@@ -113,6 +116,11 @@ game.CharacterController = function(bsp, input) {
      * @type {?base.Bsp.TraceOutput}
      */
     this.groundTrace = null;
+    /**
+     * @private
+     * @type {game.Player}
+     */
+    this.player_ = player;
     
     this.buildCameraMatrix_();
 };
@@ -182,7 +190,7 @@ game.CharacterController.GRAVITY = 400.0;
  * @const
  * @type{number}
  */
-game.CharacterController.PLAYER_RADIUS = 20.0;
+game.CharacterController.PLAYER_RADIUS = 14.0;
 /**
  * @const
  * @type{number}
@@ -247,6 +255,7 @@ game.CharacterController.prototype.update = function () {
     }
 
     this.buildCameraMatrix_();
+    this.player_.update(this.camMtx, this.position, this.zAngle, this.xAngle);
 };
 
 /**
@@ -292,6 +301,8 @@ game.CharacterController.prototype.getZAngle = function () {
     return this.zAngle;
 };
 
+game.CharacterController.TPP_CAMERA_OFFSET = base.Vec3.createVal(0, 0, 60);
+
 /**
  * @private
  */
@@ -299,9 +310,13 @@ game.CharacterController.prototype.buildCameraMatrix_ = function () {
     base.Mat4.identity(this.camMtx);
     base.Mat4.rotateZ(this.camMtx, this.zAngle);
     base.Mat4.rotateX(this.camMtx, this.xAngle);
-    this.camMtx[12] = this.position[0];
+
     this.camMtx[13] = this.position[1];
-    this.camMtx[14] = this.position[2] + 30;
+    this.camMtx[12] = this.position[0];
+    this.camMtx[14] = this.position[2] + 20;
+    if (game.globals.tppMode) {
+        base.Mat4.translate(this.camMtx, game.CharacterController.TPP_CAMERA_OFFSET);
+    }
 };
 
 /**

@@ -29,7 +29,38 @@ game.globals.TIME_STEP = 1/60;
  * @type {number}
  */
 game.globals.TIME_STEP_MS = game.globals.TIME_STEP * 1000;
+
+
+/// debug stuff
 /**
  * @type {boolean}
  */
 game.globals.freeCamera = false;
+/**
+ * @type {boolean}
+ */
+game.globals.freeCameraControl = false;
+/**
+ * @type {boolean}
+ */
+game.globals.freeCameraView = false;
+
+/**
+ * @type {boolean}
+ */
+game.globals.tppMode = true;
+/**
+ * @type {function(boolean)|null}
+ */
+game.globals.onTppModeChange = null;
+/**
+ * @param {boolean} flag
+ */
+game.globals.setTppMode = function (flag) {
+    game.globals.tppMode = flag;
+    if (game.globals.onTppModeChange) {
+        game.globals.onTppModeChange(flag);
+    }
+};
+
+

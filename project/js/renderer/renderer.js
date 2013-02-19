@@ -371,7 +371,25 @@ base.makeUnremovable(renderer.Renderer.prototype.updateModel);
  * @param {Array.<boolean>} visibilityArray
  */
 renderer.Renderer.prototype.setModelsVisibility = function (modelsInstancesIds, visibilityArray) {
-    // @todo
+    var i,
+        model;
+
+    if (modelsInstancesIds.length != visibilityArray.length) {
+	this.logger_.log(goog.debug.Logger.Level.SEVERE,
+			"Arrays passed to setModelsVisibility must have the same length");
+	return;
+    }
+
+    for (i = 0; i < modelsInstancesIds.length; ++i) {
+	model = this.modelInstances_[modelsInstancesIds[i]];
+	if (!model) {
+	    this.logger_.log(goog.debug.Logger.Level.WARNING,
+			    ("Invalid model instance id passed to setModelsVisibility: "
+			     + modelsInstancesIds[i]));
+	    continue;
+	}
+	model.setVisibility(visibilityArray[i]);
+    }
 };
 
 base.makeUnremovable(renderer.Renderer.prototype.setModelsVisibility);
