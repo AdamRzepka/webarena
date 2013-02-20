@@ -186,16 +186,19 @@ files.md3.load = function(arrayBuffer, skinFiles) {
 	    vertex,
 	    frame,
 	    geometryData,
-            skinNames;
+            skinNames,
+            off;
 
 	meshes = [];
 	
-	for (i = 0; i < header.framesCount; ++i) {
-	    vertices[i] = [];
-	}
 
 	surfCount = surfaces.length;
 	for (i = 0; i < surfCount; ++i) {
+            indices = [];
+            for (j = 0; j < header.framesCount; ++j) {
+	        vertices[j] = [];
+	    }
+
 	    surface = surfaces[i];
 	    indicesOffset = indices.length;
 	    
@@ -208,14 +211,15 @@ files.md3.load = function(arrayBuffer, skinFiles) {
 
 	    for (j = 0; j < header.framesCount; ++j) {
 		for (k = 0; k < surface.verticesCount; ++k) {
-		    vertices[j].push(surface.vertices[k][0]); //x
-		    vertices[j].push(surface.vertices[k][1]); //y
-		    vertices[j].push(surface.vertices[k][2]); //z
+                    off = j * surface.verticesCount + k;
+		    vertices[j].push(surface.vertices[off][0]); //x
+		    vertices[j].push(surface.vertices[off][1]); //y
+		    vertices[j].push(surface.vertices[off][2]); //z
 		    vertices[j].push(surface.uv[2 * k]); // u
 		    vertices[j].push(surface.uv[2 * k + 1]); // v
-		    vertices[j].push(surface.vertices[k][3]); //nx
-		    vertices[j].push(surface.vertices[k][4]); //ny
-		    vertices[j].push(surface.vertices[k][5]); //nz		    
+		    vertices[j].push(surface.vertices[off][3]); //nx
+		    vertices[j].push(surface.vertices[off][4]); //ny
+		    vertices[j].push(surface.vertices[off][5]); //nz		    
 		}
 	    }
 
