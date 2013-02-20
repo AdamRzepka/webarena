@@ -752,6 +752,7 @@ renderer.MaterialManager.prototype.compileShaderProgram = function(vertexSrc, fr
 renderer.MaterialManager.defaultVertexSrc = 
     'precision highp float;\n' +
     'attribute vec3 position; \n' +
+    'attribute vec3 position2; \n' +
     'attribute vec3 normal; \n' +
     'attribute vec2 texCoord; \n' +
     'attribute vec2 lightCoord; \n' +
@@ -761,10 +762,12 @@ renderer.MaterialManager.defaultVertexSrc =
     'varying vec2 vLightmapCoord; \n' +
     'varying vec4 vColor; \n' +
 
+    'uniform float lerpWeight; \n' +
     'uniform mat4 modelViewMat; \n' +
     'uniform mat4 projectionMat; \n' +
     'void main(void) { \n' +
-        'vec4 worldPosition = modelViewMat * vec4(position, 1.0); \n' +
+        'vec3 lerpPosition = position * (1.0 - lerpWeight) + position2 * lerpWeight;\n' +
+        'vec4 worldPosition = modelViewMat * vec4(lerpPosition, 1.0); \n' +
         'vTexCoord = texCoord; \n' +
         'vColor = color; \n' +
         'vLightmapCoord = lightCoord; \n' +

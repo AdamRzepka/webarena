@@ -128,6 +128,7 @@ renderer.Renderer.prototype.render = function () {
         meshInst, modelInst, meshBase,
         skinNum,
         shader, stage,
+        intFrame, nextFrame, lerpWeight, indexId, vertexId, vertex2Id,
         time = 0, // @todo
         gl = this.gl_;
 
@@ -156,17 +157,18 @@ renderer.Renderer.prototype.render = function () {
 		// if it is default shader, use texture from meshBase
 		this.materialManager_.bindTexture(meshInst.material.defaultTexture, stage.program);
 	    }
-
-	    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
-			  this.indexBuffers_[meshBase.geometry.indexBufferId]);
-	    gl.bindBuffer(gl.ARRAY_BUFFER,
-			  this.vertexBuffers_[
-			      meshBase.geometry.vertexBufferIds[modelInst.getFrame()]
-			  ]);
-
+            intFrame = Math.floor(modelInst.getFrame());
+            nextFrame = Math.ceil(modelInst.getFrame());
+            lerpWeight = modelInst.getFrame() - intFrame;
+            indexId = this.indexBuffers_[meshBase.geometry.indexBufferId];
+            vertexId = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[intFrame]];
+            vertex2Id = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[nextFrame]]
+                    || vertexId;
+            
 	    base.Mat4.multiply(this.viewMtx_, modelInst.getMatrix(), this.modelViewMtx_);
 	    this.bindShaderAttribs_(stage.program, this.modelViewMtx_, this.projectionMtx_,
-				    meshBase.geometry.layout);
+				    meshBase.geometry.layout, indexId, vertexId, vertex2Id,
+                                    lerpWeight);
 
 	    gl.drawElements(gl.TRIANGLES,
 			    meshBase.indicesCount,
@@ -427,7 +429,6 @@ renderer.Renderer.prototype.createBuffers_ = function (geometryData) {
     
     vertexBuffersSize = this.vertexBuffers_.length;
     
-    vertexBuffer = gl.createBuffer();
     indexBuffer = gl.createBuffer();
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -437,6 +438,7 @@ renderer.Renderer.prototype.createBuffers_ = function (geometryData) {
     geometryData.indexBufferId = this.indexBuffers_.length - 1;
 
     for (i = 0; i < geometryData.vertices.length; ++i) {
+        vertexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 	gl.bufferData(gl.ARRAY_BUFFER, geometryData.vertices[i], gl.STATIC_DRAW);
 
@@ -494,11 +496,20 @@ renderer.Renderer.prototype.insertModelInstance_ = function(model) {
 renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
 							  modelViewMat,
 							  projectionMat,
-							  vertexArrayLayout) {
+							  vertexArrayLayout,
+                                                          indexBufferId,
+                                                          vertexBufferId,
+                                                          vertexBuffer2Id,
+                                                          lerpWeight) {
     var gl = this.gl_;
 
     var vertexStride = 0, texOffset = 12, lightOffset = -1, normalOffset = -1,
 	colorOffset = -1;
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
+		  indexBufferId);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferId);
+
 
     switch (vertexArrayLayout) {
     case base.GeometryData.Layout.BSP:
@@ -559,6 +570,16 @@ renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
 	gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
     }
 	
+    if (shader.attribs['position2'] !== undefined) {
+        if (vertexBuffer2Id === -1) {
+            vertexBuffer2Id = vertexBufferId;
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer2Id);
+        gl.enableVertexAttribArray(shader.attribs['position2']);
+        gl.vertexAttribPointer(shader.attribs['position2'], 3, gl.FLOAT, false,
+                                   vertexStride, 0);
+        gl.uniform1f(shader.uniforms['lerpWeight'], lerpWeight);
+    }
 
 };
 
