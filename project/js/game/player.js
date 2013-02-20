@@ -82,6 +82,9 @@ game.Player = function (mm, rm, name, skin) {
      */
     this.weaponTag = this.torso.baseModel.tags.indexOf(game.Player.Tags.WEAPON);
     
+    this.torsoFrame = 155;
+    this.legsFrame = 0;
+    
     that.head.setVisibility(visible);
     that.torso.setVisibility(visible);
     that.legs.setVisibility(visible);
@@ -108,8 +111,49 @@ game.Player.Tags = {
  * @param {number} yaw
  * @param {number} pith
  */
-game.Player.prototype.update = function (camMtx, position, yaw, pith) {
+game.Player.prototype.update = function (camMtx, position, yaw, pith, velocity, onGround) {
     var legsMtx, torsoMtx, headMtx, weaponMtx;
+    var tframe, lframe;
+
+    if (base.Vec3.length(velocity) > 0.01 && onGround) {
+        
+        if (this.legsFrame < 104 || this.legsFrame >= 111) {
+            this.legsFrame = 104;
+        } else {
+            this.legsFrame += 0.3;
+            if (this.legsFrame >= 111) {
+                this.legsFrame = 104;
+            }
+        }
+    }
+    else {
+        if (this.legsFrame < 153 || this.legsFrame >= 164) {
+            this.legsFrame = 153;
+        } else {
+            this.legsFrame += 0.3;
+            if (this.legsFrame >= 164) {
+                this.legsFrame = 153;
+            }
+        }
+        this.legsFrame = 0;
+    }
+        
+    this.torsoFrame += 0.2;
+    if (this.torsoFrame >= 171) {
+         this.torsoFrame = 155;
+    }
+        
+    this.torso.setFrame(this.torsoFrame);
+    this.legs.setFrame(this.legsFrame);
+    
+    tframe = Math.floor(this.torsoFrame);
+    lframe = Math.floor(this.legsFrame);
+    var nextLFrame = Math.ceil(this.legsFrame);
+    var weight = this.legsFrame - lframe;
+    if (this.legsFrame + 0.3  >= 164) {
+        nextLFrame = 153;
+    }
+
     legsMtx = this.legs.getMatrix();
     base.Mat4.identity(legsMtx);
     base.Mat4.translate(legsMtx, position);
@@ -117,22 +161,28 @@ game.Player.prototype.update = function (camMtx, position, yaw, pith) {
     this.legs.setMatrix(legsMtx);
 
     torsoMtx = this.torso.getMatrix();
-    base.Mat4.multiply(legsMtx, this.legs.baseModel.framesData[0].tags[this.torsoTag], torsoMtx);
+    var tagA = this.legs.baseModel.framesData[lframe].tags[this.torsoTag];
+    var tagB = this.legs.baseModel.framesData[nextLFrame].tags[this.torsoTag];
+    base.Mat4.lerp(tagA, tagB, weight, torsoMtx);
+    base.Mat4.multiply(legsMtx, torsoMtx,
+                       torsoMtx);
     this.torso.setMatrix(torsoMtx);
 
     headMtx = this.head.getMatrix();
-    base.Mat4.multiply(torsoMtx, this.torso.baseModel.framesData[0].tags[this.headTag], headMtx);
+    base.Mat4.multiply(torsoMtx, this.torso.baseModel.framesData[tframe].tags[this.headTag],
+                       headMtx);
     this.head.setMatrix(headMtx);
 
     weaponMtx = this.weapon.getMatrix();
     if (game.globals.tppMode) {
-        base.Mat4.multiply(torsoMtx, this.torso.baseModel.framesData[0].tags[this.weaponTag],
+        base.Mat4.multiply(torsoMtx, this.torso.baseModel.framesData[tframe].tags[this.weaponTag],
                            weaponMtx);
     } else {
         base.Mat4.translate(camMtx, game.Player.WEAPON_OFF, weaponMtx);
 	base.Mat4.multiply(weaponMtx, game.Player.WEAPON_ROT, weaponMtx);
     }
     this.weapon.setMatrix(weaponMtx);
+
 };
 
 /**
