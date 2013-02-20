@@ -1063,3 +1063,36 @@ base.Mat4.str = function (mat) {
         ', ' + mat[8] + ', ' + mat[9] + ', ' + mat[10] + ', ' + mat[11] +
         ', ' + mat[12] + ', ' + mat[13] + ', ' + mat[14] + ', ' + mat[15] + ']';
 };
+
+base.Mat4.lerp = function (matA, matB, weight, dest) {
+    var wa = (1 - weight);
+    var wb = weight;
+    
+    var lx = Math.sqrt(matA[0] * matA[0] + matA[1] * matA[1] + matA[2] * matA[2]);
+    var ly = Math.sqrt(matA[4] * matA[4] + matA[5] * matA[5] + matA[6] * matA[6]);
+    var lz = Math.sqrt(matA[8] * matA[8] + matA[9] * matA[9] + matA[10] * matA[10]);
+    
+    dest = dest || matA;
+
+    // @todo: cross && normalization
+    dest[0] = wa * matA[0] + wb * matB[0];
+    dest[1] = wa * matA[1] + wb * matB[1];
+    dest[2] = wa * matA[2] + wb * matB[2];
+
+    dest[4] = wa * matA[4] + wb * matB[4];
+    dest[5] = wa * matA[5] + wb * matB[5];
+    dest[6] = wa * matA[6] + wb * matB[6];
+
+    dest[8] = wa * matA[8] + wb * matB[8];
+    dest[9] = wa * matA[9] + wb * matB[9];
+    dest[10] = wa * matA[10] + wb * matB[10];
+
+    dest[12] = wa * matA[12] + wb * matB[12];
+    dest[13] = wa * matA[13] + wb * matB[13];
+    dest[14] = wa * matA[14] + wb * matB[14];
+
+    dest[3] = dest[7] = dest[11] = 0;
+    dest[15] = 1;
+    
+    return dest;
+};
