@@ -255,7 +255,7 @@ game.CharacterController.prototype.update = function () {
     }
 
     this.buildCameraMatrix_();
-    this.player_.update(this.camMtx, this.position, this.zAngle, this.xAngle, this.velocity, this.onGround);
+    this.player_.update(this.camMtx, this.position, this.zAngle, this.xAngle, this.velocity, dir);
 };
 
 /**
