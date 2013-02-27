@@ -72,7 +72,17 @@ game.ModelManager = function (renderer, rm) {
      * @private
      * @type {Array.<number>}
      */
-    this.updateFrames = [];
+    this.updateFramesA = [];
+    /**
+     * @private
+     * @type {Array.<number>}
+     */
+    this.updateFramesB = [];
+    /**
+     * @private
+     * @type {Array.<number>}
+     */
+    this.updateLerps = [];
     /**
      * @private
      * @type {Array.<boolean>}
@@ -133,15 +143,18 @@ game.ModelManager.prototype.syncWithRenderer = function () {
         if (instance.isDirty()) {
             this.updateIds.push(instance.id);
             this.updateMatrices.push(instance.getMatrix());
-            this.updateFrames.push(instance.getFrame());
+            this.updateFramesA.push(instance.getFrameA());
+            this.updateFramesB.push(instance.getFrameB());
+            this.updateLerps.push(instance.getLerp());
             this.updateVisibility.push(instance.getVisibility());
             instance.clear();
         }
     }
-    this.renderer.updateModels(this.updateIds, this.updateMatrices, this.updateFrames);
+    this.renderer.updateModels(this.updateIds, this.updateMatrices, this.updateFramesA,
+                               this.updateFramesB, this.updateLerps);
     this.renderer.setModelsVisibility(this.updateIds, this.updateVisibility);
-    this.updateIds.length = this.updateMatrices.length = this.updateFrames.length
-        = this.updateVisibility.length = 0;
+    this.updateIds.length = this.updateMatrices.length = this.updateFramesA.length
+        = this.updateFramesB.length = this.updateLerps.length = this.updateVisibility.length = 0;
 };
 
 /**

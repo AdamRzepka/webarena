@@ -128,7 +128,7 @@ renderer.Renderer.prototype.render = function () {
         meshInst, modelInst, meshBase,
         skinNum,
         shader, stage,
-        intFrame, nextFrame, lerpWeight, indexId, vertexId, vertex2Id,
+        frameA, frameB, lerpWeight, indexId, vertexId, vertex2Id,
         time = 0, // @todo
         gl = this.gl_;
 
@@ -157,12 +157,12 @@ renderer.Renderer.prototype.render = function () {
 		// if it is default shader, use texture from meshBase
 		this.materialManager_.bindTexture(meshInst.material.defaultTexture, stage.program);
 	    }
-            intFrame = Math.floor(modelInst.getFrame());
-            nextFrame = Math.ceil(modelInst.getFrame());
-            lerpWeight = modelInst.getFrame() - intFrame;
+            frameA = modelInst.getFrameA();
+            frameB = modelInst.getFrameB();
+            lerpWeight = modelInst.getLerp();
             indexId = this.indexBuffers_[meshBase.geometry.indexBufferId];
-            vertexId = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[intFrame]];
-            vertex2Id = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[nextFrame]]
+            vertexId = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameA]];
+            vertex2Id = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameB]]
                     || vertexId;
             
 	    base.Mat4.multiply(this.viewMtx_, modelInst.getMatrix(), this.modelViewMtx_);
@@ -321,13 +321,16 @@ renderer.Renderer.prototype.addMeshInstances = function (modelInstance) {
  * @public
  * @param {Array.<number>} modelsInstancesIds
  * @param {Array.<base.Mat4>} matrices
- * @param {Array.<number>} frames
+ * @param {Array.<number>} framesA
+ * @param {Array.<number>} framesB
+ * @param {Array.<number>} lerps
  */
-renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrices, frames) {
+renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrices, framesA, framesB, lerps) {
     var i,
         model;
 
-    if (modelsInstancesIds.length != matrices.length || matrices.length != frames.length) {
+    if (modelsInstancesIds.length !== matrices.length || matrices.length !== framesA.length
+       || framesA.length !== framesB.length || framesB.length != lerps.length) {
 	this.logger_.log(goog.debug.Logger.Level.SEVERE,
 			"Arrays passed to updateModels must have the same length");
 	return;
@@ -342,7 +345,7 @@ renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrice
 	    continue;
 	}
 	model.setMatrix(matrices[i]);
-	model.setFrame(frames[i]);
+	model.setFrameLerp(framesA[i], framesB[i], lerps[i]);
     }
 };
 

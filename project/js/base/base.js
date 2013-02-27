@@ -172,7 +172,9 @@ base.ModelInstance = function(id, baseModel, skinId) {
      * @private
      * @type {number}
      */
-    this.frame_ = 0;
+    this.frameA_ = 0;
+    this.frameB_ = 0;
+    this.lerp_ = 0;
     /**
      * @private
      * @type {boolean}
@@ -225,8 +227,24 @@ base.ModelInstance.prototype.setMatrix = function (matrix) {
  * @public
  * @return {number}
  */
-base.ModelInstance.prototype.getFrame = function () {
-    return this.frame_;
+base.ModelInstance.prototype.getFrameA = function () {
+    return this.frameA_;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+base.ModelInstance.prototype.getFrameB = function () {
+    return this.frameB_;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+base.ModelInstance.prototype.getLerp = function () {
+    return this.lerp_;
 };
 
 /**
@@ -234,10 +252,29 @@ base.ModelInstance.prototype.getFrame = function () {
  * @param {number} frame
  */
 base.ModelInstance.prototype.setFrame = function (frame) {
-    goog.asserts.assert(frame >= 0 && frame < this.baseModel.framesCount);
-    this.frame_ = frame;
+    goog.asserts.assert(frame >= 0 && frame <= this.baseModel.framesCount - 1);
+    this.frameA_ = Math.floor(frame);
+    this.frameB_ = Math.ceil(frame);
+    this.lerp_ = frame - this.frameA_;
     this.dirty_ = true;
 };
+
+/**
+ * @public
+ * @param {number} frameA integer frame
+ * @param {number} frameB integer frame
+ * @param {number} lerp weight of frameB (0-1)
+ * Interpolation between two arbitrary frames.
+ */
+base.ModelInstance.prototype.setFrameLerp = function (frameA, frameB, lerp) {
+    goog.asserts.assert(frameA >= 0 && frameA <= this.baseModel.framesCount - 1);
+    goog.asserts.assert(frameB >= 0 && frameB <= this.baseModel.framesCount - 1);
+    this.frameA_ = Math.round(frameA);
+    this.frameB_ = Math.round(frameB);
+    this.lerp_ = lerp;
+    this.dirty_ = true;
+};
+
 
 /**
  * @public

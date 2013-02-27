@@ -43,9 +43,12 @@ base.IRenderer.prototype.registerModelInstance._CROSS_WORKER_ = true;
  * @public
  * @param {Array.<number>} modelsInstancesIds
  * @param {Array.<base.Mat4>} matrices
- * @param {Array.<number>} frames
+ * @param {Array.<number>} framesA
+ * @param {Array.<number>} framesB
+ * @param {Array.<number>} lerps
  */
-base.IRenderer.prototype.updateModels = function (modelsInstancesIds, matrices, frames) {};
+base.IRenderer.prototype.updateModels = function (modelsInstancesIds, matrices, framesA,
+                                                  framesB, lerps) {};
 base.IRenderer.prototype.updateModels._CROSS_WORKER_ = true;
 /**
  * @public
