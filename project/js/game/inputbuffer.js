@@ -17,6 +17,7 @@
 
 'use strict';
 
+goog.require('goog.array');
 goog.require('base.IInputHandler');
 goog.provide('game.InputBuffer');
 
@@ -29,12 +30,17 @@ game.InputBuffer = function () {
      * @private
      * @type {Array.<boolean>}
      */
-    this.actionState_ = [];
+    this.nextActionState_ = goog.array.repeat(false, game.InputBuffer.BUFFER_SIZE);
     /**
      * @private
      * @type {Array.<boolean>}
      */
-    this.prevActionState_ = [];
+    this.actionState_ = goog.array.repeat(false, game.InputBuffer.BUFFER_SIZE);
+    /**
+     * @private
+     * @type {Array.<boolean>}
+     */
+    this.prevActionState_ = goog.array.repeat(false, game.InputBuffer.BUFFER_SIZE);
 
     // cursor position is buffered
     /**
@@ -49,6 +55,8 @@ game.InputBuffer = function () {
     this.nextCursor_ = {dx: 0, dy: 0};
 };
 
+game.InputBuffer.BUFFER_SIZE = 128;
+
 /**
  * @enum
  */
@@ -60,7 +68,10 @@ game.InputBuffer.Action = {
     UP: 87, // W
     DOWN: 83, // S
     LEFT: 65, // A
-    RIGHT: 68 // D
+    RIGHT: 68, // D
+    CHANGING: 49, // 1
+    KILL: 50, // 2
+    RESPAWN: 51 // 3
 };
 
 /**
@@ -68,9 +79,15 @@ game.InputBuffer.Action = {
  * Call this at the beginning of each game step.
  */
 game.InputBuffer.prototype.step = function () {
+    var i;
     this.cursor_.dx = this.nextCursor_.dx;
     this.cursor_.dy = this.nextCursor_.dy;
     this.nextCursor_.dx = this.nextCursor_.dy = 0;
+
+    for (i = 0; i < game.InputBuffer.BUFFER_SIZE; ++i) {
+        this.prevActionState_[i] = this.actionState_[i];
+        this.actionState_[i] = this.nextActionState_[i];
+    }
 };
 /**
  * @public
@@ -102,8 +119,8 @@ game.InputBuffer.prototype.getCursor = function () {
  * Called by DOM event handler
  */
 game.InputBuffer.prototype.onKeyUp = function (key) {
-    this.prevActionState_[key] = this.actionState_[key];
-    this.actionState_[key] = false;
+//    this.prevActionState_[key] = this.actionState_[key];
+    this.nextActionState_[key] = false;
 };
 
 base.makeUnremovable(game.InputBuffer.prototype.onKeyUp);
@@ -114,8 +131,8 @@ base.makeUnremovable(game.InputBuffer.prototype.onKeyUp);
  * Called by DOM event handler
  */
 game.InputBuffer.prototype.onKeyDown = function (key) {
-    this.prevActionState_[key] = this.actionState_[key];
-    this.actionState_[key] = true;
+//    this.prevActionState_[key] = this.actionState_[key];
+    this.nextActionState_[key] = true;
 };
 
 base.makeUnremovable(game.InputBuffer.prototype.onKeyDown);
