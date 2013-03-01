@@ -94,6 +94,11 @@ game.CharacterController = function(bsp, input, player) {
     this.direction = base.Vec3.create([0, 0, 0]);
     /**
      * @private
+     * @type {base.Vec3}
+     */
+    this.directionTrans = base.Vec3.create([0, 0, 0]);
+    /**
+     * @private
      * @type {number}
      */
     this.xAngle = Math.PI / 2;
@@ -213,8 +218,11 @@ game.CharacterController.prototype.respawn = function (position, zAngle) {
  */
 game.CharacterController.prototype.update = function () {
     var dir = this.direction;
-    base.Vec3.setZero(dir);
+    var torsoState = game.Player.TorsoStates.IDLE;
+    var legsState = game.Player.LegsStates.IDLE;
     
+    base.Vec3.setZero(dir);
+
     if (this.input.getAction(game.InputBuffer.Action.UP)) {
 	dir[1] += 1;
     }
@@ -227,35 +235,78 @@ game.CharacterController.prototype.update = function () {
     if (this.input.getAction(game.InputBuffer.Action.RIGHT)) {
 	dir[0] += 1;
     }
-    this.zAngle -= this.input.getCursor().dx / 200.0;
-    if (this.zAngle > 2 * Math.PI) {
-        this.zAngle -= 2 * Math.PI;
-    }
-    if (this.zAngle < 0) {
-        this.zAngle += 2 * Math.PI;
-    }
 
-    this.xAngle -= this.input.getCursor().dy / 200.0;
-    if (this.xAngle > Math.PI) {
-        this.xAngle = Math.PI;
-    }
-    if (this.xAngle < 0) {
-        this.xAngle = 0;
+    if (!this.player_.isDead()) {
+        this.zAngle -= this.input.getCursor().dx / 200.0;
+        if (this.zAngle > 2 * Math.PI) {
+            this.zAngle -= 2 * Math.PI;
+        }
+        if (this.zAngle < 0) {
+            this.zAngle += 2 * Math.PI;
+        }
+
+        this.xAngle -= this.input.getCursor().dy / 200.0;
+        if (this.xAngle > Math.PI) {
+            this.xAngle = Math.PI;
+        }
+        if (this.xAngle < 0) {
+            this.xAngle = 0;
+        }
     }
 
     base.Mat4.identity(this.camMtx);
     base.Mat4.rotateZ(this.camMtx, this.zAngle);
         
-    base.Mat4.multiplyVec3(this.camMtx, dir);
-        
-    this.move(dir);
+    base.Mat4.multiplyVec3(this.camMtx, dir, this.directionTrans);
 
-    if (this.input.hasActionStarted(game.InputBuffer.Action.JUMP)) {
-        this.jump();
+    if (!this.player_.isDead() || !this.onGround)
+        this.move(this.directionTrans);
+
+    if (base.Vec3.length2(this.velocity) > 0.01) {
+        legsState = game.Player.LegsStates.RUN;
+        if (this.input.getAction(game.InputBuffer.Action.WALK)) {
+            legsState = game.Player.LegsStates.WALK;            
+        }
+        
+        if (this.input.getAction(game.InputBuffer.Action.CROUCH)) {
+            legsState = game.Player.LegsStates.CROUCH;
+        }        
+    } else if (this.input.getAction(game.InputBuffer.Action.CROUCH)) {
+        legsState = game.Player.LegsStates.IDLE_CROUCH;
+    }
+    
+    if (!this.onGround) {
+        legsState = game.Player.LegsStates.IN_AIR;
     }
 
+    if (!this.player_.isDead() && this.onGround
+        && this.input.hasActionStarted(game.InputBuffer.Action.JUMP)) {
+        this.jump();
+        legsState = game.Player.LegsStates.JUMP;
+    }
+
+    if (this.input.hasActionStarted(game.InputBuffer.Action.FIRE)) {
+        torsoState = game.Player.TorsoStates.ATTACKING;
+    }
+
+    if (this.input.hasActionStarted(game.InputBuffer.Action.CHANGING)) {
+        torsoState = game.Player.TorsoStates.CHANGING;
+    }
+
+    if (this.input.hasActionStarted(game.InputBuffer.Action.KILL)) {
+        this.player_.kill();
+    }
+
+    
     this.buildCameraMatrix_();
-    this.player_.update(this.camMtx, this.position, this.zAngle, this.xAngle, this.velocity, dir);
+    this.player_.update(torsoState,
+                        legsState,
+                        this.position,
+                        this.velocity,
+                        dir,
+                        this.zAngle,
+                        this.xAngle,
+                        this.camMtx);
 };
 
 /**
@@ -464,6 +515,11 @@ game.CharacterController.prototype.walkMove = function(dir) {
     this.applyFriction();
     
     var speed = base.Vec3.length(dir) * game.CharacterController.SCALE;
+
+    if (this.input.getAction(game.InputBuffer.Action.CROUCH) ||
+        this.input.getAction(game.InputBuffer.Action.WALK)) {
+        speed *= 0.5;
+    }
     
     this.accelerate(dir, speed, game.CharacterController.ACCELERATE);
     

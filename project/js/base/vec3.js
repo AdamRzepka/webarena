@@ -303,6 +303,19 @@ base.Vec3.length = function (vec) {
 };
 
 /**
+ * Caclulates the length^2 of a base.Vec3
+ *
+ * @param {base.Vec3} vec base.Vec3 to calculate length of
+ *
+ * @returns {number} Length of vec
+ */
+base.Vec3.length2 = function (vec) {
+    var x = vec[0], y = vec[1], z = vec[2];
+    return x * x + y * y + z * z;
+};
+
+
+/**
  * Caclulates the dot product of two base.Vec3s
  *
  * @param {base.Vec3} vec First operand

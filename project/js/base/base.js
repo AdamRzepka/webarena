@@ -422,3 +422,13 @@ base.makeUnremovable = function (fun) {
         fun.apply(goog.global); // it'll never be called
     }
 };
+
+base.clamp = function (x, min, max) {
+    if (x >= max) {
+        return max;
+    } else if (x <= min) {
+        return min;
+    } else {
+        return x;
+    }
+};

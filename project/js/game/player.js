@@ -89,8 +89,15 @@ game.Player = function (mm, rm, name, skin) {
      */
     this.animations = this.loadAnimations(path, rm);
 
+    this.legsState = game.Player.LegsStates.IDLE;
+    this.torsoState = game.Player.TorsoStates.IDLE;
+
     this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0);
     this.torso.startAnimation(this.animations[game.Player.Animations.TORSO_STAND], 0);
+
+    this.lastYaw = 0;
+    this.targetLegsAngle = 0;
+    this.legsAngle = 0;
     
     that.head.model.setVisibility(visible);
     that.torso.model.setVisibility(visible);
@@ -111,16 +118,46 @@ game.Player.Tags = {
     WEAPON: 'tag_weapon'
 };
 
-game.Player.prototype.startJump = function (back) {
+/**
+ * @enum {number}
+ */
+game.Player.TorsoStates = {
+    DEATH: -1,
+    IDLE: 11,
+    ATTACKING: 7,
+    ATTACKING2: 8,
+    CHANGING: -2
 };
 
-game.Player.prototype.setOnGround = function () {
+game.Player.LegsStates = {
+    // legs
+    DEATH: -1,
+    IDLE: 22,
+    RUN: 15,
+    WALK: 14,
+    CROUCH: 13,
+    IDLE_CROUCH: 23,
+    IN_AIR: -2,
+    JUMP: 18
 };
 
-game.Player.prototype.setCrouch = function () {
+game.Player.prototype.isDead = function () {
+    return this.torsoState === game.Player.TorsoStates.DEATH;
 };
 
-game.Player.prototype.setAttacking = function () {
+game.Player.prototype.kill = function () {
+    this.torso.startAnimation(this.animations[game.Player.Animations.BOTH_DEATH1], 0.1);
+    this.torsoState = game.Player.TorsoStates.DEATH;
+    this.legs.startAnimation(this.animations[game.Player.Animations.BOTH_DEATH1], 0.1);
+    this.legsState = game.Player.LegsStates.DEATH;
+};
+
+game.Player.prototype.respawn = function () {
+    this.legsState = game.Player.LegsStates.IDLE;
+    this.torsoState = game.Player.TorsoStates.IDLE;
+
+    this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0);
+    this.torso.startAnimation(this.animations[game.Player.Animations.TORSO_STAND], 0);
 };
 
 /**
@@ -132,29 +169,117 @@ game.Player.prototype.setAttacking = function () {
  * @param {base.Vec3} velocity
  * @param {base.Vec3} direction
  */
-game.Player.prototype.update = function (camMtx, position, yaw, pitch, velocity, direction) {
-    var legsMtx, torsoMtx, headMtx, weaponMtx;
+game.Player.prototype.update = function (torsoState,
+                                         legsState,
+                                         position,
+                                         velocity,
+                                         direction,
+                                         yaw,
+                                         pitch,
+                                         camMtx) {
+    var animation = 0;
 
-    if (base.Vec3.length(velocity) > 0.01 &&
-        this.legs.animation.number != game.Player.Animations.LEGS_RUN) {
-        this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_RUN], 0.1);
-    } else if (base.Vec3.length(velocity) <= 0.01 &&
-               this.legs.animation.number == game.Player.Animations.LEGS_RUN) {
-        this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0.1);
+    if (torsoState !== this.torsoState && this.torsoState !== game.Player.TorsoStates.DEATH
+       && (this.torsoState === game.Player.TorsoStates.IDLE ||
+           this.torsoState === game.Player.TorsoStates.ATTACKING ||
+           torsoState === game.Player.TorsoStates.DEATH)) {
+        if (torsoState > 0) {
+            animation = torsoState;
+        } else if (torsoState === game.Player.TorsoStates.DEATH) {
+            animation = game.Player.Animations.BOTH_DEATH1;
+        } else if (torsoState === game.Player.TorsoStates.CHANGING) {
+            animation = game.Player.Animations.TORSO_DROP;
+        } else {
+            goog.asserts.assert.fail('Wrong torso state');
+        }
+        this.torso.startAnimation(this.animations[animation], 0.1);
+        this.torsoState = torsoState;
     }
-        
+
+    if (legsState !== this.legsState && this.legsState !== game.Player.LegsStates.DEATH) {
+        switch (legsState) {
+        case game.Player.LegsStates.JUMP:
+            animation = (direction[1] < 0 ? game.Player.Animations.LEGS_JUMPB :
+                         game.Player.Animations.LEGS_JUMP);
+            break;
+        case game.Player.LegsStates.RUN:
+            animation = (direction[1] < 0 ? game.Player.Animations.LEGS_BACK :
+                         game.Player.Animations.LEGS_RUN);
+            break;
+        case game.Player.LegsStates.DEATH:
+            animation = game.Player.Animations.BOTH_DEATH1;
+            break;
+        case game.Player.LegsStates.IN_AIR:
+            animation = game.Player.Animations.LEGS_IDLE;
+            break;
+        default:
+            animation = legsState;
+            break;
+        }
+
+        this.legs.startAnimation(this.animations[animation], 0.1);
+        this.legsState = legsState;
+    }
+
+    if (this.torso.isAnimationOver()) {
+        switch (this.torsoState) {
+        case game.Player.TorsoStates.DEATH:
+            animation = game.Player.Animations.BOTH_DEAD1;
+            break;
+        case game.Player.TorsoStates.CHANGING:
+            if (this.torso.animation.number === game.Player.Animations.TORSO_DROP) {
+                animation = game.Player.Animations.TORSO_RAISE;
+            } else {
+                animation = game.Player.Animations.TORSO_STAND;
+                this.torsoState = game.Player.TorsoStates.IDLE;
+            }
+            break;
+        // case game.Player.TorsoStates.ATTACKING:
+        //     break;
+        default:
+            this.torsoState = game.Player.TorsoStates.IDLE;
+            animation = game.Player.Animations.TORSO_STAND;
+            break;
+        }
+        this.torso.startAnimation(this.animations[animation], 0);
+    }
+    
+    if (this.legs.isAnimationOver()) {
+        switch (this.legsState) {
+        case game.Player.LegsStates.JUMP:
+            this.legsState = game.Player.LegsStates.IN_AIR;
+            animation = game.Player.Animations.LEGS_IDLE;
+            break;
+        case game.Player.LegsStates.DEATH:
+            animation = game.Player.Animations.BOTH_DEAD1;
+            break;
+        default:
+            this.legsState = game.Player.LegsStates.IDLE;
+            animation = game.Player.Animations.LEGS_IDLE;
+            break;
+        }
+        this.legs.startAnimation(this.animations[animation], 0);
+    }
+
     this.legs.update(game.globals.TIME_STEP);
     this.torso.update(game.globals.TIME_STEP);
 
+    this.updateMatrices(position, direction, yaw, pitch, camMtx);
+};
+
+game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camMtx) {
+    var legsMtx, torsoMtx, headMtx, weaponMtx;
+    
     legsMtx = this.legs.model.getMatrix();
     base.Mat4.identity(legsMtx);
     base.Mat4.translate(legsMtx, position);
     base.Mat4.rotateZ(legsMtx, yaw + Math.PI * 0.5);
-    this.legs.model.setMatrix(legsMtx);
 
     torsoMtx = this.torso.model.getMatrix();
     base.Mat4.multiply(legsMtx, this.legs.tags[this.torsoTag],
                        torsoMtx);
+    // make torso move with pitch
+    base.Mat4.rotateY(torsoMtx, -base.clamp(pitch, 0.5, 2.8) + Math.PI * 0.5);
     this.torso.model.setMatrix(torsoMtx);
 
     headMtx = this.head.model.getMatrix();
@@ -171,6 +296,50 @@ game.Player.prototype.update = function (camMtx, position, yaw, pitch, velocity,
         base.Mat4.multiply(weaponMtx, game.Player.WEAPON_ROT, weaponMtx);
     }
     this.weapon.setMatrix(weaponMtx);
+
+    // correct legs angle movement
+    if (this.legsState === game.Player.LegsStates.IDLE) {
+        if (Math.abs(yaw - this.lastYaw) > 0.5) {
+            if (this.legs.animation.number === game.Player.Animations.LEGS_IDLE) {
+                this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_TURN], 0);
+            }
+            this.lastYaw = yaw;
+        }
+    } else {
+        this.lastYaw = yaw;
+    }
+    
+    var angle = 0;
+    
+    if (this.legsState >= game.Player.LegsStates.CROUCH &&
+        this.legsState <= game.Player.LegsStates.RUN) {
+        if (dir[1] === 0) {
+            if (dir[0] === -1) {
+                angle = Math.PI * 0.5;
+            } else if (dir[0] === 1) {
+                angle = -Math.PI * 0.5;
+            }
+        } else if (dir[1] === 1) {
+            if (dir[0] === -1) {
+                angle = Math.PI * 0.25;
+            } else if (dir[0] === 1) {
+                angle = -Math.PI * 0.25;
+            }
+        } else {
+            if (dir[0] === -1) {
+                angle = -Math.PI * 0.25;
+            } else if (dir[0] === 1) {
+                angle = Math.PI * 0.25;
+            }
+            
+        }
+        this.targetLegsAngle = angle;
+        if (this.legsAngle !== this.targetLegsAngle) {
+            this.legsAngle += (this.targetLegsAngle - this.legsAngle) * 0.2;
+        }
+        base.Mat4.rotateZ(legsMtx, this.legsAngle);
+    }
+    this.legs.model.setMatrix(legsMtx);
 
 };
 
@@ -301,6 +470,7 @@ game.Player.Entity = function (model) {
  * @param {number} [delayTime] currently not used
  */
 game.Player.Entity.prototype.startAnimation = function (animation, lerpTime, delayTime) {
+    goog.asserts.assert(animation);
     delayTime = delayTime || 0;
     if (lerpTime > 0 && this.animation) {
         this.oldAnimation = this.animation;
@@ -368,6 +538,11 @@ game.Player.Entity.prototype.update = function (dt) {
     }
 
     this.calcTags();
+};
+
+game.Player.Entity.prototype.isAnimationOver = function () {
+    return (this.animation.loopFrames === 0 &&
+            this.animFrame === this.animation.length - 1);
 };
 
 /**
@@ -461,7 +636,8 @@ game.Player.prototype.loadAnimations = function (playerPath, rm) {
     while (++i <= game.Player.Animations.MAX_ANIMATIONS) {
         animations[i] = null;
     }
-
+    
+    animations[game.Player.Animations.LEGS_TURN].loopFrames = 0;
     // animations[game.Player.Animation.LEGS_BACKCR] = goog.object.clone(
     //     animations[game.Player.Animations.LEGS_WALKCR]);
     // animations[game.Player.Animation.LEGS_BACKCR].reversed = true;
