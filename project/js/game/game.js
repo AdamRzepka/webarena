@@ -77,7 +77,15 @@ game.init = function (broker) {
         render.updateCamera(characterController.getCameraMatrix());
 
         function update () {
+            var spawnPoint;
             input.step();
+
+            if (input.hasActionStarted(game.InputBuffer.Action.RESPAWN)) {
+                spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+        
+                characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
+                    spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
+            }
 
             if (game.globals.freeCameraControl || game.globals.freeCamera) {
                 camera.update();
@@ -95,6 +103,5 @@ game.init = function (broker) {
         setInterval(update, game.globals.TIME_STEP_MS);
     });
 };
-
 
 goog.exportSymbol('game.init', game.init);

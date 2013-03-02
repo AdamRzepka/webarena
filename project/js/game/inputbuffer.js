@@ -119,7 +119,6 @@ game.InputBuffer.prototype.getCursor = function () {
  * Called by DOM event handler
  */
 game.InputBuffer.prototype.onKeyUp = function (key) {
-//    this.prevActionState_[key] = this.actionState_[key];
     this.nextActionState_[key] = false;
 };
 
@@ -131,7 +130,6 @@ base.makeUnremovable(game.InputBuffer.prototype.onKeyUp);
  * Called by DOM event handler
  */
 game.InputBuffer.prototype.onKeyDown = function (key) {
-//    this.prevActionState_[key] = this.actionState_[key];
     this.nextActionState_[key] = true;
 };
 

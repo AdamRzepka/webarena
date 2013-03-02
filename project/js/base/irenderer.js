@@ -60,6 +60,14 @@ base.IRenderer.prototype.updateModel = function (modelInstanceId, matrix, frame)
 base.IRenderer.prototype.updateModel._CROSS_WORKER_ = true;
 /**
  * @public
+ * @param {Array.<number>} modelsInstancesIds
+ * @param {Array.<boolean>} visibilityArray
+ */
+base.IRenderer.prototype.setModelsVisibility = function (modelsInstancesIds, visibilityArray) {};
+base.IRenderer.prototype.setModelsVisibility._CROSS_WORKER_ = true;
+
+/**
+ * @public
  * @param {base.Mat4} cameraMatrix inversed view matrix
  */
 base.IRenderer.prototype.updateCamera = function (cameraMatrix) {};

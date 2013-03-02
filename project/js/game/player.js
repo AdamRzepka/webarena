@@ -62,7 +62,6 @@ game.Player = function (mm, rm, name, skin) {
      * @type {base.ModelInstance}
      */
     this.weapon = mm.makeInstance('models/weapons2/lightning/lightning.md3');
-
     /**
      * @private
      * @const
@@ -81,23 +80,40 @@ game.Player = function (mm, rm, name, skin) {
      * @type {number}
      */
     this.weaponTag = this.torso.model.baseModel.tags.indexOf(game.Player.Tags.WEAPON);
-
     /**
      * @private
      * @const
      * @type {Array.<game.Player.Animation>}
      */
     this.animations = this.loadAnimations(path, rm);
-
+    /**
+     * @private
+     * @type {game.Player.LegsStates}
+     */
     this.legsState = game.Player.LegsStates.IDLE;
+    /**
+     * @private
+     * @type {game.Player.TorsoStates}
+     */
     this.torsoState = game.Player.TorsoStates.IDLE;
+    /**
+     * @private
+     * @type {number}
+     */
+    this.lastYaw = 0;
+    /**
+     * @private
+     * @type {number}
+     */
+    this.targetLegsAngle = 0;
+    /**
+     * @private
+     * @type {number}
+     */
+    this.legsAngle = 0;
 
     this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0);
     this.torso.startAnimation(this.animations[game.Player.Animations.TORSO_STAND], 0);
-
-    this.lastYaw = 0;
-    this.targetLegsAngle = 0;
-    this.legsAngle = 0;
     
     that.head.model.setVisibility(visible);
     that.torso.model.setVisibility(visible);
@@ -109,6 +125,29 @@ game.Player = function (mm, rm, name, skin) {
         that.legs.model.setVisibility(tppOn);
     };
 };
+
+/**
+ * @const
+ * @private
+ * @type {string}
+ */
+game.Player.PLAYERS_PATH = 'models/players/';
+/**
+ * @const
+ * @private
+ * @type {base.Vec3}
+ */
+game.Player.WEAPON_OFF = base.Vec3.create([10, -10, -4]);
+/**
+ * @const
+ * @private
+ * @type {base.Mat4}
+ */
+game.Player.WEAPON_ROT = base.Mat4.create([0, 0, -1, 0,
+        			           -1, 0, 0, 0,
+        			           0, 1, 0, 0,
+        			           0, 0, 0, 1]);
+
 /**
  * @enum {string}
  */
@@ -129,6 +168,9 @@ game.Player.TorsoStates = {
     CHANGING: -2
 };
 
+/**
+ * @enum {number}
+ */
 game.Player.LegsStates = {
     // legs
     DEATH: -1,
@@ -141,17 +183,29 @@ game.Player.LegsStates = {
     JUMP: 18
 };
 
+/**
+ * @public
+ * @return {boolean}
+ */
 game.Player.prototype.isDead = function () {
     return this.torsoState === game.Player.TorsoStates.DEATH;
 };
-
+/**
+ * @public
+ */
 game.Player.prototype.kill = function () {
-    this.torso.startAnimation(this.animations[game.Player.Animations.BOTH_DEATH1], 0.1);
+    var animations = [game.Player.Animations.BOTH_DEATH1, game.Player.Animations.BOTH_DEATH2,
+                      game.Player.Animations.BOTH_DEATH3];
+    var animation = animations[Math.floor(Math.random() * animations.length)];
+    this.torso.startAnimation(this.animations[animation], 0.1);
     this.torsoState = game.Player.TorsoStates.DEATH;
-    this.legs.startAnimation(this.animations[game.Player.Animations.BOTH_DEATH1], 0.1);
+    this.legs.startAnimation(this.animations[animation], 0.1);
     this.legsState = game.Player.LegsStates.DEATH;
 };
 
+/**
+ * @public
+ */
 game.Player.prototype.respawn = function () {
     this.legsState = game.Player.LegsStates.IDLE;
     this.torsoState = game.Player.TorsoStates.IDLE;
@@ -162,12 +216,14 @@ game.Player.prototype.respawn = function () {
 
 /**
  * @public
- * @param {base.Mat4} camMtx
+ * @param {game.Player.TorsoStates} torsoState
+ * @param {game.Player.LegsStates} legsState
  * @param {base.Vec3} position
- * @param {number} yaw
- * @param {number} pitch
  * @param {base.Vec3} velocity
  * @param {base.Vec3} direction
+ * @param {number} yaw
+ * @param {number} pitch
+ * @param {base.Mat4} camMtx
  */
 game.Player.prototype.update = function (torsoState,
                                          legsState,
@@ -190,7 +246,7 @@ game.Player.prototype.update = function (torsoState,
         } else if (torsoState === game.Player.TorsoStates.CHANGING) {
             animation = game.Player.Animations.TORSO_DROP;
         } else {
-            goog.asserts.assert.fail('Wrong torso state');
+            goog.asserts.fail('Wrong torso state');
         }
         this.torso.startAnimation(this.animations[animation], 0.1);
         this.torsoState = torsoState;
@@ -224,7 +280,7 @@ game.Player.prototype.update = function (torsoState,
     if (this.torso.isAnimationOver()) {
         switch (this.torsoState) {
         case game.Player.TorsoStates.DEATH:
-            animation = game.Player.Animations.BOTH_DEAD1;
+            animation = this.torso.animation.number + 1;// game.Player.Animations.BOTH_DEAD1;
             break;
         case game.Player.TorsoStates.CHANGING:
             if (this.torso.animation.number === game.Player.Animations.TORSO_DROP) {
@@ -251,7 +307,11 @@ game.Player.prototype.update = function (torsoState,
             animation = game.Player.Animations.LEGS_IDLE;
             break;
         case game.Player.LegsStates.DEATH:
-            animation = game.Player.Animations.BOTH_DEAD1;
+            if (this.legs.animation.number % 2 === 0) {
+                animation = this.legs.animation.number + 1;//game.Player.Animations.BOTH_DEAD1;
+            } else {
+                animation = this.legs.animation.number;
+            }
             break;
         default:
             this.legsState = game.Player.LegsStates.IDLE;
@@ -267,8 +327,17 @@ game.Player.prototype.update = function (torsoState,
     this.updateMatrices(position, direction, yaw, pitch, camMtx);
 };
 
+/**
+ * @private
+ * @param {base.Vec3} position
+ * @param {base.Vec3} dir
+ * @param {number} yaw
+ * @param {number} pitch
+ * @param {base.Mat4} camMtx
+ */
 game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camMtx) {
     var legsMtx, torsoMtx, headMtx, weaponMtx;
+    var angle = 0;
     
     legsMtx = this.legs.model.getMatrix();
     base.Mat4.identity(legsMtx);
@@ -309,8 +378,6 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
         this.lastYaw = yaw;
     }
     
-    var angle = 0;
-    
     if (this.legsState >= game.Player.LegsStates.CROUCH &&
         this.legsState <= game.Player.LegsStates.RUN) {
         if (dir[1] === 0) {
@@ -344,26 +411,48 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
 };
 
 /**
- * @const
  * @private
- * @type {string}
+ * @param {string} playerPath
+ * @param {files.ResourceManager} rm
+ * @return {Array.<game.Player.Animation>}
+ * Parse file animation.cfg
  */
-game.Player.PLAYERS_PATH = 'models/players/';
-/**
- * @const
- * @private
- * @type {base.Vec3}
- */
-game.Player.WEAPON_OFF = base.Vec3.create([10, -10, -4]);
-/**
- * @const
- * @private
- * @type {base.Mat4}
- */
-game.Player.WEAPON_ROT = base.Mat4.create([0, 0, -1, 0,
-        			           -1, 0, 0, 0,
-        			           0, 1, 0, 0,
-        			           0, 0, 0, 1]);
+game.Player.prototype.loadAnimations = function (playerPath, rm) {
+    var res;
+    var i = 0;
+    var file = rm.getConfigFile(playerPath + 'animation.cfg');
+    var re = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/gm;
+    var animations = [];
+
+    if (!file) {
+        return animations;
+    }
+
+    while ((res = re.exec(file)) !== null) {
+        animations[i] = new game.Player.Animation(i,
+                                                  parseInt(res[1], 10),
+                                                  parseInt(res[2], 10),
+                                                  parseInt(res[3], 10),
+                                                  parseInt(res[4], 10));
+        ++i;
+    }
+    goog.asserts.assert(i == game.Player.Animations.TORSO_GETFLAG);
+
+    while (++i <= game.Player.Animations.MAX_ANIMATIONS) {
+        animations[i] = null;
+    }
+    
+    animations[game.Player.Animations.LEGS_TURN].loopFrames = 0;
+    // animations[game.Player.Animation.LEGS_BACKCR] = goog.object.clone(
+    //     animations[game.Player.Animations.LEGS_WALKCR]);
+    // animations[game.Player.Animation.LEGS_BACKCR].reversed = true;
+    
+    // animations[game.Player.Animation.LEGS_BACKWALK] = goog.object.clone(
+    //     animations[game.Player.Animations.LEGS_WALK]);
+    // animations[game.Player.Animation.LEGS_BACKWALK].reversed = true;
+    
+    return animations;
+};
 
 /**
  * @constructor
@@ -487,6 +576,9 @@ game.Player.Entity.prototype.startAnimation = function (animation, lerpTime, del
     this.animFrame = 0;
 };
 
+/**
+ * @private
+ */
 game.Player.Entity.prototype.calcTags = function () {
     var i, frameA, frameB, tagA, tagB, lerp;
     for (i = 0; i < this.tags.length; ++i) {
@@ -510,6 +602,10 @@ game.Player.Entity.prototype.calcTags = function () {
     }
 };
 
+/**
+ * @public
+ * @param {number} dt
+ */
 game.Player.Entity.prototype.update = function (dt) {
     // @todo: make this function network ready (big dt)
     if (this.lerping) {
@@ -540,6 +636,10 @@ game.Player.Entity.prototype.update = function (dt) {
     this.calcTags();
 };
 
+/**
+ * @public
+ * @return {boolean}
+ */
 game.Player.Entity.prototype.isAnimationOver = function () {
     return (this.animation.loopFrames === 0 &&
             this.animFrame === this.animation.length - 1);
@@ -603,48 +703,4 @@ game.Player.Animations = {
     FLAG_STAND2RUN: 36,
 
     MAX_TOTALANIMATIONS: 37
-};
-
-/**
- * @private
- * @param {string} playerPath
- * @param {files.ResourceManager} rm
- * @return {Array.<game.Player.Animation>}
- * Parse file animation.cfg
- */
-game.Player.prototype.loadAnimations = function (playerPath, rm) {
-    var res;
-    var i = 0;
-    var file = rm.getConfigFile(playerPath + 'animation.cfg');
-    var re = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/gm;
-    var animations = [];
-
-    if (!file) {
-        return animations;
-    }
-
-    while ((res = re.exec(file)) !== null) {
-        animations[i] = new game.Player.Animation(i,
-                                                  parseInt(res[1], 10),
-                                                  parseInt(res[2], 10),
-                                                  parseInt(res[3], 10),
-                                                  parseInt(res[4], 10));
-        ++i;
-    }
-    goog.asserts.assert(i == game.Player.Animations.TORSO_GETFLAG);
-
-    while (++i <= game.Player.Animations.MAX_ANIMATIONS) {
-        animations[i] = null;
-    }
-    
-    animations[game.Player.Animations.LEGS_TURN].loopFrames = 0;
-    // animations[game.Player.Animation.LEGS_BACKCR] = goog.object.clone(
-    //     animations[game.Player.Animations.LEGS_WALKCR]);
-    // animations[game.Player.Animation.LEGS_BACKCR].reversed = true;
-    
-    // animations[game.Player.Animation.LEGS_BACKWALK] = goog.object.clone(
-    //     animations[game.Player.Animations.LEGS_WALK]);
-    // animations[game.Player.Animation.LEGS_BACKWALK].reversed = true;
-    
-    return animations;
 };

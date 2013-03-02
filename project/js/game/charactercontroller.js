@@ -50,11 +50,11 @@
 
 'use strict';
 
+goog.require('game.Player');
 goog.require('base.Vec3');
 goog.require('base.Bsp');
 goog.require('game.globals');
 goog.require('game.InputBuffer');
-goog.require('game.Player');
 
 goog.provide('game.CharacterController');
 
@@ -211,7 +211,9 @@ game.CharacterController.prototype.respawn = function (position, zAngle) {
     this.position = position;
     this.zAngle = zAngle;
     this.xAngle = Math.PI / 2;
+    base.Vec3.setZero(this.velocity);
     this.buildCameraMatrix_();
+    this.player_.respawn();
 };
 /**
  * @public
@@ -518,7 +520,7 @@ game.CharacterController.prototype.walkMove = function(dir) {
 
     if (this.input.getAction(game.InputBuffer.Action.CROUCH) ||
         this.input.getAction(game.InputBuffer.Action.WALK)) {
-        speed *= 0.5;
+        speed *= 0.3;
     }
     
     this.accelerate(dir, speed, game.CharacterController.ACCELERATE);
