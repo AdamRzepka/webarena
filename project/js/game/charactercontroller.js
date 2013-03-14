@@ -401,8 +401,9 @@ game.CharacterController.prototype.applyFriction = function() {
  * @private
  */
 game.CharacterController.prototype.groundCheck = function() {
-    var checkPoint = base.Vec3.create([this.position[0], this.position[1],
-                      this.position[2] - game.CharacterController.PLAYER_RADIUS - 0.25]);
+    var checkPoint = base.Vec3.pool.acquire();
+    base.Vec3.setValues(checkPoint, this.position[0], this.position[1],
+                        this.position[2] - game.CharacterController.PLAYER_RADIUS - 0.25);
     
     this.groundTrace = this.bsp.trace(this.position, checkPoint,
                                       game.CharacterController.PLAYER_RADIUS);
@@ -424,11 +425,12 @@ game.CharacterController.prototype.groundCheck = function() {
     }
     
     this.onGround = true;
+    base.Vec3.pool.release(checkPoint);
 };
 /**
  * @private
  */
-game.CharacterController.prototype.clipVelocity = function(velIn, normal) {
+game.CharacterController.prototype.clipVelocity = function(velIn, normal, result) {
     var backoff = base.Vec3.dot(velIn, normal);
     
     if ( backoff < 0 ) {
@@ -436,9 +438,10 @@ game.CharacterController.prototype.clipVelocity = function(velIn, normal) {
     } else {
         backoff /= game.CharacterController.OVERCLIP;
     }
-    
-    var change = base.Vec3.scale(normal, backoff, base.Vec3.create([0,0,0]));
-    return base.Vec3.subtract(velIn, change, change);
+    var tmp = base.Vec3.pool.acquire();    
+    base.Vec3.scale(normal, backoff, tmp);
+    base.Vec3.subtract(velIn, tmp, result);
+    base.Vec3.pool.release(tmp);
 };
 /**
  * @private
@@ -455,8 +458,10 @@ game.CharacterController.prototype.accelerate = function(dir, speed, accel) {
         accelSpeed = addSpeed;
     }
     
-    var accelDir = base.Vec3.scale(dir, accelSpeed, base.Vec3.create([0,0,0]));
+    var accelDir = base.Vec3.pool.acquire();
+    base.Vec3.scale(dir, accelSpeed, accelDir);
     base.Vec3.add(this.velocity, accelDir);
+    base.Vec3.pool.release(accelDir);
 };
 /**
  * @private
@@ -471,9 +476,11 @@ game.CharacterController.prototype.jump = function() {
     //Make sure that the player isn't stuck in the ground
     var groundDist = base.Vec3.dot( this.position, this.groundTrace.plane.normal )
             - this.groundTrace.plane.distance - game.CharacterController.PLAYER_RADIUS;
+    var groundDir = base.Vec3.pool.acquire();
     base.Vec3.add(this.position, base.Vec3.scale(this.groundTrace.plane.normal,
                                                  groundDist + 5,
-                                                 base.Vec3.create([0, 0, 0])));
+                                                 groundDir));
+    base.Vec3.pool.release(groundDir);
     
     return true;
 };
@@ -525,7 +532,7 @@ game.CharacterController.prototype.walkMove = function(dir) {
     
     this.accelerate(dir, speed, game.CharacterController.ACCELERATE);
     
-    this.velocity = this.clipVelocity(this.velocity, this.groundTrace.plane.normal);
+    this.clipVelocity(this.velocity, this.groundTrace.plane.normal, this.velocity);
     
     if(!this.velocity[0] && !this.velocity[1]) { return; }
     
@@ -541,7 +548,8 @@ game.CharacterController.prototype.slideMove = function(gravity) {
     var bumpcount;
     var numbumps = 4;
     var planes = [];
-    var endVelocity = base.Vec3.create([0,0,0]);
+    var tmpVec = base.Vec3.pool.acquire();
+    var endVelocity = base.Vec3.pool.acquire();
     
     if ( gravity ) {
         base.Vec3.set(this.velocity, endVelocity );
@@ -551,19 +559,19 @@ game.CharacterController.prototype.slideMove = function(gravity) {
         
         if ( this.groundTrace && this.groundTrace.plane ) {
             // slide along the ground plane
-            this.velocity = this.clipVelocity(this.velocity,
-                                              this.groundTrace.plane.normal);
+            this.clipVelocity(this.velocity,
+                              this.groundTrace.plane.normal, this.velocity);
         }
     }
 
     // never turn against the ground plane
     if ( this.groundTrace && this.groundTrace.plane ) {
         planes.push(base.Vec3.set(this.groundTrace.plane.normal,
-                                  base.Vec3.create([0,0,0])));
+                                  base.Vec3.pool.acquire()));
     }
 
     // never turn against original velocity
-    planes.push(base.Vec3.normalize(this.velocity, base.Vec3.create([0,0,0])));
+    planes.push(base.Vec3.normalize(this.velocity, base.Vec3.pool.acquire()));
     
     var time_left = game.globals.TIME_STEP;
     var end = base.Vec3.create([0,0,0]);
@@ -572,7 +580,7 @@ game.CharacterController.prototype.slideMove = function(gravity) {
         // calculate position we are trying to move to
         base.Vec3.add(this.position,
                       base.Vec3.scale(this.velocity, time_left,
-                                      base.Vec3.createVal(0,0,0)), end);
+                                      tmpVec), end);
         
         // see if we can make it there
         var trace = this.bsp.trace(this.position, end, game.CharacterController.PLAYER_RADIUS);
@@ -594,8 +602,9 @@ game.CharacterController.prototype.slideMove = function(gravity) {
         
         time_left -= time_left * trace.fraction;
         
-        planes.push(base.Vec3.set(trace.plane.normal, base.Vec3.create([0,0,0])));
+        planes.push(base.Vec3.set(trace.plane.normal, base.Vec3.pool.acquire()));
 
+        var dir = base.Vec3.pool.acquire();
         //
         // modify velocity so it parallels all of the clip planes
         //
@@ -606,8 +615,10 @@ game.CharacterController.prototype.slideMove = function(gravity) {
             if ( into >= 0.1 ) { continue; } // move doesn't interact with the plane
             
             // slide along the plane
-            var clipVelocity = this.clipVelocity(this.velocity, planes[i]);
-            var endClipVelocity = this.clipVelocity(endVelocity, planes[i]);
+            var clipVelocity = base.Vec3.pool.acquire();
+            this.clipVelocity(this.velocity, planes[i], clipVelocity);
+            var endClipVelocity = base.Vec3.pool.acquire();
+            this.clipVelocity(endVelocity, planes[i], endClipVelocity);
 
             // see if there is a second plane that the new move enters
             for (var j = 0; j < planes.length; j++) {
@@ -618,14 +629,13 @@ game.CharacterController.prototype.slideMove = function(gravity) {
                 }
                 
                 // try clipping the move to the plane
-                clipVelocity = this.clipVelocity( clipVelocity, planes[j] );
-                endClipVelocity = this.clipVelocity( endClipVelocity, planes[j] );
+                this.clipVelocity( clipVelocity, planes[j], clipVelocity );
+                this.clipVelocity( endClipVelocity, planes[j], endClipVelocity);
 
                 // see if it goes back into the first clip plane
                 if ( base.Vec3.dot( clipVelocity, planes[i] ) >= 0 ) { continue; }
 
                 // slide the original velocity along the crease
-                var dir = base.Vec3.create([0,0,0]);
                 base.Vec3.cross(planes[i], planes[j], dir);
                 base.Vec3.normalize(dir);
                 var d = base.Vec3.dot(dir, this.velocity);
@@ -645,7 +655,7 @@ game.CharacterController.prototype.slideMove = function(gravity) {
                     }
                     
                     // stop dead at a tripple plane interaction
-                    this.velocity = base.Vec3.createVal(0,0,0);
+                    base.Vec3.setZero(this.velocity);
                     return true;
                 }
             }
@@ -653,12 +663,22 @@ game.CharacterController.prototype.slideMove = function(gravity) {
             // if we have fixed all interactions, try another move
             base.Vec3.set( clipVelocity, this.velocity );
             base.Vec3.set( endClipVelocity, endVelocity );
+
+            base.Vec3.pool.release(clipVelocity);
+            base.Vec3.pool.release(endClipVelocity);
             break;
         }
+        base.Vec3.pool.release(dir);
     }
 
     if ( gravity ) {
         base.Vec3.set( endVelocity, this.velocity );
+    }
+
+    base.Vec3.pool.release(endVelocity);
+    base.Vec3.pool.release(tmpVec);
+    for (i = 0; i < planes.length; ++i) {
+        base.Vec3.pool.release(planes[i]);
     }
 
     return ( bumpcount !== 0 );
@@ -669,19 +689,20 @@ game.CharacterController.prototype.slideMove = function(gravity) {
  * @param {boolean} gravity
  */
 game.CharacterController.prototype.stepSlideMove = function(gravity) {
-    var start_o = base.Vec3.set(this.position, base.Vec3.create([0,0,0]));
-    var start_v = base.Vec3.set(this.velocity, base.Vec3.create([0,0,0]));
+    var start_o = base.Vec3.set(this.position, base.Vec3.pool.acquire());
+    var start_v = base.Vec3.set(this.velocity, base.Vec3.pool.acquire());
     
     if ( this.slideMove( gravity ) === false ) {
         // we got exactly where we wanted to go first try
         return;
     }
 
-    var down = base.Vec3.set(start_o, base.Vec3.createVal(0,0,0));
+    var down = base.Vec3.set(start_o, base.Vec3.pool.acquire());
     down[2] -= game.CharacterController.STEP_SIZE;
     var trace = this.bsp.trace(start_o, down, game.CharacterController.PLAYER_RADIUS);
     
-    var up = base.Vec3.create([0,0,1]);
+    var up = base.Vec3.pool.acquire();
+    up[2] = 1;
     
     // never step up when you still have up velocity
     if ( this.velocity[2] > 0 &&
@@ -689,8 +710,8 @@ game.CharacterController.prototype.stepSlideMove = function(gravity) {
         return;
     }
     
-    var down_o = base.Vec3.set(this.position, base.Vec3.create([0,0,0]));
-    var down_v = base.Vec3.set(this.velocity, base.Vec3.create([0,0,0]));
+    var down_o = base.Vec3.set(this.position, base.Vec3.pool.acquire());
+    var down_v = base.Vec3.set(this.velocity, base.Vec3.pool.acquire());
     
     base.Vec3.set(start_o, up);
     up[2] += game.CharacterController.STEP_SIZE;
@@ -714,6 +735,13 @@ game.CharacterController.prototype.stepSlideMove = function(gravity) {
         base.Vec3.set(trace.endPos, this.position);
     }
     if ( trace.fraction < 1.0 ) {
-        this.velocity = this.clipVelocity( this.velocity, trace.plane.normal );
+        this.clipVelocity( this.velocity, trace.plane.normal, this.velocity );
     }
+
+    base.Vec3.pool.release(start_o);
+    base.Vec3.pool.release(start_v);
+    base.Vec3.pool.release(down);
+    base.Vec3.pool.release(up);
+    base.Vec3.pool.release(down_o);
+    base.Vec3.pool.release(down_v);
 };

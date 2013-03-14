@@ -29,6 +29,7 @@
 
 "use strict";
 
+goog.require('base.Pool');
 goog.provide('base.Vec3');
 
 /*
@@ -406,3 +407,5 @@ base.Vec3.dist = function (vec, vec2) {
 base.Vec3.str = function (vec) {
     return '[' + vec[0] + ', ' + vec[1] + ', ' + vec[2] + ']';
 };
+
+base.Vec3.pool = new base.Pool(base.Vec3.create, base.Vec3.setZero);
