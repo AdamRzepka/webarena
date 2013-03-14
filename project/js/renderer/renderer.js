@@ -21,7 +21,6 @@ goog.require('goog.debug.Logger');
 goog.require('goog.debug.Logger.Level');
 
 goog.require('base');
-goog.require('base.IRenderer');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('renderer.MaterialManager');
@@ -52,16 +51,6 @@ renderer.Renderer = function(gl) {
     this.indexBuffers_ = [];
     /**
      * @private
-     * @type {Array.<base.Model>}
-     */
-    this.models_ = [];
-    /**
-     * @private
-     * @type {Array.<base.ModelInstance>}
-     */
-    this.modelInstances_ = [];
-    /**
-     * @private
      * @type {Array.<base.Mesh>}
      */
     this.meshes_ = [];
@@ -76,11 +65,6 @@ renderer.Renderer = function(gl) {
      * @type {renderer.MaterialManager}
      */
     this.materialManager_ = new renderer.MaterialManager(gl);
-    /**
-     * @private
-     * @type {renderer.Sky}
-     */
-    this.sky_ = new renderer.Sky();
     /**
      * @private
      * @type {base.Mat4}
@@ -182,95 +166,9 @@ renderer.Renderer.prototype.render = function () {
 
 /**
  * @public
- * @param {Array.<base.Model>} models
- * @param {base.Map.LightmapData} lightmapData
- */
-renderer.Renderer.prototype.registerMap = function (models, lightmapData) {
-    var i, j;
-
-    this.materialManager_.buildLightmap(lightmapData);
-
-    for (i = 0; i < models.length; ++i) {
-	this.addMeshes(models[i]);
-	this.insertModel_(models[i]);
-	// find mesh with sky material
-	for (j = 0; j < models[i].meshes.length; ++j) {
-	    if (models[i].meshes[j].materials[0].shader.sky) {
-		this.sky_.build(models[i].meshes[j].materials[0], this);
-	    }
-	}
-    }
-
-};
-
-base.makeUnremovable(renderer.Renderer.prototype.registerMap);
-
-/**
- * @public
  * @param {base.Model} model
  */
-renderer.Renderer.prototype.registerMd3 = function (model) {
-    this.addMeshes(model);
-    this.insertModel_(model);
-};
-
-base.makeUnremovable(renderer.Renderer.prototype.registerMd3);
-
-/**
- * @public
- * @param {number} id of modelInstance
- * @param {number} modelBaseId id of model
- * @param {base.Mat4} matrix
- * @param {string} [skinName]
- */
-renderer.Renderer.prototype.registerModelInstance = function (id, modelBaseId, matrix, skinName) {
-    var i,
-        baseModel = this.models_[modelBaseId],
-        skinId = -1,
-        instance = null,
-        baseMesh,
-        meshInstance;
-    
-    if (!baseModel) {
-	this.logger_.log(goog.debug.Logger.Level.SEVERE,
-			"Wrong model index in registerModelInstance: " + modelBaseId);
-	return;
-    }
-
-    skinId = baseModel.skins.indexOf(skinName || base.Model.DEFAULT_SKIN);
-    if (skinId === -1) { // default skin
-	skinId = 0;
-	this.logger_.log(goog.debug.Logger.Level.WARNING,
-			"Wrong skin name in makeModelInstance: "
-			+ skinName + ". Replaced with default.");
-    }
-
-    instance = new base.ModelInstance(
-	id,
-	baseModel,
-	skinId
-    );
-
-    instance.setMatrix(matrix);
-    i = this.meshInstances_.length;
-    this.addMeshInstances(instance);
-    // cull mesh if it has sky material
-    for (; i < this.meshInstances_.length; ++i) {
-	if (this.meshInstances_[i].material.shader.sky) {
-	    this.meshInstances_[i].culled = true;
-	}
-    }
-
-    this.insertModelInstance_(instance);
-};
-
-base.makeUnremovable(renderer.Renderer.prototype.registerModelInstance);
-
-/**
- * @public
- * @param {base.Model} model
- */
-renderer.Renderer.prototype.addMeshes = function (model) {
+renderer.Renderer.prototype.addModel = function (model) {
     var gl = this.gl_;
     var meshes = model.meshes;
     var j, materials, mesh;
@@ -298,121 +196,24 @@ renderer.Renderer.prototype.addMeshes = function (model) {
  * @public
  * @param {base.ModelInstance} modelInstance
  */
-renderer.Renderer.prototype.addMeshInstances = function (modelInstance) {
+renderer.Renderer.prototype.addModelInstance = function (modelInstance) {
     var i, baseMesh, meshInstance;
     var baseModel = modelInstance.baseModel;
     var skinId = modelInstance.skinId;
     
     for (i = 0; i < baseModel.meshes.length; ++i){
 	baseMesh = baseModel.meshes[i];
-	meshInstance =
-	    new renderer.MeshInstance(baseMesh, modelInstance,
-				      /**@type{renderer.Material}*/(baseMesh.materials[skinId]));
-	this.meshInstances_.push(meshInstance);
+        if (baseMesh.geometry && baseMesh.indicesCount > 0) {
+	    meshInstance =
+	        new renderer.MeshInstance(baseMesh,
+                                          modelInstance,
+				          /**@type{renderer.Material}*/
+                                          (baseMesh.materials[skinId]));
+	    this.meshInstances_.push(meshInstance);
+        }
     }
     
 };
-
-// renderer.Renderer.prototype.prepareForRendering = function() {
-//     // @todo
-// };
-
-/**
- * @public
- * @param {Array.<number>} modelsInstancesIds
- * @param {Array.<base.Mat4>} matrices
- * @param {Array.<number>} framesA
- * @param {Array.<number>} framesB
- * @param {Array.<number>} lerps
- */
-renderer.Renderer.prototype.updateModels = function (modelsInstancesIds, matrices, framesA, framesB, lerps) {
-    var i,
-        model;
-
-    if (modelsInstancesIds.length !== matrices.length || matrices.length !== framesA.length
-       || framesA.length !== framesB.length || framesB.length != lerps.length) {
-	this.logger_.log(goog.debug.Logger.Level.SEVERE,
-			"Arrays passed to updateModels must have the same length");
-	return;
-    }
-
-    for (i = 0; i < modelsInstancesIds.length; ++i) {
-	model = this.modelInstances_[modelsInstancesIds[i]];
-	if (!model) {
-	    this.logger_.log(goog.debug.Logger.Level.WARNING,
-			    ("Invalid model instance id passed to updateModels: "
-			     + modelsInstancesIds[i]));
-	    continue;
-	}
-	model.setMatrix(matrices[i]);
-	model.setFrameLerp(framesA[i], framesB[i], lerps[i]);
-    }
-};
-
-base.makeUnremovable(renderer.Renderer.prototype.updateModels);
-
-/**
- * @public
- * @param {number} modelInstanceId
- * @param {base.Mat4} matrix
- * @param {number} frame
- */
-renderer.Renderer.prototype.updateModel = function (modelInstanceId, matrix, frame) {
-     var model = this.modelInstances_[modelInstanceId];
-     if (model === undefined) {
-	 this.logger_.log(goog.debug.Logger.Level.WARNING,
- 			  "Invalid model instance id passed to updateModels: "
-			  + modelInstanceId);
-     }
-     model.setMatrix(matrix);
-     model.setFrame(frame);
-};
-
-base.makeUnremovable(renderer.Renderer.prototype.updateModel);
-
-/**
- * @public
- * @param {Array.<number>} modelsInstancesIds
- * @param {Array.<boolean>} visibilityArray
- */
-renderer.Renderer.prototype.setModelsVisibility = function (modelsInstancesIds, visibilityArray) {
-    var i,
-        model;
-
-    if (modelsInstancesIds.length != visibilityArray.length) {
-	this.logger_.log(goog.debug.Logger.Level.SEVERE,
-			"Arrays passed to setModelsVisibility must have the same length");
-	return;
-    }
-
-    for (i = 0; i < modelsInstancesIds.length; ++i) {
-	model = this.modelInstances_[modelsInstancesIds[i]];
-	if (!model) {
-	    this.logger_.log(goog.debug.Logger.Level.WARNING,
-			    ("Invalid model instance id passed to setModelsVisibility: "
-			     + modelsInstancesIds[i]));
-	    continue;
-	}
-	model.setVisibility(visibilityArray[i]);
-    }
-};
-
-base.makeUnremovable(renderer.Renderer.prototype.setModelsVisibility);
-
-// renderer.Renderer.prototype.setMeshVisibility = function (objectId, meshId, visible) {
-//     // @todo
-// };
-
-/**
- * @public
- * @param {base.Mat4} cameraMatrix inversed view matrix
- */
-renderer.Renderer.prototype.updateCamera = function (cameraMatrix) {
-    base.Mat4.inverse(cameraMatrix, this.viewMtx_);
-    this.sky_.updateMatrix(cameraMatrix);
-};
-
-base.makeUnremovable(renderer.Renderer.prototype.updateCamera);
 
 /**
  * @private
@@ -449,44 +250,6 @@ renderer.Renderer.prototype.createBuffers_ = function (geometryData) {
 	geometryData.vertexBufferIds.push(this.vertexBuffers_.length - 1);
     }
     
-};
-
-/**
- * @private
- * @param {base.Model} model
- * Function inserts model to proper position in this.models_ table
- */
-renderer.Renderer.prototype.insertModel_ = function(model) {
-    var size = this.models_.length;
-    var id = model.id;
-    var i;
-    goog.asserts.assert(!this.models_[id]); // is undefined or null - slot is empty
-    
-    // Filling gap between size and id with null to ensure, that the table
-    // won't be treated as a hash map by js engine.
-    for (i = size; i < id; ++i) {
-	this.models_[i] = null;
-    }
-    this.models_[id] = model;
-};
-
-/**
- * @private
- * @param {base.ModelInstance} model
- * Function inserts model to proper position in this.modelInstances_ table
- */
-renderer.Renderer.prototype.insertModelInstance_ = function(model) {
-    var size = this.modelInstances_.length;
-    var id = model.id;
-    var i;
-    goog.asserts.assert(!this.modelInstances_[id]); // is undefined or null - slot is empty
-    
-    // Filling gap between size and id with null to ensure, that the table
-    // won't be treated as a hash map by js engine.
-    for (i = size; i < id; ++i) {
-	this.modelInstances_[i] = null;
-    }
-    this.modelInstances_[id] = model;
 };
 
 
