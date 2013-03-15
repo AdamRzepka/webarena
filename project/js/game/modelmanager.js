@@ -19,7 +19,7 @@
 goog.require('goog.debug.Logger');
 
 goog.require('base.ModelInstance');
-goog.require('base.IRenderer');
+goog.require('base.IRendererScene');
 goog.require('files.ResourceManager');
 goog.require('files.md3');
 
@@ -27,7 +27,7 @@ goog.provide('game.ModelManager');
 
 /**
  * @constructor
- * @param {base.IRenderer} renderer
+ * @param {base.IRendererScene} renderer
  * @param {files.ResourceManager} rm
  * Class creates models and model instances for given path and
  * synchronizes instances with renderer.
@@ -36,7 +36,7 @@ game.ModelManager = function (renderer, rm) {
     /**
      * @private
      * @const
-     * @type {base.IRenderer}
+     * @type {base.IRendererScene}
      */
     this.renderer = renderer;
     /**

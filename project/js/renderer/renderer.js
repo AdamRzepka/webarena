@@ -24,13 +24,11 @@ goog.require('base');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('renderer.MaterialManager');
-goog.require('renderer.Sky');
 
 goog.provide('renderer.Renderer');
 
 /**
  * @constructor
- * @implements {base.IRenderer}
  * @param {WebGLRenderingContext} gl
  */
 renderer.Renderer = function(gl) {
@@ -100,7 +98,13 @@ renderer.Renderer.prototype.buildShaders = function(shaderScripts, texturesUrls)
     this.materialManager_.buildShaders(shaderScripts, texturesUrls);
 };
 
-base.makeUnremovable(renderer.Renderer.prototype.buildShaders);
+/**
+ * @public
+ * @param {base.Map.LightmapData} lightmapData
+ */
+renderer.Renderer.prototype.buildLightmap = function (lightmapData) {
+    this.materialManager_.buildLightmap(lightmapData);
+};
 
 /**
  * @public
@@ -213,6 +217,14 @@ renderer.Renderer.prototype.addModelInstance = function (modelInstance) {
         }
     }
     
+};
+
+/**
+ * @public
+ * @param {base.Mat4} cameraMatrix inversed view matrix
+ */
+renderer.Renderer.prototype.updateCameraMatrix = function (cameraMatrix) {
+    base.Mat4.inverse(cameraMatrix, this.viewMtx_);
 };
 
 /**

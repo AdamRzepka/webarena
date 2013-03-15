@@ -113,9 +113,9 @@ renderer.Sky.prototype.build = function(material, renderer) {
     var mesh = new base.Mesh(this.geometryData, 0, skyIndices.length, [material.shader.name],
 			    base.LightningType.LIGHT_CUSTOM);
     this.model = new base.Model(-1, [mesh], 1, null);
-    renderer.addMeshes(this.model);
+    renderer.addModel(this.model);
     this.modelInstance = new base.ModelInstance(-1, this.model, 0);
-    renderer.addMeshInstances(this.modelInstance);
+    renderer.addModelInstance(this.modelInstance);
 };
 
 renderer.Sky.prototype.updateMatrix = function (mtx) {

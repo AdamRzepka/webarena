@@ -3,23 +3,24 @@ goog.provide('base.Pool');
 
 /**
  * @constructor
- * @param {{function(): Object}} maker
- * @param {{function(Object)}} cleaner
+ * @param {function(): Object} maker
+ * @param {function(?)} cleaner
  */
 base.Pool = function (maker, cleaner) {
     var i;
     /**
      * @const
      * @private
-     * @type {{function(): Object}}
+     * @type {function(): Object}
      */
     this.maker_ = maker;
     /**
      * @const
      * @private
-     * @type {{function(Object)}}
+     * @type {function(*)}
      */
-    this.cleaner_ = cleaner;    /**
+    this.cleaner_ = cleaner;
+    /**
      * @const
      * @private
      * @type {Array.<Object>}
@@ -28,7 +29,6 @@ base.Pool = function (maker, cleaner) {
 };
 /**
  * @public
- * @param {string} className
  * Acquire instance of class
  */
 base.Pool.prototype.acquire = function () {
@@ -43,7 +43,7 @@ base.Pool.prototype.acquire = function () {
 };
 /**
  * @public
- * @param {Object} object
+ * @param {*} obj
  * Returns object back to pool
  */
 base.Pool.prototype.release = function (obj) {

@@ -4,7 +4,7 @@
     "paths": "project/js",
     "modules": {
 	"base": {
-	    "inputs" : ["project/js/base/base.js", "project/js/base/irenderer.js",
+	    "inputs" : ["project/js/base/base.js", "project/js/base/irendererscene.js",
                         "project/js/base/map.js", "project/js/base/material.js",
                         "project/js/base/mat3.js", "project/js/base/mat4.js",
                         "project/js/base/vec3.js", "project/js/base/quat4.js",
@@ -13,6 +13,7 @@
 	},
 	"main": {
 	    "inputs": ["project/js/main.js", "project/js/renderer/renderer.js",
+                       "project/js/renderer/scene.js",
                        "project/js/renderer/sky.js", "project/js/renderer/materialmanager.js"],
 	    "deps": "base"
 	},

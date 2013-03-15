@@ -1,12 +1,42 @@
+/**
+ * Copyright (C) 2013 Adam Rzepka
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+goog.require('goog.debug.Logger');
+
+goog.require('base');
+goog.require('base.Mat4');
+goog.require('base.Vec3');
 goog.require('base.IRendererScene');
 goog.require('renderer.Renderer');
+goog.require('renderer.Sky');
 
 goog.provide('renderer.Scene');
 
 /**
  * @constructor
+ * @implements base.IRendererScene
+ * @param {WebGLRenderingContext} gl
  */
 renderer.Scene = function (gl) {
+    /**
+     * @const
+     * @private
+     * @type {renderer.Renderer}
+     */
     this.renderer_ = new renderer.Renderer(gl);
     /**
      * @private
@@ -19,6 +49,7 @@ renderer.Scene = function (gl) {
      */
     this.modelInstances_ = [];
     /**
+     * @const
      * @private
      * @type {renderer.Sky}
      */
@@ -54,7 +85,7 @@ base.makeUnremovable(renderer.Scene.prototype.registerMd3);
 renderer.Scene.prototype.registerMap = function (models, lightmapData) {
     var i, j;
 
-    this.materialManager_.buildLightmap(lightmapData);
+    this.renderer_.buildLightmap(lightmapData);
 
     for (i = 0; i < models.length; ++i) {
 	this.renderer_.addModel(models[i]);
@@ -201,11 +232,18 @@ base.makeUnremovable(renderer.Scene.prototype.setModelsVisibility);
  * @param {base.Mat4} cameraMatrix inversed view matrix
  */
 renderer.Scene.prototype.updateCamera = function (cameraMatrix) {
-    this.renderer_updateCameraMatrix(cameraMatrix);
+    this.renderer_.updateCameraMatrix(cameraMatrix);
     this.sky_.updateMatrix(cameraMatrix);
 };
 
 base.makeUnremovable(renderer.Scene.prototype.updateCamera);
+
+/**
+ * @public
+ */
+renderer.Scene.prototype.render = function () {
+    this.renderer_.render();
+};
 
 /**
  * @private
@@ -249,5 +287,4 @@ renderer.Scene.prototype.insertModelInstance_ = function(model) {
     }
     this.modelInstances_[id] = model;
 };
-
 

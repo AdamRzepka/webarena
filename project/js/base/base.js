@@ -330,9 +330,9 @@ base.Mesh = function(geometry, indicesOffset, indicesCount, materialNames, light
      */
     this.indicesOffset = indicesOffset;
     /**
-     * @const
      * @type {number}
      */
+    // this should be const too, but it can be zeroed later to make mesh safely unrendereble
     this.indicesCount = indicesCount;
     /**
      * List of all materials, the instances of the mesh can have.

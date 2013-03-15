@@ -23,7 +23,7 @@ goog.require('flags');
 goog.require('base');
 goog.require('base.Mat4');
 goog.require('base.IInputHandler');
-goog.require('renderer.Renderer');
+goog.require('renderer.Scene');
 goog.require('base.workers.Broker');
 
 if (!flags.GAME_WORKER) {
@@ -139,7 +139,7 @@ window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequest
     window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
 
 function main() {
-    var render;
+    var scene;
     var canvas = document.getElementById('glcanvas');
 
     var gl = initWebGL(canvas);
@@ -171,12 +171,12 @@ function main() {
 	    fpsCounter = 0;
 	}
 
-	render.render();
+	scene.render();
 //        setTimeout(update, 200);
 	requestAnimationFrame(update);
     }
 
-    render = new renderer.Renderer(gl);
+    scene = new renderer.Scene(gl);
 
     if (flags.GAME_WORKER) {
         worker = new Worker('js/initworker.js');
@@ -186,7 +186,7 @@ function main() {
         broker = new base.workers.FakeBroker('game');
     }
 
-    broker.registerReceiver('base.IRenderer', render);
+    broker.registerReceiver('base.IRendererScene', scene);
 
     if (!flags.GAME_WORKER) {
         game.init(broker);

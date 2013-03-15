@@ -20,7 +20,7 @@
 
 goog.require('flags');
 goog.require('base');
-goog.require('base.IRenderer');
+goog.require('base.IRendererScene');
 goog.require('base.workers.Broker');
 goog.require('base.Mat3');
 goog.require('files.ResourceManager');
@@ -40,33 +40,34 @@ goog.provide('game');
  * @param {base.workers.IBroker} broker
  */
 game.init = function (broker) {
-    var render;
+    var scene;
     var input = new game.InputBuffer();
     var rm = new files.ResourceManager();
     var mapName = 'aggressor';
     
     broker.registerReceiver('base.IInputHandler', input);
     
-    render = /**@type{base.IRenderer}*/broker.createProxy('base.IRenderer', base.IRenderer);
+    scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
+                                                              base.IRendererScene);
     
     rm.load([mapName, 'assassin', "lightning"], function () {
 	var map, md3;
 	files.ShaderScriptLoader.loadAll(rm.getScripts());
-        render.buildShaders(files.ShaderScriptLoader.shaderScripts,
+        scene.buildShaders(files.ShaderScriptLoader.shaderScripts,
 					     rm.getTextures());
 	
 	map = files.bsp.load(rm.getMap());
-        render.registerMap(map.models, map.lightmapData);
+        scene.registerMap(map.models, map.lightmapData);
 
 	map.models.forEach(function (model) {
-            render.registerModelInstance(base.ModelInstance.getNextId(),
+            scene.registerModelInstance(base.ModelInstance.getNextId(),
 	                                   model.id,
 	                                   base.Mat4.identity());
 	});
 	
         var camera = new game.FreeCamera(input, base.Vec3.create([0,0,0]));
         
-        var modelManager = new game.ModelManager(render, rm);
+        var modelManager = new game.ModelManager(scene, rm);
         var player = new game.Player(modelManager, rm, 'assassin', 'default');
         var characterController = new game.CharacterController(map.bsp, input, player);
         var spawnPoints = map.getSpawnPoints();
@@ -74,7 +75,7 @@ game.init = function (broker) {
         
         characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
             spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
-        render.updateCamera(characterController.getCameraMatrix());
+        scene.updateCamera(characterController.getCameraMatrix());
 
         function update () {
             var spawnPoint;
@@ -93,9 +94,9 @@ game.init = function (broker) {
                 characterController.update();
             }
             if (game.globals.freeCameraView || game.globals.freeCamera) {
-                render.updateCamera(camera.getCameraMatrix());
+                scene.updateCamera(camera.getCameraMatrix());
             } else {
-                render.updateCamera(characterController.getCameraMatrix());
+                scene.updateCamera(characterController.getCameraMatrix());
             }                
 
             modelManager.syncWithRenderer();
