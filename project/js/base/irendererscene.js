@@ -42,6 +42,7 @@ base.IRendererScene.prototype.registerModelInstance = function (modelBaseId,
                                                                 skinId,
                                                                 callback) {};
 base.IRendererScene.prototype.registerModelInstance._CROSS_WORKER_ = true;
+base.IRendererScene.prototype.registerModelInstance._CROSS_WORKER_CALLBACK_ = true;
 
 /**
  * @public

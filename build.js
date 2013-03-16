@@ -27,7 +27,7 @@
     "mode": "ADVANCED",
     "level": "VERBOSE",
     "debug": false,
-    "pretty-print": false,
+    "pretty-print": true,
     "define": {
 	"goog.DEBUG": false
     },

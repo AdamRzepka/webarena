@@ -141,9 +141,9 @@ base.workers.Broker.prototype.createProxy = function (name, intface) {
                 proxy[prop] = function() {
                     var args = goog.array.clone(arguments);
                     var cb = null;
-                    
-                    if (proto[prop]._CROSS_WORKER_CALLBACK_
-                        && goog.isFunction(args[args.length - 1])) {
+
+                    if (goog.isFunction(args[args.length - 1])) {
+                        goog.asserts.assert(proto[funName]._CROSS_WORKER_CALLBACK_);
                         cb = args.pop();
                     }
                     

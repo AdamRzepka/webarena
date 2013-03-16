@@ -163,7 +163,7 @@ renderer.Scene.prototype.unregisterModelInstance = function (id) {
     this.modelInstances_[id] = null;
 };
 
-base.makeUnremovable(renderer.Scene.prototype.registerModelInstance);
+base.makeUnremovable(renderer.Scene.prototype.unregisterModelInstance);
 
 /**
  * @public
