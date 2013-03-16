@@ -146,7 +146,7 @@ base.ModelInstance = function(id, baseModel, skinId) {
     goog.asserts.assert(skinId >= 0 && skinId < baseModel.skins.length);
     
     /**
-     * @const
+     * id used to communicate between renderer and game
      * @type {number}
      */
     this.id = id;
@@ -173,7 +173,17 @@ base.ModelInstance = function(id, baseModel, skinId) {
      * @type {number}
      */
     this.frameA_ = 0;
+    /**
+     * Frame, the model is lerping to.
+     * @private
+     * @type {number}
+     */
     this.frameB_ = 0;
+    /**
+     * Lerp [0-1]
+     * @private
+     * @type {number}
+     */
     this.lerp_ = 0;
     /**
      * @private
@@ -189,16 +199,16 @@ base.ModelInstance = function(id, baseModel, skinId) {
 
 };
 
-/**
- * @public
- * @return {number}
- */
-base.ModelInstance.getNextId = (function() {
-    var id = -1;
-    return function() {
-	return ++id;
-    };
-})();
+// /**
+//  * @public
+//  * @return {number}
+//  */
+// base.ModelInstance.getNextId = (function() {
+//     var id = -1;
+//     return function() {
+// 	return ++id;
+//     };
+// })();
 
 /**
  * @public

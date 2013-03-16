@@ -79,8 +79,16 @@ renderer.Renderer = function(gl) {
      * Temp matrix used in rendering
      */
     this.modelViewMtx_ = base.Mat4.create();
-
+    /**
+     * @private
+     * @type {number}
+     */
     this.startTime_ = Date.now();
+    /**
+     * @private
+     * @type {boolean}
+     */
+    this.sortNeeded_ = true;
 
     gl.clearColor(0, 0, 0, 1);
     gl.clearDepth(1);
@@ -122,11 +130,19 @@ renderer.Renderer.prototype.render = function () {
 
     time = (Date.now() - this.startTime_) / 1000;
     
+    if (this.sortNeeded_) {
+        this.sort();
+        this.sortNeeded_ = false;
+    }
+    
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
 
     for (i = 0; i < this.meshInstances_.length; ++i) {
 	meshInst = this.meshInstances_[i];
+        if (!meshInst) {
+            continue;
+        }
 	modelInst = meshInst.modelInstance;
 	meshBase = meshInst.baseMesh;
 
@@ -217,6 +233,21 @@ renderer.Renderer.prototype.addModelInstance = function (modelInstance) {
         }
     }
     
+    this.sortNeeded_ = true;
+};
+
+/**
+ * @public
+ * @param {base.ModelInstance} modelInstance
+ */
+renderer.Renderer.prototype.removeModelInstance = function (modelInstance) {
+    var i;
+    for (i = 0; i < this.meshInstances_.length; ++i) {
+        if (this.meshInstances_[i].modelInstance === modelInstance) {
+            this.meshInstances_[i] = null;
+        }
+    }
+    this.sortNeeded_ = true;
 };
 
 /**
@@ -359,6 +390,13 @@ renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
         gl.uniform1f(shader.uniforms['lerpWeight'], lerpWeight);
     }
 
+};
+
+/**
+ * @private
+ */
+renderer.Renderer.prototype.sort = function () {
+    // @todo
 };
 
 /**

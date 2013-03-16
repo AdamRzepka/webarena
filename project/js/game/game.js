@@ -50,7 +50,7 @@ game.init = function (broker) {
     scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                               base.IRendererScene);
     
-    rm.load([mapName, 'assassin', "lightning"], function () {
+    rm.load([mapName, 'assassin', 'lightning'], function () {
 	var map, md3;
 	files.ShaderScriptLoader.loadAll(rm.getScripts());
         scene.buildShaders(files.ShaderScriptLoader.shaderScripts,
@@ -60,9 +60,12 @@ game.init = function (broker) {
         scene.registerMap(map.models, map.lightmapData);
 
 	map.models.forEach(function (model) {
-            scene.registerModelInstance(base.ModelInstance.getNextId(),
-	                                   model.id,
-	                                   base.Mat4.identity());
+            scene.registerModelInstance(model.id,
+	                                base.Mat4.identity(),
+                                        0,
+                                        function (id) {
+                                            model.id = id;
+                                        });
 	});
 	
         var camera = new game.FreeCamera(input, base.Vec3.create([0,0,0]));

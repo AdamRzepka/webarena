@@ -125,9 +125,13 @@ game.ModelManager.prototype.makeInstance = function (modelPath, matrix, skinName
                         modelPath + ' does not exist' );
         skinId = 0;
     }
-    instance = new base.ModelInstance(base.ModelInstance.getNextId(),
-                                      model, skinId);
-    this.renderer.registerModelInstance(instance.id, model.id, matrix, skinName);
+    instance = new base.ModelInstance(-1, model, skinId);
+    this.renderer.registerModelInstance(model.id,
+                                        matrix,
+                                        skinId,
+                                        function (id) {
+                                            instance.id = /**@type{number}*/id;
+                                        });
     this.instances.push(instance);
 
     return instance;
@@ -140,7 +144,7 @@ game.ModelManager.prototype.syncWithRenderer = function () {
     var i, instance;
     for (i = 0; i < this.instances.length; ++i) {
         instance = this.instances[i];
-        if (instance.isDirty()) {
+        if (instance.isDirty() && instance.id > 0) { // make sure instance already has valid id
             this.updateIds.push(instance.id);
             this.updateMatrices.push(instance.getMatrix());
             this.updateFramesA.push(instance.getFrameA());

@@ -98,22 +98,23 @@ renderer.Scene.prototype.registerMap = function (models, lightmapData) {
 	    }
 	}
     }
-
 };
 
 base.makeUnremovable(renderer.Scene.prototype.registerMap);
 
 /**
  * @public
- * @param {number} id of modelInstance
  * @param {number} modelBaseId id of model
  * @param {base.Mat4} matrix
- * @param {string} [skinName]
+ * @param {number} skinId
+ * @param {function(*)} callback called with id of model instance as first argument
  */
-renderer.Scene.prototype.registerModelInstance = function (id, modelBaseId, matrix, skinName) {
-    var i,
+renderer.Scene.prototype.registerModelInstance = function (modelBaseId,
+                                                           matrix,
+                                                           skinId,
+                                                           callback) {
+    var id,
         baseModel = this.models_[modelBaseId],
-        skinId = -1,
         instance = null,
         baseMesh,
         meshInstance;
@@ -124,13 +125,16 @@ renderer.Scene.prototype.registerModelInstance = function (id, modelBaseId, matr
 	return;
     }
 
-    skinId = baseModel.skins.indexOf(skinName || base.Model.DEFAULT_SKIN);
-    if (skinId === -1) { // default skin
-	skinId = 0;
-	this.logger_.log(goog.debug.Logger.Level.WARNING,
-			"Wrong skin name in makeModelInstance: "
-			+ skinName + ". Replaced with default.");
-    }
+    // skinId = baseModel.skins.indexOf(skinName || base.Model.DEFAULT_SKIN);
+    // if (skinId === -1) { // default skin
+    //     skinId = 0;
+    //     this.logger_.log(goog.debug.Logger.Level.WARNING,
+    //     		"Wrong skin name in makeModelInstance: "
+    //     		+ skinName + ". Replaced with default.");
+    // }
+
+    // find free slot in modelInstances_ array
+    for (id = 0; id < this.modelInstances_.length && this.modelInstances_[id]; ++id) {}
 
     instance = new base.ModelInstance(
 	id,
@@ -140,7 +144,23 @@ renderer.Scene.prototype.registerModelInstance = function (id, modelBaseId, matr
 
     instance.setMatrix(matrix);
     this.renderer_.addModelInstance(instance);
-    this.insertModelInstance_(instance);
+//    this.insertModelInstance_(instance);
+    this.modelInstances_[id] = instance;
+    callback(id);
+};
+
+base.makeUnremovable(renderer.Scene.prototype.registerModelInstance);
+
+/**
+ * @public
+ * @param {number} id
+ */
+renderer.Scene.prototype.unregisterModelInstance = function (id) {
+    var i, model;
+
+    goog.asserts.assert(id >= 0 && id < this.modelInstances_.length);
+    this.renderer_.removeModelInstance(this.modelInstances_[id]);
+    this.modelInstances_[id] = null;
 };
 
 base.makeUnremovable(renderer.Scene.prototype.registerModelInstance);
@@ -269,22 +289,22 @@ renderer.Scene.prototype.insertModel_ = function(model) {
     this.models_[id] = model;
 };
 
-/**
- * @private
- * @param {base.ModelInstance} model
- * Function inserts model to proper position in this.modelInstances_ table
- */
-renderer.Scene.prototype.insertModelInstance_ = function(model) {
-    var size = this.modelInstances_.length;
-    var id = model.id;
-    var i;
-    goog.asserts.assert(!this.modelInstances_[id]); // is undefined or null - slot is empty
+// /**
+//  * @private
+//  * @param {base.ModelInstance} model
+//  * Function inserts model to proper position in this.modelInstances_ table
+//  */
+// renderer.Scene.prototype.insertModelInstance_ = function(model) {
+//     var size = this.modelInstances_.length;
+//     var id = model.id;
+//     var i;
+//     goog.asserts.assert(!this.modelInstances_[id]); // is undefined or null - slot is empty
     
-    // Filling gap between size and id with null to ensure, that the table
-    // won't be treated as a hash map by js engine.
-    for (i = size; i < id; ++i) {
-	this.modelInstances_[i] = null;
-    }
-    this.modelInstances_[id] = model;
-};
+//     // Filling gap between size and id with null to ensure, that the table
+//     // won't be treated as a hash map by js engine.
+//     for (i = size; i < id; ++i) {
+// 	this.modelInstances_[i] = null;
+//     }
+//     this.modelInstances_[id] = model;
+// };
 

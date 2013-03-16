@@ -32,13 +32,24 @@ base.IRendererScene.prototype.registerMd3._CROSS_WORKER_ = true;
 
 /**
  * @public
- * @param {number} id of modelInstance
  * @param {number} modelBaseId id of model
  * @param {base.Mat4} matrix
- * @param {string} [skinName]
+ * @param {number} skinId
+ * @param {function(*)} callback called with id of model instance as first argument
  */
-base.IRendererScene.prototype.registerModelInstance = function (id, modelBaseId, matrix, skinName) {};
+base.IRendererScene.prototype.registerModelInstance = function (modelBaseId,
+                                                                matrix,
+                                                                skinId,
+                                                                callback) {};
 base.IRendererScene.prototype.registerModelInstance._CROSS_WORKER_ = true;
+
+/**
+ * @public
+ * @param {number} id
+ */
+base.IRendererScene.prototype.unregisterModelInstance = function (id) {};
+base.IRendererScene.prototype.unregisterModelInstance._CROSS_WORKER_ = true;
+
 /**
  * @public
  * @param {Array.<number>} modelsInstancesIds
