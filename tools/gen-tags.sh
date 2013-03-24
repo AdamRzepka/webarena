@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd ../project/js/
-ctags-exuberant -e -R --languages="js"
+cd ../project/
+ctags-exuberant -e -R --languages="js" --verbose=yes -f TAGS
