@@ -24,6 +24,11 @@ goog.require('base');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('renderer.MaterialManager');
+goog.require('renderer.Material');
+goog.require('renderer.Shader');
+goog.require('renderer.Stage');
+goog.require('renderer.ShaderProgram');
+goog.require('renderer.State');
 
 goog.provide('renderer.Renderer');
 
@@ -73,12 +78,21 @@ renderer.Renderer = function(gl) {
      * @type {base.Mat4}
      */
     this.projectionMtx_ = base.Mat4.perspective(90, 1.6, 0.1, 4096);
-    /**
-     * @private
-     * @type {base.Mat4}
-     * Temp matrix used in rendering
-     */
-    this.modelViewMtx_ = base.Mat4.create();
+    
+    this.viewProjMtx_ = base.Mat4.create();
+
+    this.state_ = new renderer.State();
+
+    this.meshBinders_ = [
+        renderer.Renderer.bspBindMesh,
+        renderer.Renderer.md3BindMesh
+    ];
+    
+    this.meshInstanceBinders_ = [
+        renderer.Renderer.bspBindMeshInstance,
+        renderer.Renderer.md3BindMeshInstance
+    ];
+    
     /**
      * @private
      * @type {number}
@@ -120,11 +134,13 @@ renderer.Renderer.prototype.buildLightmap = function (lightmapData) {
  */
 renderer.Renderer.prototype.render = function () {
     // TODO: sort meshes to limit state changes
-    var i, j, length,
+    var i = 0, j = 0, length = 0,
         meshInst, modelInst, meshBase,
-        skinNum,
+        prevMeshInst,
+        type,
+        skinNum = 0,
         shader, stage,
-        frameA, frameB, lerpWeight, indexId, vertexId, vertex2Id,
+        frameA = 0, frameB = 0, lerpWeight = 0, indexId = 0, vertexId = 0, vertex2Id = 0,
         time = 0, // @todo
         gl = this.gl_;
 
@@ -138,6 +154,9 @@ renderer.Renderer.prototype.render = function () {
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
 
+    this.state_.prevMeshInstance = null;
+    this.state_.prevStage = null;
+    
     for (i = 0; i < this.meshInstances_.length; ++i) {
 	meshInst = this.meshInstances_[i];
         if (!meshInst) {
@@ -150,6 +169,8 @@ renderer.Renderer.prototype.render = function () {
 	    continue;
 	}
 
+        type = modelInst.baseModel.type;
+        this.state_.meshInstance = meshInst;
 	shader = meshInst.material.shader;
 
 	this.materialManager_.setShader(shader);
@@ -157,28 +178,35 @@ renderer.Renderer.prototype.render = function () {
 	for (j = 0; j < length; ++j) {
 	    stage = shader.stages[j];
 	    this.materialManager_.setShaderStage(shader, stage, time);
-	    if (meshInst.material.defaultTexture) {
+            this.state_.stage = stage;
+	    if (meshInst.material.customTexture) {
 		// if it is default shader, use texture from meshBase
-		this.materialManager_.bindTexture(meshInst.material.defaultTexture, stage.program);
+		this.materialManager_.bindTexture(meshInst.material.customTexture, stage.program);
 	    }
-            frameA = modelInst.getFrameA();
-            frameB = modelInst.getFrameB();
-            lerpWeight = modelInst.getLerp();
-            indexId = this.indexBuffers_[meshBase.geometry.indexBufferId];
-            vertexId = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameA]];
-            vertex2Id = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameB]]
-                    || vertexId;
+            // frameA = modelInst.getFrameA();
+            // frameB = modelInst.getFrameB();
+            // lerpWeight = modelInst.getLerp();
+            // indexId = this.indexBuffers_[meshBase.geometry.indexBufferId];
+            // vertexId = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameA]];
+            // vertex2Id = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameB]]
+            //         || vertexId;
             
-	    base.Mat4.multiply(this.viewMtx_, modelInst.getMatrix(), this.modelViewMtx_);
-	    this.bindShaderAttribs_(stage.program, this.modelViewMtx_, this.projectionMtx_,
-				    meshBase.geometry.layout, indexId, vertexId, vertex2Id,
-                                    lerpWeight);
-
+	    base.Mat4.multiply(this.viewProjMtx_, modelInst.getMatrix(), this.state_.mvpMat);
+//            base.Mat4.multiply(this.projectionMtx_, this.modelViewMtx_, this.modelViewMtx_);
+	    // this.bindShaderAttribs_(stage.program, this.modelViewMtx_,
+	    //     		    modelInst.baseModel.type, indexId, vertexId, vertex2Id,
+            //                         lerpWeight);
+            this.meshBinders_[type](gl, this.state_, this.indexBuffers_, this.vertexBuffers_);
+            this.meshInstanceBinders_[type](gl, this.state_, this.indexBuffers_,
+                                            this.vertexBuffers_);
+            
 	    gl.drawElements(gl.TRIANGLES,
 			    meshBase.indicesCount,
 			    gl.UNSIGNED_SHORT,
 			    meshBase.indicesOffset);
+            this.state_.prevStage = stage;
 	}
+        this.state_.prevMeshInstance = meshInst;
 
     }
 
@@ -256,6 +284,14 @@ renderer.Renderer.prototype.removeModelInstance = function (modelInstance) {
  */
 renderer.Renderer.prototype.updateCameraMatrix = function (cameraMatrix) {
     base.Mat4.inverse(cameraMatrix, this.viewMtx_);
+    base.Mat4.multiply(this.projectionMtx_, this.viewMtx_, this.viewProjMtx_);
+};
+
+renderer.Renderer.prototype.registerBinders = function (modelType,
+                                                        meshBinder,
+                                                        meshInstanceBinder) {
+    this.meshBinders_[modelType] = meshBinder;
+    this.meshInstanceBinders_[modelType] = meshInstanceBinder;
 };
 
 /**
@@ -296,101 +332,97 @@ renderer.Renderer.prototype.createBuffers_ = function (geometryData) {
 };
 
 
-/**
- * @private
- * @param {renderer.ShaderProgram} shader
- * @param {base.Mat4} modelViewMat
- * @param {base.Mat4} projectionMat
- */
-renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
-							  modelViewMat,
-							  projectionMat,
-							  vertexArrayLayout,
-                                                          indexBufferId,
-                                                          vertexBufferId,
-                                                          vertexBuffer2Id,
-                                                          lerpWeight) {
-    var gl = this.gl_;
+// /**
+//  * @private
+//  * @param {renderer.ShaderProgram} shader
+//  * @param {base.Mat4} mvpMat
+//  */
+// renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
+// 							  mvpMat,
+// 							  modelType,
+//                                                           indexBufferId,
+//                                                           vertexBufferId,
+//                                                           vertexBuffer2Id,
+//                                                           lerpWeight) {
+//     var gl = this.gl_;
 
-    var vertexStride = 0, texOffset = 12, lightOffset = -1, normalOffset = -1,
-	colorOffset = -1;
+//     var vertexStride = 0, texOffset = 12, lightOffset = -1, normalOffset = -1,
+// 	colorOffset = -1;
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
-		  indexBufferId);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferId);
+//     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
+// 		  indexBufferId);
+//     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferId);
 
-
-    switch (vertexArrayLayout) {
-    case base.GeometryData.Layout.BSP:
-	vertexStride = 56;
-	lightOffset = 20;
-	normalOffset = 28;
-	colorOffset = 40;
-	break;
-    case base.GeometryData.Layout.MD3:
-	vertexStride = 32; // @todo: check this
-	normalOffset = 20;
-	break;
-    case base.GeometryData.Layout.SKY:
-	vertexStride = 20;
-	break;
-    default:
-	goog.asserts.fail("Strange layout value in bindShaderAttribs: " + vertexArrayLayout);
-    }
+//     switch (modelType) {
+//     case base.Model.Type.BSP:
+// 	vertexStride = 56;
+// 	lightOffset = 20;
+// 	normalOffset = 28;
+// 	colorOffset = 40;
+// 	break;
+//     case base.Model.Type.MD3:
+// 	vertexStride = 32;
+// 	normalOffset = 20;
+// 	break;
+//     case base.Model.Type.SKY:
+// 	vertexStride = 20;
+// 	break;
+//     default:
+// 	goog.asserts.fail("Strange model type in bindShaderAttribs: " + modelType);
+//     }
     
-    // Set uniforms
-    gl.uniformMatrix4fv(shader.uniforms['modelViewMat'], false, modelViewMat);
-    gl.uniformMatrix4fv(shader.uniforms['projectionMat'], false, projectionMat);
+//     // Set uniforms
+//     gl.uniformMatrix4fv(shader.uniforms['mvpMat'], false, mvpMat);
 
-    // Setup vertex attributes
-    gl.enableVertexAttribArray(shader.attribs['position']);
-    gl.vertexAttribPointer(shader.attribs['position'], 3, gl.FLOAT, false, vertexStride, 0);
+//     // Setup vertex attributes
+//     gl.enableVertexAttribArray(shader.attribs['position']);
+//     gl.vertexAttribPointer(shader.attribs['position'], 3, gl.FLOAT, false, vertexStride, 0);
 
-    if(shader.attribs['texCoord'] !== undefined) {
-        gl.enableVertexAttribArray(shader.attribs['texCoord']);
-        gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
-			       vertexStride, texOffset);
-    }
+//     if(shader.attribs['texCoord'] !== undefined) {
+//         gl.enableVertexAttribArray(shader.attribs['texCoord']);
+//         gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
+// 			       vertexStride, texOffset);
+//     }
 
-    if(shader.attribs['lightCoord'] !== undefined
-       && vertexArrayLayout === base.GeometryData.Layout.BSP) {
-        gl.enableVertexAttribArray(shader.attribs['lightCoord']);
-        gl.vertexAttribPointer(shader.attribs['lightCoord'], 2, gl.FLOAT, false,
-			       vertexStride, lightOffset);
-    }
+//     if(shader.attribs['lightCoord'] !== undefined
+//        && modelType === base.Model.Type.BSP) {
+//         gl.enableVertexAttribArray(shader.attribs['lightCoord']);
+//         gl.vertexAttribPointer(shader.attribs['lightCoord'], 2, gl.FLOAT, false,
+// 			       vertexStride, lightOffset);
+//     }
 
-    if(shader.attribs['normal'] !== undefined
-       && vertexArrayLayout !== base.GeometryData.Layout.SKY) {
-        gl.enableVertexAttribArray(shader.attribs['normal']);
-        gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
-			       vertexStride, normalOffset);
-    }
+//     if(shader.attribs['normal'] !== undefined
+//        && modelType !== base.Model.Type.SKY) {
+//         gl.enableVertexAttribArray(shader.attribs['normal']);
+//         gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
+// 			       vertexStride, normalOffset);
+//     }
 
-    if(shader.attribs['color'] !== undefined
-       && vertexArrayLayout === base.GeometryData.Layout.BSP) {
-        gl.enableVertexAttribArray(shader.attribs['color']);
-        gl.vertexAttribPointer(shader.attribs['color'], 4, gl.FLOAT, false,
-			       vertexStride, colorOffset);
-    }
+//     if(shader.attribs['color'] !== undefined
+//        && modelType === base.Model.Type.BSP) {
+//         gl.enableVertexAttribArray(shader.attribs['color']);
+//         gl.vertexAttribPointer(shader.attribs['color'], 4, gl.FLOAT, false,
+// 			       vertexStride, colorOffset);
+//     }
     
-    // @todo create separate shader whithout colour for md3 and delete this
-    if(shader.attribs['color'] !== undefined
-       && vertexArrayLayout === base.GeometryData.Layout.MD3) {
-	gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
-    }
+//     // @todo create separate shader whithout colour for md3 and delete this
+//     if(shader.attribs['color'] !== undefined
+//        && modelType === base.Model.Type.MD3) {
+// 	gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
+//     }
 	
-    if (shader.attribs['position2'] !== undefined) {
-        if (vertexBuffer2Id === -1) {
-            vertexBuffer2Id = vertexBufferId;
-        }
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer2Id);
-        gl.enableVertexAttribArray(shader.attribs['position2']);
-        gl.vertexAttribPointer(shader.attribs['position2'], 3, gl.FLOAT, false,
-                                   vertexStride, 0);
-        gl.uniform1f(shader.uniforms['lerpWeight'], lerpWeight);
-    }
+//     if (shader.attribs['position2'] !== undefined) {
+//         if (vertexBuffer2Id === -1) {
+//             vertexBuffer2Id = vertexBufferId;
+//         }
+//         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer2Id);
+//         gl.enableVertexAttribArray(shader.attribs['position2']);
+//         gl.vertexAttribPointer(shader.attribs['position2'], 3, gl.FLOAT, false,
+//                                    vertexStride, 0);
+//         gl.uniform1f(shader.uniforms['lerpWeight'], lerpWeight);
+//     }
 
-};
+// };
 
 /**
  * @private
@@ -399,30 +431,132 @@ renderer.Renderer.prototype.sort = function () {
     // @todo
 };
 
-/**
- * @constructor
- * @param {base.Mesh} baseMesh
- * @param {base.ModelInstance} modelInstance
- * @param {renderer.Material} material
- */
-renderer.MeshInstance = function(baseMesh, modelInstance, material) {
-    /**
-     * @const
-     * @type {base.Mesh}
-     */
-    this.baseMesh = baseMesh;
-    /**
-     * @type {boolean}
-     */
-    this.culled = false;
-    /**
-     * @const
-     * @type {base.ModelInstance}
-     */
-    this.modelInstance = modelInstance;
-    /**
-     * @const
-     * @type {renderer.Material}
-     */
-    this.material = material;
+renderer.Renderer.bspBindMesh = function (gl, state, indexBuffers, vertexBuffers) {
+    var vertexStride = 56,
+	lightOffset = 20,
+	normalOffset = 28,
+	colorOffset = 40,
+        texOffset = 12;
+    var mesh = state.meshInstance.baseMesh;
+    var shader =  state.stage.program;
+    var indexBufferId = mesh.geometry.indexBufferId,
+        vertexBufferId = mesh.geometry.vertexBufferIds[0];
+    var changed = false;
+
+    goog.asserts.assert(state.meshInstance.modelInstance.baseModel.type === base.Model.Type.BSP);
+
+    if (indexBufferId !== state.prevMeshInstance.baseMesh.geometry.indexBufferId) {
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
+		      indexBuffers[indexBufferId]);
+    }
+    if (vertexBufferId !== state.prevMeshInstance.baseMesh.geometry.vertexBufferIds[0]) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBufferId]);
+        changed = true;
+    }
+
+    if (changed || state.prevStage !== state.stage) {
+        
+        gl.enableVertexAttribArray(shader.attribs['position']);
+        gl.vertexAttribPointer(shader.attribs['position'], 3, gl.FLOAT, false,
+                               vertexStride, 0);
+
+        if(shader.attribs['texCoord'] !== undefined) {
+            gl.enableVertexAttribArray(shader.attribs['texCoord']);
+            gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
+			           vertexStride, texOffset);
+        }
+
+        if(shader.attribs['lightCoord'] !== undefined) {
+            gl.enableVertexAttribArray(shader.attribs['lightCoord']);
+            gl.vertexAttribPointer(shader.attribs['lightCoord'], 2, gl.FLOAT, false,
+			           vertexStride, lightOffset);
+        }
+
+        if(shader.attribs['normal'] !== undefined) {
+            gl.enableVertexAttribArray(shader.attribs['normal']);
+            gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
+			           vertexStride, normalOffset);
+        }
+
+        if(shader.attribs['color'] !== undefined) {
+            gl.enableVertexAttribArray(shader.attribs['color']);
+            gl.vertexAttribPointer(shader.attribs['color'], 4, gl.FLOAT, false,
+			           vertexStride, colorOffset);
+        }
+    }
+};
+
+renderer.Renderer.bspBindMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
+    if (state.prevMeshInstance === null ||
+        state.prevStage !== state.stage ||
+        state.prevMeshInstance.modelInstance !== state.prevMeshInstance.modelInstance) {
+        gl.uniformMatrix4fv(state.stage.program.uniforms['mvpMat'], false, state.mvpMat);
+    }
+//    gl.uniformMatrix4fv(state.stage.program.uniforms['mvpMat'], false, state.mvpMat);
+};
+
+renderer.Renderer.md3BindMesh = function (gl, state, indexBuffers, vertexBuffers) {
+    var mesh = state.meshInstance.baseMesh;
+    var shader =  state.stage.program;
+    var indexBufferId = mesh.geometry.indexBufferId;
+    
+    goog.asserts.assert(state.meshInstance.modelInstance.baseModel.type === base.Model.Type.MD3);
+    
+    if (indexBufferId !== state.prevMeshInstance.baseMesh.geometry.indexBufferId) {
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
+		      indexBuffers[indexBufferId]);
+    }
+};
+
+renderer.Renderer.md3BindMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
+    var vertexStride = 32,
+	normalOffset = 20,
+        texOffset = 12;
+    var vertexBufferIdA = 0, vertexBufferIdB = 0;
+
+    var mesh = state.meshInstance.baseMesh;
+    var shader = state.stage.program;
+    var modelInst = state.meshInstance.modelInstance;
+    var prevModelInst = state.prevMeshInstance.modelInstance;
+    var changed = (state.prevStage !== state.stage);
+
+    if (modelInst.baseModel !== prevModelInst.baseModel
+        || modelInst.getFrameA() !== prevModelInst.getFrameA()) {
+        vertexBufferIdA = mesh.geometry.vertexBufferIds[modelInst.getFrameA()];
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBufferIdA]);
+        changed = true;
+    }
+    if (changed) {
+        // Setup vertex attributes
+        gl.enableVertexAttribArray(shader.attribs['position']);
+        gl.vertexAttribPointer(shader.attribs['position'], 3, gl.FLOAT, false,
+                               vertexStride, 0);
+
+        gl.enableVertexAttribArray(shader.attribs['texCoord']);
+        gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
+			       vertexStride, texOffset);
+
+        gl.enableVertexAttribArray(shader.attribs['normal']);
+        gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
+			       vertexStride, normalOffset);
+//        gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
+    }
+
+    if (modelInst.baseModel !== prevModelInst.baseModel
+        || modelInst.getFrameB() !== prevModelInst.getFrameB()) {
+        vertexBufferIdB = mesh.geometry.vertexBufferIds[modelInst.getFrameB()];
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBufferIdB]
+                      || vertexBuffers[vertexBufferIdA]);
+        changed = true;
+    }    
+    if (changed) {
+        gl.enableVertexAttribArray(shader.attribs['position2']);
+        gl.vertexAttribPointer(shader.attribs['position2'], 3, gl.FLOAT, false,
+                               vertexStride, 0);
+    }
+
+    if (modelInst !== prevModelInst || changed) {
+        gl.uniformMatrix4fv(shader.uniforms['mvpMat'], false, state.mvpMat);
+        gl.uniform1f(shader.uniforms['lerpWeight'], modelInst.getLerp());        
+    }
 };

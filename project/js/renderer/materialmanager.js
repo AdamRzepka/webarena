@@ -53,117 +53,13 @@ goog.require('goog.debug.Logger.Level');
 
 goog.require('base.Mat4');
 goog.require('base.Material');
-	     
-goog.provide('renderer.Material');
+goog.require('renderer.Material');
+goog.require('renderer.Shader');
+goog.require('renderer.Stage');
+goog.require('renderer.ShaderProgram');
 
 goog.provide('renderer.MaterialManager');
 
-/**
- * @constructor
- * @extends {base.Material}
- */
-renderer.Material = function (shader, defaultTexture, lightningType) {
-    /**
-     * @const
-     * @type {renderer.Shader}
-     */
-    this.shader = shader;
-    /**
-     * @const
-     * @type {WebGLTexture}
-     */
-    this.defaultTexture = defaultTexture;
-    /**
-     * @const
-     * @type {base.LightningType}
-     */
-    this.lightningType = lightningType;
-};
-
-goog.inherits(renderer.Material, base.Material);
-
-/**
- * @constructor
- */
-renderer.Stage = function () {
-    /**
-     * @type {string}
-     */
-    this.map = '';
-    /**
-     * @type {WebGLTexture}
-     */
-    this.texture = null;
-    /**
-     * @type {number}
-     */
-    this.blendSrc = -1;
-    /**
-     * @type {number}
-     */
-    this.blendDest = -1;
-    /**
-     * @type {number}
-     */
-    this.depthFunc = -1;
-    /**
-     * @type {renderer.ShaderProgram}
-     */
-    this.program = null;
-};
-
-/**
- * @constructor
- */
-renderer.Shader = function () {
-    /**
-     * @type {number}
-     */
-    this.cull = -1;
-    /**
-     * @type {number}
-     */
-    this.sort = -1;
-    /**
-     * @type {boolean}
-     */
-    this.sky = false;
-    /**
-     * @type {number}
-     */
-    this.blend = -1;
-    /**
-     * @type {string}
-     */
-    this.name = '';
-    /**
-     * @type {Array.<renderer.Stage>}
-     */
-    this.stages = [];
-};
-
-/**
- * @constructor
- * @param {Object.<string,number>} attribs
- * @param {Object.<string,number>} uniforms
- * @param {WebGLProgram} glProgram
- */
-renderer.ShaderProgram = function (attribs, uniforms, glProgram) {
-    /**
-     * @type {Object.<string,number>}
-     * Attribs locations
-     */
-    this.attribs = attribs;
-    /**
-     * @type {Object.<string,WebGLUniformLocation>}
-     * Uniforms locations
-     */
-    this.uniforms = uniforms;
-    /**
-     * @type {WebGLProgram}
-     */
-    this.glProgram = glProgram;
-};
 
 /**
  * @constructor
@@ -223,7 +119,7 @@ renderer.MaterialManager = function(gl) {
      * @type {renderer.ShaderProgram}
      */    
     this.defaultModelProgram = this.compileShaderProgram(
-	renderer.MaterialManager.defaultVertexSrc,
+	renderer.MaterialManager.defaultModelVertexSrc,
 	renderer.MaterialManager.defaultModelFragmentSrc);
 
     /**
@@ -752,7 +648,6 @@ renderer.MaterialManager.prototype.compileShaderProgram = function(vertexSrc, fr
 renderer.MaterialManager.defaultVertexSrc = 
     'precision highp float;\n' +
     'attribute vec3 position; \n' +
-    'attribute vec3 position2; \n' +
     'attribute vec3 normal; \n' +
     'attribute vec2 texCoord; \n' +
     'attribute vec2 lightCoord; \n' +
@@ -762,17 +657,42 @@ renderer.MaterialManager.defaultVertexSrc =
     'varying vec2 vLightmapCoord; \n' +
     'varying vec4 vColor; \n' +
 
-    'uniform float lerpWeight; \n' +
-    'uniform mat4 modelViewMat; \n' +
-    'uniform mat4 projectionMat; \n' +
+    'uniform mat4 mvpMat; \n' +
     'void main(void) { \n' +
-        'vec3 lerpPosition = position * (1.0 - lerpWeight) + position2 * lerpWeight;\n' +
-        'vec4 worldPosition = modelViewMat * vec4(lerpPosition, 1.0); \n' +
         'vTexCoord = texCoord; \n' +
         'vColor = color; \n' +
         'vLightmapCoord = lightCoord; \n' +
-        'gl_Position = projectionMat * worldPosition; \n' +
+        'gl_Position = mvpMat * vec4(position, 1.0); \n' +
     '} \n';
+
+/**
+ * @private
+ * @const
+ * @type {string}
+ */
+renderer.MaterialManager.defaultModelVertexSrc = 
+    'precision highp float;\n' +
+    'attribute vec3 position; \n' +
+    'attribute vec3 position2; \n' +
+    'attribute vec3 normal; \n' +
+    'attribute vec2 texCoord; \n' +
+//    'attribute vec2 lightCoord; \n' +
+//    'attribute vec4 color; \n' +
+
+    'varying vec2 vTexCoord; \n' +
+//    'varying vec2 vLightmapCoord; \n' +
+//    'varying vec4 vColor; \n' +
+
+    'uniform float lerpWeight; \n' +
+    'uniform mat4 mvpMat; \n' +
+    'void main(void) { \n' +
+        'vec3 lerpPosition = position * (1.0 - lerpWeight) + position2 * lerpWeight;\n' +
+        'vTexCoord = texCoord; \n' +
+//        'vColor = color; \n' +
+//        'vLightmapCoord = lightCoord; \n' +
+        'gl_Position = mvpMat * vec4(lerpPosition, 1.0); \n' +
+    '} \n';
+
 
 /**
  * @private
@@ -800,10 +720,10 @@ renderer.MaterialManager.defaultLightmapFragmentSrc =
 renderer.MaterialManager.defaultModelFragmentSrc =
     'precision highp float;\n' +
     'varying vec2 vTexCoord; \n' +
-    'varying vec4 vColor; \n' +
+//    'varying vec4 vColor; \n' +
     'uniform sampler2D texture; \n' +
 
     'void main(void) { \n' +
-        'vec4 diffuseColor = texture2D(texture, vTexCoord); \n' +
-        'gl_FragColor = vec4(diffuseColor.rgb * vColor.rgb, diffuseColor.a); \n' +
+        'gl_FragColor = texture2D(texture, vTexCoord); \n' +
+//        'gl_FragColor = vec4(diffuseColor.rgb * vColor.rgb, diffuseColor.a); \n' +
     '} \n';

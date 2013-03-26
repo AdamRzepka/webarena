@@ -660,8 +660,7 @@ files.bsp.compileMapModels_ = function(verts, faces, meshVerts, lightmapData, sh
     }
 
     var geometryData = new base.GeometryData(new Uint16Array(indices),
-					     [new Float32Array(vertices)],
-					     base.GeometryData.Layout.BSP);
+					     [new Float32Array(vertices)]);
 
     for (i = 0; i < shaders.length; ++i) {
 	shader = shaders[i];
@@ -673,7 +672,7 @@ files.bsp.compileMapModels_ = function(verts, faces, meshVerts, lightmapData, sh
 	}
     }
 
-    var model = new base.Model(base.Model.getNextId(), meshes, 1, []);
+    var model = new base.Model(base.Model.getNextId(), meshes, 1, [], base.Model.Type.BSP);
 
     return [model];
 };

@@ -22,6 +22,8 @@
  *
  */
 
+'use strict';
+
 goog.require('goog.asserts');
 goog.require('base.Vec3');
 goog.require('base.Mat4');
@@ -40,10 +42,11 @@ goog.provide('base.GeometryData');
  * @param {Array.<base.Mesh>} meshes
  * @param {number} framesCount
  * @param {Array.<base.Model.FrameData>} framesData
+ * @param {base.Model.Type} type
  * @param {Array.<string>} [tags]
  * @param {Array.<string>} [skins]
  */
-base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
+base.Model = function (id, meshes, framesCount, framesData, type, tags, skins) {
     goog.asserts.assert(meshes.length > 0);
     goog.asserts.assert(framesCount > 0);
 
@@ -72,13 +75,21 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
      */
     this.tags = tags || [];
     /**
+     * @const
+     * @type {base.Model.Type}
+     */
+    this.type = type;    
+    /**
      * One model can be displayed with different materials, when they have .skin
      * files specified.
      * @const
      * @type {Array.<string>}
      */
     this.skins = (skins && skins[0]) ? skins : [base.Model.DEFAULT_SKIN];  // If skins are not defined explicitly, we create default skin
-
+    /**
+     * @public
+     */
+    this.customData = null;
 };
 /**
  * @public
@@ -86,6 +97,18 @@ base.Model = function (id, meshes, framesCount, framesData, tags, skins) {
  * @type {string}
  */
 base.Model.DEFAULT_SKIN = '__default__';
+
+/**
+ * @enum {number}
+ */
+base.Model.Type = {
+    BSP: 0,
+    MD3: 1,
+    SKY: 2,
+    LINE: 3,
+    BILLBOARD: 4,
+    SIZE: 5
+};
 
 /**
  * @public
@@ -196,6 +219,11 @@ base.ModelInstance = function(id, baseModel, skinId) {
      * @type {boolean}
      */
     this.dirty_ = false;
+    /**
+     * @public
+     * Data specific to model type
+     */
+    this.customData = null;
 
 };
 
@@ -380,11 +408,10 @@ base.LightningType = {
  * @constructor
  * @param {Uint16Array} indices Index array
  * @param {Array.<Float32Array>} vertices Array vertex array. One vertex array
- * @param {base.GeometryData.Layout} layout
  * corresponds to one frame.
  */
-base.GeometryData = function(indices, vertices, layout) {
-    goog.asserts.assert(layout >= 0 && layout < base.GeometryData.Layout.SIZE);
+base.GeometryData = function(indices, vertices) {
+//    goog.asserts.assert(layout >= 0 && layout < base.GeometryData.Layout.SIZE);
     /**
      * @const
      * @type {Uint16Array}
@@ -395,11 +422,11 @@ base.GeometryData = function(indices, vertices, layout) {
      * @type {Array.<Float32Array>}
      */
     this.vertices = vertices;
-    /**
-     * @const
-     * @type {base.GeometryData.Layout}
-     */
-    this.layout = layout;
+    // /**
+    //  * @const
+    //  * @type {base.GeometryData.Layout}
+    //  */
+    // this.layout = layout;
     /**
      * @type {number}
      */
@@ -410,15 +437,15 @@ base.GeometryData = function(indices, vertices, layout) {
     this.vertexBufferIds = [];
 };
 
-/**
- * @enum
- */
-base.GeometryData.Layout = {
-    BSP: 0,
-    MD3: 1,
-    SKY: 2,
-    SIZE: 3
-};
+// /**
+//  * @enum
+//  */
+// base.GeometryData.Layout = {
+//     BSP: 0,
+//     MD3: 1,
+//     SKY: 2,
+//     SIZE: 3
+// };
 
 /**
  * @public

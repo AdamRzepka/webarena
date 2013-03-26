@@ -226,8 +226,7 @@ files.md3.load = function(arrayBuffer, skinFiles) {
 	    geometryData = new base.GeometryData(new Uint16Array(indices),
 						 vertices.map(function(v) {
 						     return new Float32Array(v);
-						 }),
-						 base.GeometryData.Layout.MD3);
+						 }));
             materials.push(surface.shaders[0].name); // material from md3
             for (k = 0; k < skins.length; ++k) {
                 materials.push(skins[k].skin[surface.name]);
@@ -243,7 +242,7 @@ files.md3.load = function(arrayBuffer, skinFiles) {
         }));
         
 	model = new base.Model(base.Model.getNextId(), meshes, header.framesCount,
-			       frames, tagNames, skinNames);
+			       frames, base.Model.Type.MD3, tagNames, skinNames);
     }
 
     for( key in skinFiles ) {

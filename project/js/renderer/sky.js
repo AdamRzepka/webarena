@@ -19,6 +19,7 @@
 
 goog.require('goog.asserts');
 goog.require('base.Mat4');
+goog.require('renderer.State');
 goog.provide('renderer.Sky');
 
 /**
@@ -30,7 +31,7 @@ renderer.Sky = function() {
     this.geometryData = null;
 };
 
-renderer.Sky.prototype.build = function(material, renderer) {
+renderer.Sky.prototype.build = function(material, rend) {
     // var skyVerts = [
     //     -128, 128, 128, 0, 0,
     //     128, 128, 128, 1, 0,
@@ -107,15 +108,17 @@ renderer.Sky.prototype.build = function(material, renderer) {
 
     goog.asserts.assert(this.model === null);
 
+    rend.registerBinders(base.Model.Type.SKY, renderer.Sky.meshBinder,
+                         renderer.Sky.meshInstanceBinder);
+    
     this.geometryData = new base.GeometryData(new Uint16Array(skyIndices),
-					      [new Float32Array(skyVerts)],
-					      base.GeometryData.Layout.SKY);
+					      [new Float32Array(skyVerts)]);
     var mesh = new base.Mesh(this.geometryData, 0, skyIndices.length, [material.shader.name],
 			    base.LightningType.LIGHT_CUSTOM);
-    this.model = new base.Model(-1, [mesh], 1, null);
-    renderer.addModel(this.model);
+    this.model = new base.Model(-1, [mesh], 1, [], base.Model.Type.SKY);
+    rend.addModel(this.model);
     this.modelInstance = new base.ModelInstance(-1, this.model, 0);
-    renderer.addModelInstance(this.modelInstance);
+    rend.addModelInstance(this.modelInstance);
 };
 
 renderer.Sky.prototype.updateMatrix = function (mtx) {
@@ -127,3 +130,31 @@ renderer.Sky.prototype.updateMatrix = function (mtx) {
     }
 };
 
+renderer.Sky.meshBinder = function (gl, state, indexBuffers, vertexBuffers) {
+    var vertexStride = 20, texOffset = 12;
+    var meshInstance = state.meshInstance;
+    var shader = state.stage.program;
+    var indexBufferId = meshInstance.baseMesh.geometry.indexBufferId;
+    var vertexBufferId = meshInstance.baseMesh.geometry.vertexBufferIds[0];
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
+		  indexBuffers[indexBufferId]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBufferId]);
+
+    goog.asserts.assert(meshInstance.modelInstance.baseModel.type === base.Model.Type.SKY);
+    
+    // Set uniforms
+    gl.uniformMatrix4fv(shader.uniforms['mvpMat'], false, state.mvpMat);
+
+    // Setup vertex attributes
+    gl.enableVertexAttribArray(shader.attribs['position']);
+    gl.vertexAttribPointer(shader.attribs['position'], 3, gl.FLOAT, false, vertexStride, 0);
+
+    gl.enableVertexAttribArray(shader.attribs['texCoord']);
+    gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
+			   vertexStride, texOffset);
+};
+
+renderer.Sky.meshInstanceBinder = function (gl, state, indexBuffers, vertexBuffers) {
+    // all was already done in meshBinder
+};

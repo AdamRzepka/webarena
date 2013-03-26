@@ -420,8 +420,7 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
     });
 
     shader.addUniforms({
-        'modelViewMat': 'mat4',
-        'projectionMat': 'mat4',
+        'mvpMat': 'mat4',
         'time': 'float'
     });
 
@@ -458,15 +457,19 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
         }
     }
 
-    shader.addLines(['vec4 worldPosition = modelViewMat * vec4(defPosition, 1.0);']);
+//    shader.addLines(['vec4 worldPosition = mvpMat * vec4(defPosition, 1.0);']);
     shader.addLines(['vColor = color;']);
 
     if(stage.tcGen == 'environment') {
+        // shader.addLines([
+        //     'vec3 viewer = normalize(-worldPosition.xyz);',
+        //     'float d = dot(normal, viewer);',
+        //     'vec3 reflected = normal*2.0*d - viewer;',
+        //     'vTexCoord = vec2(0.5, 0.5) + reflected.xy * 0.5;'
+        // ]);
+        // @todo
         shader.addLines([
-            'vec3 viewer = normalize(-worldPosition.xyz);',
-            'float d = dot(normal, viewer);',
-            'vec3 reflected = normal*2.0*d - viewer;',
-            'vTexCoord = vec2(0.5, 0.5) + reflected.xy * 0.5;'
+            'vTexCoord = vec2(0.5, 0.5);'
         ]);
     } else {
         // Standard texturing
@@ -529,7 +532,7 @@ files.ShaderScriptLoader.buildVertexShader = function(stageShader, stage) {
             break;
     }
 
-    shader.addLines(['gl_Position = projectionMat * worldPosition;']);
+    shader.addLines(['gl_Position = mvpMat * vec4(defPosition, 1.0);']);
 
     return shader.getSource();
 
