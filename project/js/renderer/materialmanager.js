@@ -674,22 +674,18 @@ renderer.MaterialManager.defaultModelVertexSrc =
     'precision highp float;\n' +
     'attribute vec3 position; \n' +
     'attribute vec3 position2; \n' +
-    'attribute vec3 normal; \n' +
+//    'attribute vec3 normal; \n' +
     'attribute vec2 texCoord; \n' +
-//    'attribute vec2 lightCoord; \n' +
-//    'attribute vec4 color; \n' +
 
     'varying vec2 vTexCoord; \n' +
-//    'varying vec2 vLightmapCoord; \n' +
-//    'varying vec4 vColor; \n' +
 
     'uniform float lerpWeight; \n' +
     'uniform mat4 mvpMat; \n' +
     'void main(void) { \n' +
-        'vec3 lerpPosition = position * (1.0 - lerpWeight) + position2 * lerpWeight;\n' +
+        'float w1 = 1.0 - lerpWeight;\n' +
+        'float w2 = lerpWeight;\n' +
+        'vec3 lerpPosition = (1.0 - lerpWeight) * position + lerpWeight * position2;\n' +
         'vTexCoord = texCoord; \n' +
-//        'vColor = color; \n' +
-//        'vLightmapCoord = lightCoord; \n' +
         'gl_Position = mvpMat * vec4(lerpPosition, 1.0); \n' +
     '} \n';
 
@@ -720,10 +716,8 @@ renderer.MaterialManager.defaultLightmapFragmentSrc =
 renderer.MaterialManager.defaultModelFragmentSrc =
     'precision highp float;\n' +
     'varying vec2 vTexCoord; \n' +
-//    'varying vec4 vColor; \n' +
     'uniform sampler2D texture; \n' +
 
     'void main(void) { \n' +
         'gl_FragColor = texture2D(texture, vTexCoord); \n' +
-//        'gl_FragColor = vec4(diffuseColor.rgb * vColor.rgb, diffuseColor.a); \n' +
     '} \n';

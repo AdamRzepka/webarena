@@ -536,9 +536,9 @@ renderer.Renderer.md3BindMeshInstance = function (gl, state, indexBuffers, verte
         gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
 			       vertexStride, texOffset);
 
-        gl.enableVertexAttribArray(shader.attribs['normal']);
-        gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
-			       vertexStride, normalOffset);
+        // gl.enableVertexAttribArray(shader.attribs['normal']);
+        // gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
+	// 		       vertexStride, normalOffset);
 //        gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
     }
 
