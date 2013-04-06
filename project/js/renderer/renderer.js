@@ -172,30 +172,22 @@ renderer.Renderer.prototype.render = function () {
         type = modelInst.baseModel.type;
         this.state_.meshInstance = meshInst;
 	shader = meshInst.material.shader;
-
 	this.materialManager_.setShader(shader);
+        
 	length = shader.stages.length;
 	for (j = 0; j < length; ++j) {
 	    stage = shader.stages[j];
-	    this.materialManager_.setShaderStage(shader, stage, time);
+            if (this.state_.prevStage === null || this.state_.prevStage !== stage) {
+	        this.materialManager_.setShaderStage(shader, stage, time);
+            }
             this.state_.stage = stage;
+
 	    if (meshInst.material.customTexture) {
 		// if it is default shader, use texture from meshBase
 		this.materialManager_.bindTexture(meshInst.material.customTexture, stage.program);
 	    }
-            // frameA = modelInst.getFrameA();
-            // frameB = modelInst.getFrameB();
-            // lerpWeight = modelInst.getLerp();
-            // indexId = this.indexBuffers_[meshBase.geometry.indexBufferId];
-            // vertexId = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameA]];
-            // vertex2Id = this.vertexBuffers_[meshBase.geometry.vertexBufferIds[frameB]]
-            //         || vertexId;
             
 	    base.Mat4.multiply(this.viewProjMtx_, modelInst.getMatrix(), this.state_.mvpMat);
-//            base.Mat4.multiply(this.projectionMtx_, this.modelViewMtx_, this.modelViewMtx_);
-	    // this.bindShaderAttribs_(stage.program, this.modelViewMtx_,
-	    //     		    modelInst.baseModel.type, indexId, vertexId, vertex2Id,
-            //                         lerpWeight);
             this.meshBinders_[type](gl, this.state_, this.indexBuffers_, this.vertexBuffers_);
             this.meshInstanceBinders_[type](gl, this.state_, this.indexBuffers_,
                                             this.vertexBuffers_);

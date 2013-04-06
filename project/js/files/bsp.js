@@ -190,6 +190,7 @@ files.bsp.readShaders_ = function(lump, src) {
             contents: src.readLong(),
             shader: null,
             faces: [],
+            geometryData: null,
             indexOffset: 0,
             elementCount: 0,
             visible: true
@@ -564,6 +565,11 @@ files.bsp.colorToVec_ = function(color) {
 // Compile the map into a stream of WebGL-compatible data
 //
 
+/**
+ * @define {boolean}
+ */
+files.bsp.SINGLE_BUFFER = true;
+
 /** @private*/
 files.bsp.compileMapModels_ = function(verts, faces, meshVerts, lightmapData, shaders) {
 
@@ -613,59 +619,106 @@ files.bsp.compileMapModels_ = function(verts, faces, meshVerts, lightmapData, sh
     // Compile vert list
     var vertices = [];
     var offset = 0;
-    for(i = 0; i < verts.length; ++i) {
-        vert = verts[i];
+    if (files.bsp.SINGLE_BUFFER) {
+        for(i = 0; i < verts.length; ++i) {
+            vert = verts[i];
 
-        vertices[offset++] = vert.pos[0];
-        vertices[offset++] = vert.pos[1];
-        vertices[offset++] = vert.pos[2];
+            vertices[offset++] = vert.pos[0];
+            vertices[offset++] = vert.pos[1];
+            vertices[offset++] = vert.pos[2];
 
-        vertices[offset++] = vert.texCoord[0];
-        vertices[offset++] = vert.texCoord[1];
+            vertices[offset++] = vert.texCoord[0];
+            vertices[offset++] = vert.texCoord[1];
 
-        vertices[offset++] = vert.lmNewCoord[0];
-        vertices[offset++] = vert.lmNewCoord[1];
+            vertices[offset++] = vert.lmNewCoord[0];
+            vertices[offset++] = vert.lmNewCoord[1];
 
-        vertices[offset++] = vert.normal[0];
-        vertices[offset++] = vert.normal[1];
-        vertices[offset++] = vert.normal[2];
+            vertices[offset++] = vert.normal[0];
+            vertices[offset++] = vert.normal[1];
+            vertices[offset++] = vert.normal[2];
 
-        vertices[offset++] = vert.color[0];
-        vertices[offset++] = vert.color[1];
-        vertices[offset++] = vert.color[2];
-        vertices[offset++] = vert.color[3];
+            vertices[offset++] = vert.color[0];
+            vertices[offset++] = vert.color[1];
+            vertices[offset++] = vert.color[2];
+            vertices[offset++] = vert.color[3];
+        }
     }
 
     // Compile index list
     var indices = [];
     var meshes = [];
+    var shaderIndices = [], shaderVertices = [];
+    var geometryData;
     var mesh;
 
     for(i = 0; i <  shaders.length; ++i) {
         shader = shaders[i];
         if(shader.faces.length > 0) {
-            shader.indexOffset = indices.length * 2; // Offset is in bytes
+            if (files.bsp.SINGLE_BUFFER) {
+                shader.indexOffset = indices.length * 2; // Offset is in bytes
 
-            for(j = 0; j < shader.faces.length; ++j) {
-                face = shader.faces[j];
-                face.indexOffset = indices.length * 2;
-                for(k = 0; k < face.meshVertCount; ++k) {
-                    indices.push(face.vertex + meshVerts[face.meshVert + k]);
+                for(j = 0; j < shader.faces.length; ++j) {
+                    face = shader.faces[j];
+                    face.indexOffset = indices.length * 2;
+                    for(k = 0; k < face.meshVertCount; ++k) {
+                        indices.push(face.vertex + meshVerts[face.meshVert + k]);
+                    }
+                    shader.elementCount += face.meshVertCount;
+
                 }
-                shader.elementCount += face.meshVertCount;
+            } else {
+                shaderIndices.length = 0;
+                shaderVertices.length = 0;
+                shader.indexOffset = 0;
+                offset = 0;
+                for(j = 0; j < shader.faces.length; ++j) {
+                    face = shader.faces[j];
+                    face.indexOffset = indices.length * 2;
+                    for(k = 0; k < face.meshVertCount; ++k) {
+                        shaderIndices.push(shaderVertices.length / 14 + meshVerts[face.meshVert + k]);
+                    }
+                    for(k = face.vertex; k < face.vertex + face.vertCount; ++k) {
+                        vert = verts[k];
 
+                        shaderVertices[offset++] = vert.pos[0];
+                        shaderVertices[offset++] = vert.pos[1];
+                        shaderVertices[offset++] = vert.pos[2];
+
+                        shaderVertices[offset++] = vert.texCoord[0];
+                        shaderVertices[offset++] = vert.texCoord[1];
+
+                        shaderVertices[offset++] = vert.lmNewCoord[0];
+                        shaderVertices[offset++] = vert.lmNewCoord[1];
+
+                        shaderVertices[offset++] = vert.normal[0];
+                        shaderVertices[offset++] = vert.normal[1];
+                        shaderVertices[offset++] = vert.normal[2];
+
+                        shaderVertices[offset++] = vert.color[0];
+                        shaderVertices[offset++] = vert.color[1];
+                        shaderVertices[offset++] = vert.color[2];
+                        shaderVertices[offset++] = vert.color[3];
+                    }
+                    shader.elementCount += face.meshVertCount;
+                }
+                shader.geometryData = new base.GeometryData(new Uint16Array(shaderIndices),
+                                                            [new Float32Array(shaderVertices)]);
             }
+            
         }
 //        shader.faces = null; // Don't need to send this to the render thread.
     }
 
-    var geometryData = new base.GeometryData(new Uint16Array(indices),
+    if (files.bsp.SINGLE_BUFFER) {
+        geometryData = new base.GeometryData(new Uint16Array(indices),
 					     [new Float32Array(vertices)]);
+    }
 
     for (i = 0; i < shaders.length; ++i) {
 	shader = shaders[i];
 	if (shader.faces.length > 0) {
-	    mesh = new base.Mesh(geometryData, shader.indexOffset,
+	    mesh = new base.Mesh((files.bsp.SINGLE_BUFFER ? geometryData : shader.geometryData),
+                                 shader.indexOffset,
 				 shader.elementCount, [shader.shaderName],
 				 base.LightningType.LIGHT_MAP);
 	    meshes.push(mesh);

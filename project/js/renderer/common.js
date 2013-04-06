@@ -167,6 +167,11 @@ renderer.MeshInstance = function(baseMesh, modelInstance, material) {
      * @type {renderer.Material}
      */
     this.material = material;
+    /**
+     * @const
+     * @type {number}
+     */
+    this.hash = 0;
 };
 
 /**
