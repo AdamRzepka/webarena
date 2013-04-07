@@ -179,11 +179,13 @@ renderer.MaterialManager.prototype.buildSpecialMaterial = function (materialName
                                                                     fragmentShaderSrc) {
     var stage = new renderer.Stage();
     stage.program = this.compileShaderProgram(vertexShaderSrc, fragmentShaderSrc);
+//    stage.depthFunc = this.gl.ALWAYS;
 
     var shader = new renderer.Shader();
     shader.stages[0] = stage;
     shader.name = materialName;
-    shader.cull = goog.webgl.FRONT_AND_BACK;
+    // @todo: patch
+    //shader.cull = goog.webgl.FRONT_AND_BACK;
 
     this.materials[materialName] = new renderer.Material(
         shader,
@@ -246,6 +248,21 @@ renderer.MaterialManager.prototype.getMaterial = function (name, lightningType) 
     }
 
     return /**@type{renderer.Material}*/material;
+};
+
+/**
+ * @public
+ * @param {string} name
+ * @return {WebGLTexture}
+ */
+renderer.MaterialManager.prototype.getTexture = function (name) {
+    var texture = this.textures[name];
+    if (!texture) {
+        this.logger.log(goog.debug.Logger.Level.WARNING, 'Texture ' +
+			name + ' not found');
+        texture = this.defaultTexture;
+    }
+    return texture;
 };
 
 //

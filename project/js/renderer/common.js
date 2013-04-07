@@ -101,7 +101,7 @@ renderer.Shader = function () {
     /**
      * @type {number}
      */
-    this.cull = goog.webgl.FRONT;
+    this.cull = goog.webgl.BACK;
     /**
      * @type {number}
      */
@@ -189,6 +189,14 @@ renderer.State = function () {
      */
     this.mvpMat = base.Mat4.identity();
     /**
+     * @type {base.Mat4}
+     */
+    this.viewMat = base.Mat4.identity();
+    /**
+     * @type {base.Mat4}
+     */
+    this.projectionMat = base.Mat4.identity();
+    /**
      * @type {base.Vec3}
      */
     this.camPos = base.Vec3.create();
@@ -215,5 +223,6 @@ renderer.State = function () {
  */
 renderer.SpecialModelId = {
     SKY: -1,
-    LINE: -2
+    LINE: -2,
+    BILLBOARD: -3
 };

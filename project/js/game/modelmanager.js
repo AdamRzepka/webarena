@@ -139,6 +139,11 @@ game.ModelManager.prototype.makeInstance = function (modelPath, matrix, skinName
                                             instance.id = /**@type{number}*/id;
                                         });
     this.instances.push(instance);
+    // var that = this;
+    // this.renderer.registerBillboard(base.Vec3.create(), 20, 20, 'textures/base_light/ceil1_22a',
+    //                                 function (id) {
+    //                                     that.lineId = /**@type{number}*/id;
+    //                                 });
 
     // var from = matrix.subarray(12,15);
     // var to = base.Vec3.create();
@@ -175,6 +180,10 @@ game.ModelManager.prototype.syncWithRenderer = function () {
                                this.updateFramesB, this.updateLerps);
     this.renderer.setModelsVisibility(this.updateIds, this.updateVisibility);
 
+    // if (this.updateMatrices.length > 0) {
+    //     this.renderer.updateBillboard(this.lineId, this.updateMatrices[0].subarray(12,15),
+    //                                   30, 30);
+    // }
     // if (this.updateMatrices.length > 0) {
     //     var matrix = this.updateMatrices[0];
     //     var from = matrix.subarray(12,15);

@@ -24,6 +24,7 @@ goog.require('base.IRendererScene');
 goog.require('renderer.Renderer');
 goog.require('renderer.Sky');
 goog.require('renderer.line');
+goog.require('renderer.billboard');
 
 goog.provide('renderer.Scene');
 
@@ -57,6 +58,7 @@ renderer.Scene = function (gl) {
     this.sky_ = new renderer.Sky();
 
     renderer.line.init(this.renderer_);
+    renderer.billboard.init(this.renderer_);
 };
 
 /**
@@ -303,6 +305,45 @@ renderer.Scene.prototype.updateLine = function (id, from, to) {
     renderer.line.update(modelInst, from, to);
 };
 base.makeUnremovable(renderer.Scene.prototype.updateLine);
+
+/**
+ * @param {base.Vec3} center
+ * @param {number} sizeX
+ * @param {number} sizeY
+ * @param {string} textureName
+ * @param {function(*)} callback called with id of model instance as first argument
+ */
+renderer.Scene.prototype.registerBillboard = function (center, sizeX, sizeY, textureName,
+                                                       callback) {
+    var id;
+    var modelInst;
+
+    for (id = 0; id < this.modelInstances_.length && this.modelInstances_[id]; ++id) {}
+
+    modelInst = renderer.billboard.create(id, center, sizeX, sizeY,
+                                          this.renderer_.getTexture(textureName));
+
+    this.modelInstances_[id] = modelInst;
+    this.renderer_.addModelInstance(modelInst);
+
+    callback(id);
+};
+base.makeUnremovable(renderer.Scene.prototype.registerBillboard);
+
+/**
+ * @param {number} id
+ * @param {base.Vec3} center
+ * @param {number} sizeX
+ * @param {number} sizeY
+ */
+renderer.Scene.prototype.updateBillboard = function (id, center, sizeX, sizeY) {
+    var modelInst = this.modelInstances_[id];
+    goog.asserts.assert(modelInst);
+    
+    renderer.billboard.update(modelInst, center, sizeX, sizeY);
+};
+base.makeUnremovable(renderer.Scene.prototype.updateBillboard);
+
 /**
  * @private
  */

@@ -162,6 +162,15 @@ renderer.Renderer.prototype.buildLightmap = function (lightmapData) {
 
 /**
  * @public
+ * @param {string} name
+ * @return {WebGLTexture}
+ */
+renderer.Renderer.prototype.getTexture = function (name) {
+    return this.materialManager_.getTexture(name);
+};
+
+/**
+ * @public
  * Where the magic happens...
  */
 renderer.Renderer.prototype.render = function () {
@@ -188,6 +197,8 @@ renderer.Renderer.prototype.render = function () {
 
     this.state_.prevMeshInstance = null;
     this.state_.prevStage = null;
+    this.state_.viewMat = this.viewMtx_;
+    this.state_.projectionMat = this.projectionMtx_;
     
     for (i = 0; i < this.meshInstances_.length; ++i) {
 	meshInst = this.meshInstances_[i];

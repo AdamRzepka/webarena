@@ -99,6 +99,34 @@ base.IRendererScene.prototype.updateLine = function (id, from, to) {};
 base.IRendererScene.prototype.updateLine._CROSS_WORKER_ = true;
 
 /**
+ * @param {base.Vec3} center
+ * @param {number} sizeX
+ * @param {number} sizeY
+ * @param {string} textureName
+ * @param {function(*)} callback called with id of model instance as first argument
+ */
+base.IRendererScene.prototype.registerBillboard = function (center,
+                                                            sizeX,
+                                                            sizeY,
+                                                            textureName,
+                                                            callback) {};
+base.IRendererScene.prototype.registerBillboard._CROSS_WORKER_ = true;
+base.IRendererScene.prototype.registerBillboard._CROSS_WORKER_CALLBACK_ = true;
+
+/**
+ * @param {number} id
+ * @param {base.Vec3} center
+ * @param {number} sizeX
+ * @param {number} sizeY
+ */
+base.IRendererScene.prototype.updateBillboard = function (id,
+                                                          center,
+                                                          sizeX,
+                                                          sizeY) {};
+base.IRendererScene.prototype.updateBillboard._CROSS_WORKER_ = true;
+
+
+/**
  * @public
  * @param {number} id
  * Unregisters ModelInstance, Line or Bilboard with given id.
