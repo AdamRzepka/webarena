@@ -19,7 +19,9 @@
 'use strict';
 
 goog.require('base.Material');
+goog.require('goog.webgl');
 
+goog.provide('renderer');
 goog.provide('renderer.Material');
 goog.provide('renderer.Stage');
 goog.provide('renderer.Shader');
@@ -67,17 +69,21 @@ renderer.Stage = function () {
      */
     this.texture = null;
     /**
-     * @type {number}
+     * @type {boolean}
      */
-    this.blendSrc = -1;
+    this.isLightmap = false;
     /**
      * @type {number}
      */
-    this.blendDest = -1;
+    this.blendSrc = goog.webgl.ONE;
     /**
      * @type {number}
      */
-    this.depthFunc = -1;
+    this.blendDest = goog.webgl.ZERO;
+    /**
+     * @type {number}
+     */
+    this.depthFunc = goog.webgl.LEQUAL;
     /**
      * @type {boolean}
      */
@@ -95,19 +101,19 @@ renderer.Shader = function () {
     /**
      * @type {number}
      */
-    this.cull = -1;
+    this.cull = goog.webgl.FRONT;
     /**
      * @type {number}
      */
-    this.sort = -1;
+    this.sort = 7;
     /**
      * @type {boolean}
      */
     this.sky = false;
-    /**
-     * @type {number}
-     */
-    this.blend = -1;
+    // /**
+    //  * @type {number}
+    //  */
+    // this.blend = -1;
     /**
      * @type {string}
      */
@@ -194,7 +200,6 @@ renderer.State = function () {
      * @type {renderer.Stage}
      */
     this.prevStage = null;
-
     /**
      * @type {renderer.MeshInstance}
      */
@@ -203,4 +208,12 @@ renderer.State = function () {
      * @type {renderer.MeshInstance}
      */
     this.prevMeshInstance = null;
+};
+
+/**
+ * @enum {number}
+ */
+renderer.SpecialModelId = {
+    SKY: -1,
+    LINE: -2
 };

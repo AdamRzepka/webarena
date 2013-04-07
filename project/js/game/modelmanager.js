@@ -88,6 +88,12 @@ game.ModelManager = function (renderer, rm) {
      * @type {Array.<boolean>}
      */
     this.updateVisibility = [];
+
+    /**
+     * @private
+     * @type {number}
+     */
+    this.lineId = -1;
 };
 
 /**
@@ -134,6 +140,17 @@ game.ModelManager.prototype.makeInstance = function (modelPath, matrix, skinName
                                         });
     this.instances.push(instance);
 
+    // var from = matrix.subarray(12,15);
+    // var to = base.Vec3.create();
+    // to[2] += 4;
+    // var color = new Float32Array([1, 0, 0, 1]);
+    // var color2 = new Float32Array([0, 1, 0, 1]);
+    // var that = this;
+    
+    // this.renderer.registerLine(from, to, color, color2, function(id) {
+    //     that.lineId = /**@type{number}*/id;
+    // });
+
     return instance;
 };
 
@@ -157,6 +174,16 @@ game.ModelManager.prototype.syncWithRenderer = function () {
     this.renderer.updateModels(this.updateIds, this.updateMatrices, this.updateFramesA,
                                this.updateFramesB, this.updateLerps);
     this.renderer.setModelsVisibility(this.updateIds, this.updateVisibility);
+
+    // if (this.updateMatrices.length > 0) {
+    //     var matrix = this.updateMatrices[0];
+    //     var from = matrix.subarray(12,15);
+    //     var to = base.Vec3.create(from);
+    //     to[2] += 50;
+
+    //     this.renderer.updateLine(this.lineId, from, to);
+    // }
+    
     this.updateIds.length = this.updateMatrices.length = this.updateFramesA.length
         = this.updateFramesB.length = this.updateLerps.length = this.updateVisibility.length = 0;
 };

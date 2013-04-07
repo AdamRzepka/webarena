@@ -19,6 +19,7 @@
 
 goog.require('goog.asserts');
 goog.require('base.Mat4');
+goog.require('renderer');
 goog.require('renderer.State');
 goog.provide('renderer.Sky');
 
@@ -31,51 +32,11 @@ renderer.Sky = function() {
     this.geometryData = null;
 };
 
+/**
+ * @param {base.Material} material
+ * @param {renderer.Renderer} rend
+ */
 renderer.Sky.prototype.build = function(material, rend) {
-    // var skyVerts = [
-    //     -128, 128, 128, 0, 0,
-    //     128, 128, 128, 1, 0,
-    //     -128, -128, 128, 0, 1,
-    //     128, -128, 128, 1, 1,
-        
-    //     -128, 128, 128, 0, 1,
-    //     128, 128, 128, 1, 1,
-    //     -128, 128, -128, 0, 0,
-    //     128, 128, -128, 1, 0,
-        
-    //     -128, -128, 128, 0, 0,
-    //     128, -128, 128, 1, 0,
-    //     -128, -128, -128, 0, 1,
-    //     128, -128, -128, 1, 1,
-        
-    //     128, 128, 128, 0, 0,
-    //     128, -128, 128, 0, 1,
-    //     128, 128, -128, 1, 0,
-    //     128, -128, -128, 1, 1,
-        
-    //     -128, 128, 128, 1, 0,
-    //     -128, -128, 128, 1, 1,
-    //     -128, 128, -128, 0, 0,
-    //     -128, -128, -128, 0, 1
-    // ];
-    
-    // var skyIndices = [
-    //     0, 1, 2,
-    //     1, 2, 3,
-        
-    //     4, 5, 6,
-    //     5, 6, 7,
-        
-    //     8, 9, 10,
-    //     9, 10, 11,
-        
-    //     12, 13, 14,
-    //     13, 14, 15,
-        
-    //     16, 17, 18,
-    //     17, 18, 19
-    // ];
-
     var a = 0.29289, b = 0.7071, d = 128;
 
     var skyVerts = [
@@ -108,19 +69,22 @@ renderer.Sky.prototype.build = function(material, rend) {
 
     goog.asserts.assert(this.model === null);
 
-    rend.registerBinders(base.Model.Type.SKY, renderer.Sky.meshBinder,
-                         renderer.Sky.meshInstanceBinder);
+    rend.registerMeshCallbacks(base.Model.Type.SKY, renderer.Sky.bindMesh,
+                         renderer.Sky.renderMeshInstance);
     
     this.geometryData = new base.GeometryData(new Uint16Array(skyIndices),
 					      [new Float32Array(skyVerts)]);
     var mesh = new base.Mesh(this.geometryData, 0, skyIndices.length, [material.shader.name],
 			    base.LightningType.LIGHT_CUSTOM);
-    this.model = new base.Model(-1, [mesh], 1, [], base.Model.Type.SKY);
+    this.model = new base.Model(renderer.SpecialModelId.SKY, [mesh], 1, [], base.Model.Type.SKY);
     rend.addModel(this.model);
     this.modelInstance = new base.ModelInstance(-1, this.model, 0);
     rend.addModelInstance(this.modelInstance);
 };
 
+/**
+ * @param {base.Mat4} mtx
+ */
 renderer.Sky.prototype.updateMatrix = function (mtx) {
     if (this.modelInstance) {
 	var skyMtx = this.modelInstance.getMatrix();
@@ -130,7 +94,15 @@ renderer.Sky.prototype.updateMatrix = function (mtx) {
     }
 };
 
-renderer.Sky.meshBinder = function (gl, state, indexBuffers, vertexBuffers) {
+/**
+ * @param {WebGLRenderingContext} gl
+ * @param {renderer.State} state
+ * @param {Array.<WebGLBuffer>} indexBuffers
+ * @param {Array.<WebGLBuffer>} vertexBuffers
+ * Callback fired by renderer just before drawElements to set uniforms and attribs.
+ * Called once for mesh type.
+ */
+renderer.Sky.bindMesh = function (gl, state, indexBuffers, vertexBuffers) {
     var vertexStride = 20, texOffset = 12;
     var meshInstance = state.meshInstance;
     var shader = state.stage.program;
@@ -155,6 +127,14 @@ renderer.Sky.meshBinder = function (gl, state, indexBuffers, vertexBuffers) {
 			   vertexStride, texOffset);
 };
 
-renderer.Sky.meshInstanceBinder = function (gl, state, indexBuffers, vertexBuffers) {
-    // all was already done in meshBinder
+/**
+ * @param {WebGLRenderingContext} gl
+ * @param {renderer.State} state
+ * @param {Array.<WebGLBuffer>} indexBuffers
+ * @param {Array.<WebGLBuffer>} vertexBuffers
+ * Callback fired by renderer for every meshInstance.
+ */
+renderer.Sky.renderMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
+    var mesh = state.meshInstance.baseMesh;
+    gl.drawElements(gl.TRIANGLES, mesh.indicesCount, gl.UNSIGNED_SHORT, mesh.indicesOffset);
 };

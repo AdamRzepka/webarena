@@ -46,13 +46,6 @@ base.IRendererScene.prototype.registerModelInstance._CROSS_WORKER_CALLBACK_ = tr
 
 /**
  * @public
- * @param {number} id
- */
-base.IRendererScene.prototype.unregisterModelInstance = function (id) {};
-base.IRendererScene.prototype.unregisterModelInstance._CROSS_WORKER_ = true;
-
-/**
- * @public
  * @param {Array.<number>} modelsInstancesIds
  * @param {Array.<base.Mat4>} matrices
  * @param {Array.<number>} framesA
@@ -75,7 +68,8 @@ base.IRendererScene.prototype.updateModel._CROSS_WORKER_ = true;
  * @param {Array.<number>} modelsInstancesIds
  * @param {Array.<boolean>} visibilityArray
  */
-base.IRendererScene.prototype.setModelsVisibility = function (modelsInstancesIds, visibilityArray) {};
+base.IRendererScene.prototype.setModelsVisibility = function (modelsInstancesIds,
+                                                              visibilityArray) {};
 base.IRendererScene.prototype.setModelsVisibility._CROSS_WORKER_ = true;
 
 /**
@@ -84,3 +78,30 @@ base.IRendererScene.prototype.setModelsVisibility._CROSS_WORKER_ = true;
  */
 base.IRendererScene.prototype.updateCamera = function (cameraMatrix) {};
 base.IRendererScene.prototype.updateCamera._CROSS_WORKER_ = true;
+
+/**
+ * @param {base.Vec3} from
+ * @param {base.Vec3} to
+ * @param {base.Vec4} fromColor
+ * @param {base.Vec4} toColor
+ * @param {function(*)} callback called with id of model instance as first argument
+ */
+base.IRendererScene.prototype.registerLine = function (from, to, fromColor, toColor, callback) {};
+base.IRendererScene.prototype.registerLine._CROSS_WORKER_ = true;
+base.IRendererScene.prototype.registerLine._CROSS_WORKER_CALLBACK_ = true;
+
+/**
+ * @param {number} id
+ * @param {base.Vec3} from
+ * @param {base.Vec3} to
+ */
+base.IRendererScene.prototype.updateLine = function (id, from, to) {};
+base.IRendererScene.prototype.updateLine._CROSS_WORKER_ = true;
+
+/**
+ * @public
+ * @param {number} id
+ * Unregisters ModelInstance, Line or Bilboard with given id.
+ */
+base.IRendererScene.prototype.unregister = function (id) {};
+base.IRendererScene.prototype.unregister._CROSS_WORKER_ = true;

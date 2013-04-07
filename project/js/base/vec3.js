@@ -31,6 +31,7 @@
 
 goog.require('base.Pool');
 goog.provide('base.Vec3');
+goog.provide('base.Vec4');
 
 /*
  * base.Vec3

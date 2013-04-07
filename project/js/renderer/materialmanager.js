@@ -170,6 +170,29 @@ renderer.MaterialManager.prototype.buildShaders = function (shaderScripts, image
 
 /**
  * @public
+ * @param {string} materialName
+ * @param {string} vertexShaderSrc
+ * @param {string} fragmentShaderSrc
+ */
+renderer.MaterialManager.prototype.buildSpecialMaterial = function (materialName,
+                                                                    vertexShaderSrc,
+                                                                    fragmentShaderSrc) {
+    var stage = new renderer.Stage();
+    stage.program = this.compileShaderProgram(vertexShaderSrc, fragmentShaderSrc);
+
+    var shader = new renderer.Shader();
+    shader.stages[0] = stage;
+    shader.name = materialName;
+    shader.cull = goog.webgl.FRONT_AND_BACK;
+
+    this.materials[materialName] = new renderer.Material(
+        shader,
+        null,
+        base.LightningType.LIGHT_CUSTOM);
+};
+
+/**
+ * @public
  * @param {base.Map.LightmapData} lightmapData
  */
 renderer.MaterialManager.prototype.buildLightmap = function (lightmapData) {
@@ -236,7 +259,7 @@ renderer.MaterialManager.prototype.build = function(gl, shader) {
         cull: this.translateCull(gl, shader.cull),
         sort: shader.sort,
         sky: shader.sky,
-        blend: shader.blend,
+//        blend: shader.blend,
         name: shader.name,
         stages: []
     };
@@ -268,7 +291,7 @@ renderer.MaterialManager.prototype.build = function(gl, shader) {
  */
 renderer.MaterialManager.prototype.buildDefault = function(gl, lightningType) {
     var diffuseStage = {
-        map: null,
+        map: '',
 	texture: null,
         isLightmap: (lightningType == base.LightningType.LIGHT_MAP),
         blendSrc: gl.ONE,
@@ -289,7 +312,7 @@ renderer.MaterialManager.prototype.buildDefault = function(gl, lightningType) {
         cull: gl.FRONT,
         sort: 3,
 	sky: false,
-        blend: false,
+//        blend: false,
 	name: "__default__",
         stages: [ diffuseStage ]
     };

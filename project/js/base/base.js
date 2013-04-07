@@ -255,7 +255,7 @@ base.ModelInstance.prototype.setMatrix = function (matrix) {
     if (goog.DEBUG) {
 	// Checks if matrix looks OK.
 	det = base.Mat4.determinant(matrix);
-	goog.asserts.assert(det !== 0 && det < 10e9 && det > -10e9); 
+	goog.asserts.assert(det < 10e9 && det > -10e9); 
     }
     this.matrix_ = matrix;
     this.dirty_ = true;

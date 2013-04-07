@@ -23,6 +23,7 @@ goog.require('base.Vec3');
 goog.require('base.IRendererScene');
 goog.require('renderer.Renderer');
 goog.require('renderer.Sky');
+goog.require('renderer.line');
 
 goog.provide('renderer.Scene');
 
@@ -54,7 +55,10 @@ renderer.Scene = function (gl) {
      * @type {renderer.Sky}
      */
     this.sky_ = new renderer.Sky();
+
+    renderer.line.init(this.renderer_);
 };
+
 /**
  * @public
  * @param {Array.<base.ShaderScript>} shaderScripts
@@ -155,7 +159,7 @@ base.makeUnremovable(renderer.Scene.prototype.registerModelInstance);
  * @public
  * @param {number} id
  */
-renderer.Scene.prototype.unregisterModelInstance = function (id) {
+renderer.Scene.prototype.unregister = function (id) {
     var i, model;
 
     goog.asserts.assert(id >= 0 && id < this.modelInstances_.length);
@@ -163,7 +167,7 @@ renderer.Scene.prototype.unregisterModelInstance = function (id) {
     this.modelInstances_[id] = null;
 };
 
-base.makeUnremovable(renderer.Scene.prototype.unregisterModelInstance);
+base.makeUnremovable(renderer.Scene.prototype.unregister);
 
 /**
  * @public
@@ -265,6 +269,40 @@ renderer.Scene.prototype.render = function () {
     this.renderer_.render();
 };
 
+
+/**
+ * @param {base.Vec3} from
+ * @param {base.Vec3} to
+ * @param {base.Vec4} fromColor
+ * @param {base.Vec4} toColor
+ * @param {function(*)} callback called with id of model instance as first argument
+ */
+renderer.Scene.prototype.registerLine = function (from, to, fromColor, toColor, callback) {
+    var id;
+    var modelInst;
+
+    for (id = 0; id < this.modelInstances_.length && this.modelInstances_[id]; ++id) {}
+
+    modelInst = renderer.line.create(id, from, to, fromColor, toColor);
+
+    this.modelInstances_[id] = modelInst;
+    this.renderer_.addModelInstance(modelInst);
+
+    callback(id);
+};
+base.makeUnremovable(renderer.Scene.prototype.registerLine);
+/**
+ * @param {number} id
+ * @param {base.Vec3} from
+ * @param {base.Vec3} to
+ */
+renderer.Scene.prototype.updateLine = function (id, from, to) {
+    var modelInst = this.modelInstances_[id];
+    goog.asserts.assert(modelInst);
+    
+    renderer.line.update(modelInst, from, to);
+};
+base.makeUnremovable(renderer.Scene.prototype.updateLine);
 /**
  * @private
  */
@@ -288,23 +326,3 @@ renderer.Scene.prototype.insertModel_ = function(model) {
     }
     this.models_[id] = model;
 };
-
-// /**
-//  * @private
-//  * @param {base.ModelInstance} model
-//  * Function inserts model to proper position in this.modelInstances_ table
-//  */
-// renderer.Scene.prototype.insertModelInstance_ = function(model) {
-//     var size = this.modelInstances_.length;
-//     var id = model.id;
-//     var i;
-//     goog.asserts.assert(!this.modelInstances_[id]); // is undefined or null - slot is empty
-    
-//     // Filling gap between size and id with null to ensure, that the table
-//     // won't be treated as a hash map by js engine.
-//     for (i = size; i < id; ++i) {
-// 	this.modelInstances_[i] = null;
-//     }
-//     this.modelInstances_[id] = model;
-// };
-

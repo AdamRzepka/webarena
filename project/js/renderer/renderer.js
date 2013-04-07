@@ -78,19 +78,38 @@ renderer.Renderer = function(gl) {
      * @type {base.Mat4}
      */
     this.projectionMtx_ = base.Mat4.perspective(90, 1.6, 0.1, 4096);
-    
+    /**
+     * @private
+     * @type {base.Mat4}
+     */
     this.viewProjMtx_ = base.Mat4.create();
-
+    /**
+     * @private
+     * @type {renderer.State}
+     */
     this.state_ = new renderer.State();
-
+    /**
+     * @private
+     * @type {Array.<function(WebGLRenderingContext,
+                              renderer.State,
+                              Array.<WebGLBuffer>,
+                              Array.<WebGLBuffer>)>}
+     */
     this.meshBinders_ = [
-        renderer.Renderer.bspBindMesh,
-        renderer.Renderer.md3BindMesh
+        renderer.Renderer.bindBspMesh,
+        renderer.Renderer.bindMd3Mesh
     ];
     
-    this.meshInstanceBinders_ = [
-        renderer.Renderer.bspBindMeshInstance,
-        renderer.Renderer.md3BindMeshInstance
+    /**
+     * @private
+     * @type {Array.<function(WebGLRenderingContext,
+                              renderer.State,
+                              Array.<WebGLBuffer>,
+                              Array.<WebGLBuffer>)>}
+     */    
+    this.meshInstanceRenderers_ = [
+        renderer.Renderer.renderBspMeshInstance,
+        renderer.Renderer.renderMd3MeshInstance
     ];
     
     /**
@@ -126,6 +145,19 @@ renderer.Renderer.prototype.buildShaders = function(shaderScripts, texturesUrls)
  */
 renderer.Renderer.prototype.buildLightmap = function (lightmapData) {
     this.materialManager_.buildLightmap(lightmapData);
+};
+
+/**
+ * @public
+ * @param {string} materialName
+ * @param {string} vertexShaderSrc
+ * @param {string} fragmentShaderSrc
+ */
+ renderer.Renderer.prototype.buildSpecialMaterial = function (materialName,
+                                                             vertexShaderSrc,
+                                                             fragmentShaderSrc) {
+    this.materialManager_.buildSpecialMaterial(materialName, vertexShaderSrc,
+                                               fragmentShaderSrc);
 };
 
 /**
@@ -189,13 +221,9 @@ renderer.Renderer.prototype.render = function () {
             
 	    base.Mat4.multiply(this.viewProjMtx_, modelInst.getMatrix(), this.state_.mvpMat);
             this.meshBinders_[type](gl, this.state_, this.indexBuffers_, this.vertexBuffers_);
-            this.meshInstanceBinders_[type](gl, this.state_, this.indexBuffers_,
-                                            this.vertexBuffers_);
+            this.meshInstanceRenderers_[type](gl, this.state_, this.indexBuffers_,
+                                              this.vertexBuffers_);
             
-	    gl.drawElements(gl.TRIANGLES,
-			    meshBase.indicesCount,
-			    gl.UNSIGNED_SHORT,
-			    meshBase.indicesOffset);
             this.state_.prevStage = stage;
 	}
         this.state_.prevMeshInstance = meshInst;
@@ -279,11 +307,23 @@ renderer.Renderer.prototype.updateCameraMatrix = function (cameraMatrix) {
     base.Mat4.multiply(this.projectionMtx_, this.viewMtx_, this.viewProjMtx_);
 };
 
-renderer.Renderer.prototype.registerBinders = function (modelType,
-                                                        meshBinder,
-                                                        meshInstanceBinder) {
+/**
+ * @public
+ * @param {base.Model.Type} modelType
+ * @param {function(WebGLRenderingContext,
+                    renderer.State,
+                    Array.<WebGLBuffer>,
+                    Array.<WebGLBuffer>)} meshBinder
+ * @param {function(WebGLRenderingContext,
+                    renderer.State,
+                    Array.<WebGLBuffer>,
+                    Array.<WebGLBuffer>)} meshInstanceRenderer
+ */
+renderer.Renderer.prototype.registerMeshCallbacks = function (modelType,
+                                                              meshBinder,
+                                                              meshInstanceRenderer) {
     this.meshBinders_[modelType] = meshBinder;
-    this.meshInstanceBinders_[modelType] = meshInstanceBinder;
+    this.meshInstanceRenderers_[modelType] = meshInstanceRenderer;
 };
 
 /**
@@ -323,99 +363,6 @@ renderer.Renderer.prototype.createBuffers_ = function (geometryData) {
     
 };
 
-
-// /**
-//  * @private
-//  * @param {renderer.ShaderProgram} shader
-//  * @param {base.Mat4} mvpMat
-//  */
-// renderer.Renderer.prototype.bindShaderAttribs_ = function(shader,
-// 							  mvpMat,
-// 							  modelType,
-//                                                           indexBufferId,
-//                                                           vertexBufferId,
-//                                                           vertexBuffer2Id,
-//                                                           lerpWeight) {
-//     var gl = this.gl_;
-
-//     var vertexStride = 0, texOffset = 12, lightOffset = -1, normalOffset = -1,
-// 	colorOffset = -1;
-
-//     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
-// 		  indexBufferId);
-//     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufferId);
-
-//     switch (modelType) {
-//     case base.Model.Type.BSP:
-// 	vertexStride = 56;
-// 	lightOffset = 20;
-// 	normalOffset = 28;
-// 	colorOffset = 40;
-// 	break;
-//     case base.Model.Type.MD3:
-// 	vertexStride = 32;
-// 	normalOffset = 20;
-// 	break;
-//     case base.Model.Type.SKY:
-// 	vertexStride = 20;
-// 	break;
-//     default:
-// 	goog.asserts.fail("Strange model type in bindShaderAttribs: " + modelType);
-//     }
-    
-//     // Set uniforms
-//     gl.uniformMatrix4fv(shader.uniforms['mvpMat'], false, mvpMat);
-
-//     // Setup vertex attributes
-//     gl.enableVertexAttribArray(shader.attribs['position']);
-//     gl.vertexAttribPointer(shader.attribs['position'], 3, gl.FLOAT, false, vertexStride, 0);
-
-//     if(shader.attribs['texCoord'] !== undefined) {
-//         gl.enableVertexAttribArray(shader.attribs['texCoord']);
-//         gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
-// 			       vertexStride, texOffset);
-//     }
-
-//     if(shader.attribs['lightCoord'] !== undefined
-//        && modelType === base.Model.Type.BSP) {
-//         gl.enableVertexAttribArray(shader.attribs['lightCoord']);
-//         gl.vertexAttribPointer(shader.attribs['lightCoord'], 2, gl.FLOAT, false,
-// 			       vertexStride, lightOffset);
-//     }
-
-//     if(shader.attribs['normal'] !== undefined
-//        && modelType !== base.Model.Type.SKY) {
-//         gl.enableVertexAttribArray(shader.attribs['normal']);
-//         gl.vertexAttribPointer(shader.attribs['normal'], 3, gl.FLOAT, false,
-// 			       vertexStride, normalOffset);
-//     }
-
-//     if(shader.attribs['color'] !== undefined
-//        && modelType === base.Model.Type.BSP) {
-//         gl.enableVertexAttribArray(shader.attribs['color']);
-//         gl.vertexAttribPointer(shader.attribs['color'], 4, gl.FLOAT, false,
-// 			       vertexStride, colorOffset);
-//     }
-    
-//     // @todo create separate shader whithout colour for md3 and delete this
-//     if(shader.attribs['color'] !== undefined
-//        && modelType === base.Model.Type.MD3) {
-// 	gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
-//     }
-	
-//     if (shader.attribs['position2'] !== undefined) {
-//         if (vertexBuffer2Id === -1) {
-//             vertexBuffer2Id = vertexBufferId;
-//         }
-//         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer2Id);
-//         gl.enableVertexAttribArray(shader.attribs['position2']);
-//         gl.vertexAttribPointer(shader.attribs['position2'], 3, gl.FLOAT, false,
-//                                    vertexStride, 0);
-//         gl.uniform1f(shader.uniforms['lerpWeight'], lerpWeight);
-//     }
-
-// };
-
 /**
  * @private
  */
@@ -423,7 +370,15 @@ renderer.Renderer.prototype.sort = function () {
     // @todo
 };
 
-renderer.Renderer.bspBindMesh = function (gl, state, indexBuffers, vertexBuffers) {
+/**
+ * @param {WebGLRenderingContext} gl
+ * @param {renderer.State} state
+ * @param {Array.<WebGLBuffer>} indexBuffers
+ * @param {Array.<WebGLBuffer>} vertexBuffers
+ * Callback fired by renderer just before drawElements to set uniforms and attribs.
+ * Called once for mesh type.
+ */
+renderer.Renderer.bindBspMesh = function (gl, state, indexBuffers, vertexBuffers) {
     var vertexStride = 56,
 	lightOffset = 20,
 	normalOffset = 28,
@@ -478,16 +433,33 @@ renderer.Renderer.bspBindMesh = function (gl, state, indexBuffers, vertexBuffers
     }
 };
 
-renderer.Renderer.bspBindMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
+/**
+ * @param {WebGLRenderingContext} gl
+ * @param {renderer.State} state
+ * @param {Array.<WebGLBuffer>} indexBuffers
+ * @param {Array.<WebGLBuffer>} vertexBuffers
+ * Callback fired by renderer for every meshInstance.
+ */
+renderer.Renderer.renderBspMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
     if (state.prevMeshInstance === null ||
         state.prevStage !== state.stage ||
         state.prevMeshInstance.modelInstance !== state.prevMeshInstance.modelInstance) {
         gl.uniformMatrix4fv(state.stage.program.uniforms['mvpMat'], false, state.mvpMat);
     }
-//    gl.uniformMatrix4fv(state.stage.program.uniforms['mvpMat'], false, state.mvpMat);
+    
+    var mesh = state.meshInstance.baseMesh;
+    gl.drawElements(gl.TRIANGLES, mesh.indicesCount, gl.UNSIGNED_SHORT, mesh.indicesOffset);
 };
 
-renderer.Renderer.md3BindMesh = function (gl, state, indexBuffers, vertexBuffers) {
+/**
+ * @param {WebGLRenderingContext} gl
+ * @param {renderer.State} state
+ * @param {Array.<WebGLBuffer>} indexBuffers
+ * @param {Array.<WebGLBuffer>} vertexBuffers
+ * Callback fired by renderer just before drawElements to set uniforms and attribs.
+ * Called once for mesh type.
+ */
+renderer.Renderer.bindMd3Mesh = function (gl, state, indexBuffers, vertexBuffers) {
     var mesh = state.meshInstance.baseMesh;
     var shader =  state.stage.program;
     var indexBufferId = mesh.geometry.indexBufferId;
@@ -500,7 +472,14 @@ renderer.Renderer.md3BindMesh = function (gl, state, indexBuffers, vertexBuffers
     }
 };
 
-renderer.Renderer.md3BindMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
+/**
+ * @param {WebGLRenderingContext} gl
+ * @param {renderer.State} state
+ * @param {Array.<WebGLBuffer>} indexBuffers
+ * @param {Array.<WebGLBuffer>} vertexBuffers
+ * Callback fired by renderer for every meshInstance.
+ */
+renderer.Renderer.renderMd3MeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
     var vertexStride = 32,
 	normalOffset = 20,
         texOffset = 12;
@@ -551,4 +530,6 @@ renderer.Renderer.md3BindMeshInstance = function (gl, state, indexBuffers, verte
         gl.uniformMatrix4fv(shader.uniforms['mvpMat'], false, state.mvpMat);
         gl.uniform1f(shader.uniforms['lerpWeight'], modelInst.getLerp());        
     }
+
+    gl.drawElements(gl.TRIANGLES, mesh.indicesCount, gl.UNSIGNED_SHORT, mesh.indicesOffset);
 };
