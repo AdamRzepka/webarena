@@ -8,4 +8,4 @@ flags.GAME_WORKER = false;
 /**
  * @define {boolean}
  */
-flags.DEBUG_WINDOW = false;
+flags.DEBUG_WINDOW = true;

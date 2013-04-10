@@ -14,7 +14,7 @@ renderer.billboard.init = function (rend) {
                     1, 1,
                     -0.5, 0.5,
                     0, 1];
-    var indices = [0, 1, 2, 0, 2, 3];
+    var indices = [1, 2, 0, 3];
     var vertexShader =
             'precision highp float;\n' +
             'attribute vec2 position;\n' +
@@ -24,24 +24,31 @@ renderer.billboard.init = function (rend) {
             'uniform mat4 mMat; \n' +
             'uniform mat4 vMat; \n' +
             'uniform mat4 pMat; \n' +
+            'uniform float rot;\n' +
             
             'void main(void) {\n' +
                 'mat4 mv = vMat * mMat;\n' +
                 'vec4 centerPos = mv[3];\n' +
-                'vTexCoord = texCoord;\n' +
-                'centerPos[0] += position[0] * length(mv[0]);\n' +
-                'centerPos[1] += position[1] * length(mv[1]);\n' +
+                'mat2 rotMat = mat2(cos(rot), -sin(rot), sin(rot), cos(rot));\n' +
+                'vec2 pos = centerPos.xy;\n' +
+                'pos += position * vec2(length(mv[0]), length(mv[1]));\n' +
+                'centerPos.xy = rotMat * pos;\n' +
                 'gl_Position = pMat * centerPos;\n' +
+                'vTexCoord = texCoord;\n' +
+
             '}\n';
 
     var fragmentShader =
             'precision highp float;\n' +
             'varying vec2 vTexCoord; \n' +
             'uniform sampler2D texture; \n' +
+            'uniform float alpha;\n' +
 
             'void main(void) { \n' +
                 //'gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n' +
-                'gl_FragColor = texture2D(texture, vTexCoord); \n' +
+                'vec4 color = texture2D(texture, vTexCoord);\n' +
+                'color.w *= alpha;\n' +
+                'gl_FragColor = color\n;' +
             '} \n';
     
     rend.buildSpecialMaterial('__BILLBOARD__', vertexShader, fragmentShader);
@@ -63,7 +70,16 @@ renderer.billboard.init = function (rend) {
  */
 renderer.billboard.model = null;
 
-renderer.billboard.create = function (id, center, sizeX, sizeY, texture) {
+/**
+ * @param {number} id
+ * @param {base.Vec3} center
+ * @param {number} sizeX
+ * @param {number} sizeY
+ * @param {number} rotation 
+ * @param {WebGLTexture} texture
+ * @param {number} alpha
+ */
+renderer.billboard.create = function (id, center, sizeX, sizeY, rotation, texture, alpha) {
     goog.asserts.assert(renderer.billboard.model);
 
     var mtx = base.Mat4.identity();
@@ -76,11 +92,19 @@ renderer.billboard.create = function (id, center, sizeX, sizeY, texture) {
 
     var modelInst = new base.ModelInstance(id, renderer.billboard.model, 0);
     modelInst.setMatrix(mtx);
-    modelInst.customData = texture;
+    modelInst.customData = new renderer.billboard.Data(texture, rotation, alpha);
     return modelInst;
 };
 
-renderer.billboard.update = function (model, center, sizeX, sizeY) {
+/**
+ * @param {base.ModelInstance} model
+ * @param {base.Vec3} center
+ * @param {number} sizeX
+ * @param {number} sizeY
+ * @param {number} rotation 
+ * @param {number} alpha
+ */
+renderer.billboard.update = function (model, center, sizeX, sizeY, rotation, alpha) {
     var mtx = model.getMatrix();
     mtx[0] = sizeX;
     mtx[5] = sizeY;
@@ -88,7 +112,9 @@ renderer.billboard.update = function (model, center, sizeX, sizeY) {
     mtx[12] = center[0];
     mtx[13] = center[1];
     mtx[14] = center[2];
-    model.setMatrix(mtx); // redundant, but for clarification    
+    model.setMatrix(mtx); // redundant, but for clarification
+    model.customData.rotation = rotation;
+    model.customData.alpha = alpha;
 };
 
 /**
@@ -126,16 +152,18 @@ renderer.billboard.bindMesh = function (gl, state, indexBuffers, vertexBuffers) 
 renderer.billboard.renderMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
     var vertexStride = 16, texOffset = 8;
     var shader = state.stage.program;
-    var texture = /**@type{WebGLTexture}*/state.meshInstance.modelInstance.customData;
+    var data = /**@type{renderer.billboard.Data}*/state.meshInstance.modelInstance.customData;
     var mesh = state.meshInstance.baseMesh;
-    
+
     // // Set uniforms
     gl.uniformMatrix4fv(shader.uniforms['mMat'], false,
                         state.meshInstance.modelInstance.getMatrix());
+    gl.uniform1f(shader.uniforms['rot'], data.rotation);
+    gl.uniform1f(shader.uniforms['alpha'], data.alpha);
     
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(shader.uniforms['texture'], 0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindTexture(gl.TEXTURE_2D, data.texture);
 
     // Setup vertex attributes
     gl.enableVertexAttribArray(shader.attribs['position']);
@@ -145,6 +173,29 @@ renderer.billboard.renderMeshInstance = function (gl, state, indexBuffers, verte
     gl.vertexAttribPointer(shader.attribs['texCoord'], 2, gl.FLOAT, false,
          		   vertexStride, texOffset);
 
-    gl.drawElements(gl.TRIANGLES, mesh.indicesCount, gl.UNSIGNED_SHORT, mesh.indicesOffset);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    gl.drawElements(gl.TRIANGLE_STRIP, mesh.indicesCount, gl.UNSIGNED_SHORT, mesh.indicesOffset);
 };
 
+/**
+ * @private
+ * @constructor
+ * @param {WebGLTexture} texture
+ * @param {number} rotation
+ * @param {number} alpha
+ */
+renderer.billboard.Data = function (texture, rotation, alpha) {
+    /**
+     * @type {WebGLTexture}
+     */
+    this.texture = texture;
+    /**
+     * @type {number}
+     */
+    this.rotation = rotation;
+    /**
+     * @type {number}
+     */
+    this.alpha = alpha;
+};

@@ -310,18 +310,21 @@ base.makeUnremovable(renderer.Scene.prototype.updateLine);
  * @param {base.Vec3} center
  * @param {number} sizeX
  * @param {number} sizeY
+ * @param {number} rotation 
  * @param {string} textureName
+ * @param {number} alpha
  * @param {function(*)} callback called with id of model instance as first argument
  */
-renderer.Scene.prototype.registerBillboard = function (center, sizeX, sizeY, textureName,
-                                                       callback) {
+renderer.Scene.prototype.registerBillboard = function (center, sizeX, sizeY, rotation,
+                                                       textureName, alpha, callback) {
     var id;
     var modelInst;
 
     for (id = 0; id < this.modelInstances_.length && this.modelInstances_[id]; ++id) {}
 
-    modelInst = renderer.billboard.create(id, center, sizeX, sizeY,
-                                          this.renderer_.getTexture(textureName));
+    modelInst = renderer.billboard.create(id, center, sizeX, sizeY, rotation,
+                                          this.renderer_.getTexture(textureName),
+                                          alpha);
 
     this.modelInstances_[id] = modelInst;
     this.renderer_.addModelInstance(modelInst);
@@ -335,12 +338,14 @@ base.makeUnremovable(renderer.Scene.prototype.registerBillboard);
  * @param {base.Vec3} center
  * @param {number} sizeX
  * @param {number} sizeY
+ * @param {number} rotation
+ * @param {number} alpha 
  */
-renderer.Scene.prototype.updateBillboard = function (id, center, sizeX, sizeY) {
+renderer.Scene.prototype.updateBillboard = function (id, center, sizeX, sizeY, rotation, alpha) {
     var modelInst = this.modelInstances_[id];
     goog.asserts.assert(modelInst);
     
-    renderer.billboard.update(modelInst, center, sizeX, sizeY);
+    renderer.billboard.update(modelInst, center, sizeX, sizeY, rotation, alpha);
 };
 base.makeUnremovable(renderer.Scene.prototype.updateBillboard);
 
