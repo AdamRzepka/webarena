@@ -50,7 +50,7 @@ game.init = function (broker) {
     scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                               base.IRendererScene);
     
-    rm.load([mapName, 'assassin', 'lightning'], function () {
+    rm.load([mapName, 'assassin', 'weapons'], function () {
 	var map, md3;
 	files.ShaderScriptLoader.loadAll(rm.getScripts());
         scene.buildShaders(files.ShaderScriptLoader.shaderScripts,

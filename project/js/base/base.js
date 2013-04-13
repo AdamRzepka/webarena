@@ -80,7 +80,7 @@ base.Model = function (id, meshes, framesCount, framesData, type, tags, skins) {
      */
     this.type = type;    
     /**
-     * One model can be displayed with different materials, when they have .skin
+     * One model can be displayed with different materials, when it have .skin
      * files specified.
      * @const
      * @type {Array.<string>}

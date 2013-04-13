@@ -61,7 +61,8 @@ game.Player = function (mm, rm, name, skin) {
      * @const
      * @type {base.ModelInstance}
      */
-    this.weapon = mm.makeInstance('models/weapons2/lightning/lightning.md3');
+    this.weapon = mm.makeInstance('models/weapons2/machinegun/machinegun.md3');
+    this.flash = mm.makeInstance('models/weapons2/machinegun/machinegun_flash.md3');
     /**
      * @private
      * @const
@@ -365,6 +366,10 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
         base.Mat4.multiply(weaponMtx, game.Player.WEAPON_ROT, weaponMtx);
     }
     this.weapon.setMatrix(weaponMtx);
+
+    var flashMtx = this.flash.getMatrix();
+    base.Mat4.multiply(weaponMtx, this.weapon.baseModel.framesData[0].tags[0], flashMtx);
+    this.flash.setMatrix(flashMtx);
 
     // correct legs angle movement
     if (this.legsState === game.Player.LegsStates.IDLE) {

@@ -3,8 +3,10 @@ import os
 import Image
 import bsp
 import math
+import itertools
 
 def check_file_exists(path):
+     print 'checking file', path
      try:
          open(path, 'r')
          return True
@@ -70,3 +72,31 @@ def pack_player(player_dir, baseoa, zipname):
                 
 def pack_md3(md3_file, baseoa, zipname):
      pack_files(bsp.get_files_for_md3(md3_file, baseoa), baseoa, zipname)
+
+def find_files_in_tree(root, subdir, filter_fun):
+     result = []
+     files = os.listdir(root + '/' + subdir)
+     for f in files:
+          path = subdir + '/' + f
+          if os.path.isdir(root + '/' + path):
+               result.extend(find_files_in_tree(root, path, filter_fun))
+          elif filter_fun(path):
+               result.append(path)
+     return result
+
+def pack_weapons(weapon_dir, baseoa, zipname):
+     md3s = find_files_in_tree(baseoa, weapon_dir, lambda f: f.find('.md3') != -1)
+     files = []
+     shader = ''
+     
+     for md3 in md3s:
+          files.extend(bsp.get_files_for_md3(md3, baseoa))
+          with open(baseoa + '/scripts/__all__.shader', 'r') as script:
+               shader = shader + script.read() + '\n'
+     
+     with open(baseoa + '/scripts/__all__.shader', 'w') as script:
+          script.write(shader)
+          
+     pack_files(files, baseoa, zipname)
+     
+     

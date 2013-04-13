@@ -163,6 +163,7 @@ def parse_shader_file(script_path):
 
 # md3 dependencies (scripts and textures)
 def get_md3_deps(md3_path):
+    print 'checking', md3_path
     try:
         with open(md3_path, 'rb') as md3:
             check_md3_header(md3)
