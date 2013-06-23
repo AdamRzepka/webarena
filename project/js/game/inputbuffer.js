@@ -18,131 +18,87 @@
 'use strict';
 
 goog.require('goog.array');
-goog.require('base.IInputHandler');
+goog.require('game.InputState');
+
 goog.provide('game.InputBuffer');
 
 /**
  * @constructor
- * @implements {base.IInputHandler}
  */
 game.InputBuffer = function () {
     /**
      * @private
-     * @type {Array.<boolean>}
+     * @type {game.InputState}
      */
-    this.nextActionState_ = goog.array.repeat(false, game.InputBuffer.BUFFER_SIZE);
+    this.prevState_ = new game.InputState();
     /**
      * @private
-     * @type {Array.<boolean>}
+     * @type {game.InputState}
      */
-    this.actionState_ = goog.array.repeat(false, game.InputBuffer.BUFFER_SIZE);
-    /**
-     * @private
-     * @type {Array.<boolean>}
-     */
-    this.prevActionState_ = goog.array.repeat(false, game.InputBuffer.BUFFER_SIZE);
-
-    // cursor position is buffered
-    /**
-     * @private
-     * @type {{dx: number, dy: number}}
-     */
-    this.cursor_ = {dx: 0, dy: 0};
-    /**
-     * @private
-     * @type {{dx: number, dy: number}}
-     */
-    this.nextCursor_ = {dx: 0, dy: 0};
-};
-
-game.InputBuffer.BUFFER_SIZE = 128;
-
-/**
- * @enum
- */
-game.InputBuffer.Action = {
-    FIRE: 0, // LMB
-    WALK: 16, // shift
-    JUMP: 32, // space
-    CROUCH: 67, // C
-    UP: 87, // W
-    DOWN: 83, // S
-    LEFT: 65, // A
-    RIGHT: 68, // D
-    CHANGING: 49, // 1
-    KILL: 50, // 2
-    RESPAWN: 51 // 3
+    this.state_ = new game.InputState();
 };
 
 /**
  * @public
  * Call this at the beginning of each game step.
  */
-game.InputBuffer.prototype.step = function () {
-    var i;
-    this.cursor_.dx = this.nextCursor_.dx;
-    this.cursor_.dy = this.nextCursor_.dy;
-    this.nextCursor_.dx = this.nextCursor_.dy = 0;
-
-    for (i = 0; i < game.InputBuffer.BUFFER_SIZE; ++i) {
-        this.prevActionState_[i] = this.actionState_[i];
-        this.actionState_[i] = this.nextActionState_[i];
-    }
+game.InputBuffer.prototype.step = function (newState) {
+    // var i = 0;
+    // this.prevState_.cursorX = this.state_.cursorX;
+    // this.prevState_.cursorY = this.state_.cursorY;
+    // for (i = 0; i < this.state_.actions.length; ++i) {
+    //     this.prevState_.actions[i] = this.state_.actions[i];
+    // }
+    this.prevState_ = this.state_;
+    this.state_ = newState;
 };
+
 /**
  * @public
- * @param {game.InputBuffer.Action} action
+ * @param {game.InputState.Action} action
  * @return {boolean}
  */
 game.InputBuffer.prototype.getAction = function (action) {
-    return this.actionState_[action];
+    return this.state_.actions[action];
 };
+
 /**
  * @public
- * @param {game.InputBuffer.Action} action
+ * @param {game.InputState.Action} action
  * @return {boolean}
  */
 game.InputBuffer.prototype.hasActionStarted = function (action) {
-    return (this.actionState_[action] && !this.prevActionState_[action]);
-};
-/**
- * @public
- * @return {{dx: number, dy: number}}
- */
-game.InputBuffer.prototype.getCursor = function () {
-    return this.cursor_;
+    return (this.state_.actions[action] && !this.prevState_.actions[action]);
 };
 
 /**
  * @public
- * @param {number} key
- * Called by DOM event handler
+ * @return {number}
  */
-game.InputBuffer.prototype.onKeyUp = function (key) {
-    this.nextActionState_[key] = false;
+game.InputBuffer.prototype.getX = function () {
+    return this.state_.cursorX;
 };
-
-base.makeUnremovable(game.InputBuffer.prototype.onKeyUp);
 
 /**
  * @public
- * @param {number} key
- * Called by DOM event handler
+ * @return {number}
  */
-game.InputBuffer.prototype.onKeyDown = function (key) {
-    this.nextActionState_[key] = true;
+game.InputBuffer.prototype.getY = function () {
+    return this.state_.cursorY;
 };
-
-base.makeUnremovable(game.InputBuffer.prototype.onKeyDown);
 
 /**
  * @public
- * @param {number} dx
- * @param {number} dy
- * Called by DOM event handler
+ * @return {number}
  */
-game.InputBuffer.prototype.onMouseMove = function (dx, dy) {
-    this.nextCursor_.dx += dx;
-    this.nextCursor_.dy += dy;
+game.InputBuffer.prototype.getDeltaX = function () {
+    return this.state_.cursorX - this.prevState_.cursorX;
 };
-base.makeUnremovable(game.InputBuffer.prototype.onMouseMove);
+
+/**
+ * @public
+ * @return {number}
+ */
+game.InputBuffer.prototype.getDeltaY = function () {
+    return this.state_.cursorY - this.prevState_.cursorY;
+};

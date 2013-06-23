@@ -51,36 +51,36 @@ game.FreeCamera.prototype.update = function()
     var dirty = false;
     var dir = base.Vec3.create([0.0, 0.0, 0.0]);
 
-    if (this.input.getAction(game.InputBuffer.Action.UP))
+    if (this.input.getAction(game.InputState.Action.UP))
     {
 	dir[2] -= this.speed;
 	dirty = true;
     }
 
-    if (this.input.getAction(game.InputBuffer.Action.DOWN))
+    if (this.input.getAction(game.InputState.Action.DOWN))
     {
 	dir[2] += this.speed;
 	dirty = true;
     }
 
-    if (this.input.getAction(game.InputBuffer.Action.LEFT))
+    if (this.input.getAction(game.InputState.Action.LEFT))
     {
 	dir[0] -= this.speed;
 	dirty = true;
     }
 
-    if (this.input.getAction(game.InputBuffer.Action.RIGHT))
+    if (this.input.getAction(game.InputState.Action.RIGHT))
     {
 	dir[0] += this.speed;
 	dirty = true;
     }
-    if (this.input.getAction(game.InputBuffer.Action.FIRE))
+    if (this.input.getAction(game.InputState.Action.FIRE))
     {
 	var globalRot = base.Mat4.identity();
-	base.Mat4.rotateZ(globalRot, -this.input.getCursor().dx / 50.0);
+	base.Mat4.rotateZ(globalRot, -this.input.getDeltaX() / 50.0);
 	this.rotation = base.Mat4.multiply(globalRot, this.rotation);
 	var localRot = base.Mat4.identity();
-	base.Mat4.rotateX(localRot, -this.input.getCursor().dy / 50.0);
+	base.Mat4.rotateX(localRot, -this.input.getDeltaY() / 50.0);
 	base.Mat4.multiply(this.rotation, localRot);
 
 	dirty = true;

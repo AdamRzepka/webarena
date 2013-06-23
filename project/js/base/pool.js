@@ -50,3 +50,28 @@ base.Pool.prototype.release = function (obj) {
     goog.asserts.assert(goog.isDefAndNotNull(obj));
     this.pool_.push(obj);
 };
+
+/**
+ * @public
+ * @param {*} obj
+ * Very simple reference counting
+ */
+base.Pool.prototype.ref = function (obj) {
+    if (goog.isDefAndNotNull(obj.__refCounter__)){
+        ++obj.__refCounter__;
+    } else {
+        obj.__refCounter__ = 1;
+    }
+};
+
+/**
+ * @public
+ * @param {*} obj
+ */
+base.Pool.prototype.unref = function (obj) {
+    goog.asserts.assert(goog.isDefAndNotNull(obj.__refCounter__));
+    --obj.__refCounter__;
+    if (obj.__refCounter__ === 0) {
+        this.pool_.push(obj);
+    }
+};

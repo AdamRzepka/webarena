@@ -28,6 +28,7 @@ goog.require('files.bsp');
 goog.require('files.md3');
 goog.require('files.ShaderScriptLoader');
 goog.require('game.InputBuffer');
+goog.require('game.InputHandler');
 goog.require('game.FreeCamera');
 goog.require('game.CharacterController');
 goog.require('game.globals');
@@ -41,11 +42,12 @@ goog.provide('game');
  */
 game.init = function (broker) {
     var scene;
-    var input = new game.InputBuffer();
+    var inputBuffer = new game.InputBuffer();
+    var inputHandler = new game.InputHandler();
     var rm = new files.ResourceManager();
     var mapName = 'aggressor';
     
-    broker.registerReceiver('base.IInputHandler', input);
+    broker.registerReceiver('base.IInputHandler', inputHandler);
     
     scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                               base.IRendererScene);
@@ -68,11 +70,11 @@ game.init = function (broker) {
                                         });
 	});
 	
-        var camera = new game.FreeCamera(input, base.Vec3.create([0,0,0]));
+        var camera = new game.FreeCamera(inputBuffer, base.Vec3.create([0,0,0]));
         
         var modelManager = new game.ModelManager(scene, rm);
         var player = new game.Player(modelManager, rm, 'assassin', 'default');
-        var characterController = new game.CharacterController(map.bsp, input, player);
+        var characterController = new game.CharacterController(map.bsp, inputBuffer, player);
         var spawnPoints = map.getSpawnPoints();
         var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
         
@@ -82,9 +84,11 @@ game.init = function (broker) {
 
         function update () {
             var spawnPoint;
-            input.step();
 
-            if (input.hasActionStarted(game.InputBuffer.Action.RESPAWN)) {
+            inputHandler.step();
+            inputBuffer.step(inputHandler.getState());
+
+            if (inputBuffer.hasActionStarted(game.InputState.Action.RESPAWN)) {
                 spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
         
                 characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
