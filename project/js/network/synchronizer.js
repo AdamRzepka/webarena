@@ -36,16 +36,68 @@ network.Synchronizer = function () {
      * @type {network.Snapshot}
      */
     this.snapshot_ = null;
-    this.data_ = null;
+    /**
+     * @private
+     * @type {Array.<{objectBuffer: ObjectBuffer, index: number}>}
+     * Stack used to traverse through objects structure
+     */
+    this.stack_ = [{
+                objectBuffer: new network.ObjectBuffer(),
+                index: 0
+            }]; // start with dummy ObjectBuffer on stack
+    /**
+     * @private
+     * @type {number}
+     * Top of the stack
+     */
+    this.top_ = 0;
 };
 
 network.Synchronizer.prototype.synchronize = function (data) {
-    if (this.mode_ === network.Synchronizer.Mode.WRITE) {
-        this.data_ = data;
-        return data;
-    } else {
-        return this.data_;
+    var obj, state;
+    if (goog.isArray(data)) {
+        throw new Error("not implemented");
     }
+    else if (goog.isObject(data)) {
+        if (this.mode_ === network.Synchronizer.Mode.WRITE) {
+            obj = new network.ObjectBuffer();
+            obj.id = data.getId();
+            obj.type = data.getType();
+            
+            this.stack_[++this.top_] = {
+                objectBuffer: obj,
+                index: 0
+            };
+            
+            data.synchronize(this);
+            --this.top_;
+            this.snapshot_.objects[data.getId()] = obj;
+        } else {
+            obj = this.snapshot_.objects[data.getId()];
+            goog.asserts.assert(goog.isDefAndNotNull(obj));
+            goog.asserts.assert(obj.type === data.getType());
+            
+            this.stack_[++this.top_] = {
+                objectBuffer: obj,
+                index: 0
+            };
+            data.synchronize(this);
+            --this.top_;
+        }
+        return data;
+    }
+    else {
+        if (this.mode_ === network.Synchronizer.Mode.WRITE) {
+            state = this.stack_[this.top_];
+            obj = state.objectBuffer;
+            obj.data[state.index++] = data;
+            return data;
+        } else {
+            state = this.stack_[this.top_];
+            obj = state.objectBuffer;
+            return obj.data[state.index++];
+        }        
+    }    
 };
 
 /**
@@ -60,6 +112,9 @@ network.Synchronizer.prototype.reset = function (mode, snapshot) {
                         && goog.isDefAndNotNull(snapshot)));
     this.mode_ = mode;
     this.snapshot_ = snapshot || new network.Snapshot();
+    this.stack_.legth = 1;
+    this.stack_[0].index = 0;
+    this.top_ = 0;
 };
 
 /**

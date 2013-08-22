@@ -44,7 +44,7 @@ function testResetParams() {
 
 function testWrite() {
     var sync = new network.Synchronizer();
-    assertEquals("Returns the same value during writing", sync.synchronize(1), 1);
+    assertEquals("Returns the same value during writing", 1, sync.synchronize(1));
 }
 
 function testRead() {
@@ -52,5 +52,33 @@ function testRead() {
     sync.reset(network.Synchronizer.Mode.WRITE);
     sync.synchronize(1);
     sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
-    assertEquals("Returns previously written value", sync.synchronize(2), 1);
+    assertEquals("Returns previously written value", 1, sync.synchronize(2));
+}
+
+function testObject() {
+    function Mock() {
+        this.dummy = 1;
+    }
+
+    Mock.prototype.getId = function () {
+        return 0;
+    };
+    
+    Mock.prototype.getType = function () {
+        return 0;
+    };
+
+    Mock.prototype.synchronize = function (synchronizer) {
+        this.dummy = synchronizer.synchronize(this.dummy);
+    };
+
+    var mock = new Mock();
+    
+    var sync = new network.Synchronizer();
+    sync.reset(network.Synchronizer.Mode.WRITE);
+    sync.synchronize(mock);
+    sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
+    mock.dummy = 2;
+    mock = sync.synchronize(mock);
+    assertEquals("Returns previously written value", 1, mock.dummy);
 }
