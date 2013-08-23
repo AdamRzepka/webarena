@@ -138,3 +138,71 @@ function testNestedObjects() {
     assertEquals("Returns previously written value", 2, mock.obj.b);
     assertEquals("Returns previously written value", 'a', mock.c);
 }
+
+function testNestedObjectCreation() {
+    function MockA() {
+        this.id = 0;
+        this.a = 1;
+        this.b = 2;
+    }
+
+    MockA.prototype.getId = function () {
+        return this.id;
+    };
+
+    MockA.prototype.setId = function (id) {
+        this.id = id;
+    };
+    
+    MockA.prototype.getType = function () {
+        return 0;
+    };
+
+    MockA.prototype.synchronize = function (synchronizer) {
+        this.a = synchronizer.synchronize(this.a);
+        this.b = synchronizer.synchronize(this.b);
+    };
+
+    function MockB() {
+        this.id = 1;
+        this.c = 'a';
+        this.obj = new MockA();
+    }
+
+    MockB.prototype.getId = function () {
+        return this.id;
+    };
+
+    MockB.prototype.setId = function (id) {
+        this.id = id;
+    };
+    
+    MockB.prototype.getType = function () {
+        return 1;
+    };
+
+    MockB.prototype.synchronize = function (synchronizer) {
+        this.c = synchronizer.synchronize(this.c);
+        this.obj = synchronizer.synchronize(this.obj);
+    };
+
+    var mock = new MockB();
+    
+    var sync = new network.Synchronizer();
+    network.Synchronizer.registerClass(0, function () {
+        return new MockA();
+    });
+    sync.reset(network.Synchronizer.Mode.WRITE);
+    sync.synchronize(mock);
+    mock.obj.a = 2;
+    mock.obj.b = 3;
+    mock.c = 'b';
+    mock.obj = null;
+    sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
+    mock = sync.synchronize(mock);
+    assertNotNullNorUndefined("Creates new object if null", mock.obj);
+    assertEquals("Returns previously written value 1", 1, mock.obj.a);
+    assertEquals("Returns previously written value 2", 2, mock.obj.b);
+    assertEquals("Returns previously written value a", 'a', mock.c);
+}
+
