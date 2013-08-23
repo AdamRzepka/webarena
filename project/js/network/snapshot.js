@@ -21,6 +21,9 @@ goog.require('network.ObjectBuffer');
 
 goog.provide('network.Snapshot');
 
+/**
+ * @constructor
+ */
 network.Snapshot = function () {
     this.timestamp = 0;
     this.objects = [];

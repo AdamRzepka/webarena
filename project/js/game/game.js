@@ -34,6 +34,7 @@ goog.require('game.CharacterController');
 goog.require('game.globals');
 goog.require('game.ModelManager');
 goog.require('game.Player');
+goog.require('network.Synchronizer');
 
 goog.provide('game');
 

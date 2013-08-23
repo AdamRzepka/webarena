@@ -22,19 +22,19 @@ goog.provide('network.ObjectBuffer');
 /**
  * @constructor
  */
-network.ObjectBuffer = function (mode) {
+network.ObjectBuffer = function () {
     /**
-     * @private
+     * @public
      * @type {number}
      */
     this.id = -1;
     /**
-     * @private
+     * @public
      * @type {number}
      */
     this.type = -1;
     /**
-     * @private
+     * @public
      * @type {Array.<*>}
      * Holding object data (only primitive type or other object id)
      */

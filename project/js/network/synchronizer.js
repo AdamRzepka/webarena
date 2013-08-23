@@ -20,6 +20,7 @@
 goog.require('goog.asserts');
 goog.require('network.Snapshot');
 
+goog.provide('network.ISynchronizable');
 goog.provide('network.Synchronizer');
 
 /**
@@ -28,9 +29,9 @@ goog.provide('network.Synchronizer');
 network.Synchronizer = function () {
     /**
      * @private
-     * @type {network.Synchronizer.Mode}
+     * @type {boolean}
      */
-    this.mode_ = network.Synchronizer.Mode.WRITE;
+    this.modeWriting_ = true;
     /**
      * @private
      * @type {network.Snapshot}
@@ -38,7 +39,7 @@ network.Synchronizer = function () {
     this.snapshot_ = null;
     /**
      * @private
-     * @type {Array.<{objectBuffer: ObjectBuffer, index: number}>}
+     * @type {Array.<{objectBuffer: network.ObjectBuffer, index: number}>}
      * Stack used to traverse through objects structure
      */
     this.stack_ = [{
@@ -53,50 +54,39 @@ network.Synchronizer = function () {
     this.top_ = 0;
 };
 
+/**
+ * @interface
+ * A class must implement this to be synchronized.
+ */
+network.ISynchronizable = function () {};
+/**
+ * @return {number}
+ */
+network.ISynchronizable.prototype.getId = function () {};
+/**
+ * @return {number}
+ */
+network.ISynchronizable.prototype.getType = function () {};
+/**
+ * @param {network.Synchronizer} synchronizer
+ */
+network.ISynchronizable.prototype.synchronize = function (synchronizer) {};
+
+
+/**
+ * @public
+ * @param {*} data
+ */
 network.Synchronizer.prototype.synchronize = function (data) {
-    var obj, state;
+    var state, obj;
     if (goog.isArray(data)) {
         throw new Error("not implemented");
     }
     else if (goog.isObject(data)) {
-        if (this.mode_ === network.Synchronizer.Mode.WRITE) {
-            obj = new network.ObjectBuffer();
-            obj.id = data.getId();
-            obj.type = data.getType();
-            
-            this.stack_[++this.top_] = {
-                objectBuffer: obj,
-                index: 0
-            };
-            
-            data.synchronize(this);
-            --this.top_;
-            this.snapshot_.objects[data.getId()] = obj;
-        } else {
-            obj = this.snapshot_.objects[data.getId()];
-            goog.asserts.assert(goog.isDefAndNotNull(obj));
-            goog.asserts.assert(obj.type === data.getType());
-            
-            this.stack_[++this.top_] = {
-                objectBuffer: obj,
-                index: 0
-            };
-            data.synchronize(this);
-            --this.top_;
-        }
-        return data;
+        return this.synchronizeObject_(data);
     }
     else {
-        if (this.mode_ === network.Synchronizer.Mode.WRITE) {
-            state = this.stack_[this.top_];
-            obj = state.objectBuffer;
-            obj.data[state.index++] = data;
-            return data;
-        } else {
-            state = this.stack_[this.top_];
-            obj = state.objectBuffer;
-            return obj.data[state.index++];
-        }        
+        return this.synchronizePrimitive_(data);
     }    
 };
 
@@ -110,7 +100,7 @@ network.Synchronizer.prototype.reset = function (mode, snapshot) {
                         && !goog.isDefAndNotNull(snapshot))
                         || (mode == network.Synchronizer.Mode.READ
                         && goog.isDefAndNotNull(snapshot)));
-    this.mode_ = mode;
+    this.modeWriting_ = (mode == network.Synchronizer.Mode.WRITE);
     this.snapshot_ = snapshot || new network.Snapshot();
     this.stack_.legth = 1;
     this.stack_[0].index = 0;
@@ -123,4 +113,47 @@ network.Synchronizer.prototype.reset = function (mode, snapshot) {
 network.Synchronizer.Mode = {
     WRITE: 0,
     READ: 1
+};
+
+/**
+ * @private
+ * @param {network.ISynchronizable} data
+ */
+network.Synchronizer.prototype.synchronizeObject_ = function (data) {
+    var obj;
+    if (this.modeWriting_) {
+        obj = new network.ObjectBuffer();
+        obj.id = data.getId();
+        obj.type = data.getType();
+        this.snapshot_.objects[data.getId()] = obj;
+    } else {
+        obj = this.snapshot_.objects[data.getId()];
+        goog.asserts.assert(goog.isDefAndNotNull(obj));
+        goog.asserts.assert(obj.type === data.getType());
+    }        
+    
+    this.stack_[++this.top_] = {
+        objectBuffer: obj,
+        index: 0
+    };
+    
+    data.synchronize(this);
+    --this.top_;
+    
+    return data;    
+};
+
+/**
+ * @private
+ * @param {*} data
+ */
+network.Synchronizer.prototype.synchronizePrimitive_ = function (data) {
+    var state = this.stack_[this.top_];
+    var obj = state.objectBuffer;
+    if (this.modeWriting_) {
+        obj.data[state.index++] = data;
+        return data;
+    } else {
+        return obj.data[state.index++];
+    }  
 };

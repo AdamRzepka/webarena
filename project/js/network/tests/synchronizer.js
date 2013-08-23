@@ -57,7 +57,8 @@ function testRead() {
 
 function testObject() {
     function Mock() {
-        this.dummy = 1;
+        this.a = 1;
+        this.b = 2;
     }
 
     Mock.prototype.getId = function () {
@@ -69,7 +70,8 @@ function testObject() {
     };
 
     Mock.prototype.synchronize = function (synchronizer) {
-        this.dummy = synchronizer.synchronize(this.dummy);
+        this.a = synchronizer.synchronize(this.a);
+        this.b = synchronizer.synchronize(this.b);
     };
 
     var mock = new Mock();
@@ -78,7 +80,61 @@ function testObject() {
     sync.reset(network.Synchronizer.Mode.WRITE);
     sync.synchronize(mock);
     sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
-    mock.dummy = 2;
+    mock.a = 2;
+    mock.b = 3;
     mock = sync.synchronize(mock);
-    assertEquals("Returns previously written value", 1, mock.dummy);
+    assertEquals("Returns previously written value", 1, mock.a);
+    assertEquals("Returns previously written value", 2, mock.b);
+}
+
+function testNestedObjects() {
+    function MockA() {
+        this.a = 1;
+        this.b = 2;
+    }
+
+    MockA.prototype.getId = function () {
+        return 0;
+    };
+    
+    MockA.prototype.getType = function () {
+        return 0;
+    };
+
+    MockA.prototype.synchronize = function (synchronizer) {
+        this.a = synchronizer.synchronize(this.a);
+        this.b = synchronizer.synchronize(this.b);
+    };
+
+    function MockB() {
+        this.c = 'a';
+        this.obj = new MockA();
+    }
+
+    MockB.prototype.getId = function () {
+        return 1;
+    };
+    
+    MockB.prototype.getType = function () {
+        return 1;
+    };
+
+    MockB.prototype.synchronize = function (synchronizer) {
+        this.c = synchronizer.synchronize(this.c);
+        this.obj = synchronizer.synchronize(this.obj);
+    };
+
+    var mock = new MockB();
+    
+    var sync = new network.Synchronizer();
+    sync.reset(network.Synchronizer.Mode.WRITE);
+    sync.synchronize(mock);
+    sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
+    mock.obj.a = 2;
+    mock.obj.b = 3;
+    mock.c = 'b';
+    mock = sync.synchronize(mock);
+    assertEquals("Returns previously written value", 1, mock.obj.a);
+    assertEquals("Returns previously written value", 2, mock.obj.b);
+    assertEquals("Returns previously written value", 'a', mock.c);
 }
