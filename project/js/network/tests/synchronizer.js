@@ -232,9 +232,17 @@ function testArrays() {
     sync.synchronize(mock);
     sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
     mock.a = 2;
-    mock.b = [4, 5];
+    mock.b = [4];
     mock = sync.synchronize(mock);
     assertEquals("Returns previously written value", 1, mock.a);
+    assertEquals("Returns previously written value", 2, mock.b.length);
+    assertEquals("Returns previously written value", 2, mock.b[0]);
+    assertEquals("Returns previously written value", 3, mock.b[1]);
+    sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
+    mock.b = [4,5,6];
+    mock = sync.synchronize(mock);
+    assertEquals("Returns previously written value", 2, mock.b.length);
     assertEquals("Returns previously written value", 2, mock.b[0]);
     assertEquals("Returns previously written value", 3, mock.b[1]);
 };
+

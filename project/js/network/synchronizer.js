@@ -24,7 +24,7 @@ goog.provide('network.ISynchronizable');
 goog.provide('network.Synchronizer');
 
 /*
- * Simple, yet quite powerfull serialization API.
+ * Simple, yet quite powerful serialization API.
  * Assumptions:
  * - serialized class must implement ISynchronizable interface,
  * - type and object ids must be unique and should be continuous
@@ -165,7 +165,7 @@ network.Synchronizer.createObject_ = function (typeId, id) {
  * @param {Array.<*>} array
  */
 network.Synchronizer.prototype.synchronizeArray_ = function (array) {
-    var id, i;
+    var id, i, size;
     var childBuffer;
     var state = this.stack_[this.top_];
     var parentBuffer = state.objectBuffer;
@@ -194,8 +194,9 @@ network.Synchronizer.prototype.synchronizeArray_ = function (array) {
             objectBuffer: childBuffer,
             index: 0
         };
-        
-        for (i = 0; i < childBuffer.data.length; ++i) {
+        size = childBuffer.data.length;
+        array.length = size;
+        for (i = 0; i < size; ++i) {
             array[i] = this.synchronize(array[i]);
         }
         --this.top_;
