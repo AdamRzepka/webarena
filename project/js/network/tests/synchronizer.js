@@ -206,3 +206,35 @@ function testNestedObjectCreation() {
     assertEquals("Returns previously written value a", 'a', mock.c);
 }
 
+function testArrays() {
+    function Mock() {
+        this.a = 1;
+        this.b = [2, 3];
+    }
+
+    Mock.prototype.getId = function () {
+        return 0;
+    };
+    
+    Mock.prototype.getType = function () {
+        return 0;
+    };
+
+    Mock.prototype.synchronize = function (synchronizer) {
+        this.a = synchronizer.synchronize(this.a);
+        this.b = synchronizer.synchronize(this.b);
+    };
+
+    var mock = new Mock();
+    
+    var sync = new network.Synchronizer();
+    sync.reset(network.Synchronizer.Mode.WRITE);
+    sync.synchronize(mock);
+    sync.reset(network.Synchronizer.Mode.READ, sync.snapshot_);
+    mock.a = 2;
+    mock.b = [4, 5];
+    mock = sync.synchronize(mock);
+    assertEquals("Returns previously written value", 1, mock.a);
+    assertEquals("Returns previously written value", 2, mock.b[0]);
+    assertEquals("Returns previously written value", 3, mock.b[1]);
+};

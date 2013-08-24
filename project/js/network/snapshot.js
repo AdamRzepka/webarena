@@ -17,16 +17,51 @@
 
 'use strict';
 
-goog.require('network.ObjectBuffer');
-
+goog.provide('network.ArrayBuffer');
+goog.provide('network.ObjectBuffer');
 goog.provide('network.Snapshot');
 
 /**
  * @constructor
  */
+network.ObjectBuffer = function () {
+    /**
+     * @public
+     * @type {number}
+     */
+    this.id = -1;
+    /**
+     * @public
+     * @type {number}
+     */
+    this.type = -1;
+    /**
+     * @public
+     * @type {Array.<*>}
+     * Holding object data (only primitive type or other object id)
+     */
+    this.data = [];
+};
+
+/**
+ * @constructor
+ */
 network.Snapshot = function () {
+    /**
+     * @public
+     * @type {number}
+     */
     this.timestamp = 0;
+    /**
+     * @public
+     * @type {Array.<network.ObjectBuffer>}
+     */
     this.objects = [];
+    /**
+     * @public
+     * @type {Array.<network.ObjectBuffer>}
+     */
+    this.arrays = [];
 };
 
 

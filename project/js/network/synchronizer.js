@@ -23,6 +23,17 @@ goog.require('network.Snapshot');
 goog.provide('network.ISynchronizable');
 goog.provide('network.Synchronizer');
 
+/*
+ * Simple, yet quite powerfull serialization API.
+ * Assumptions:
+ * - serialized class must implement ISynchronizable interface,
+ * - type and object ids must be unique and should be continuous
+ *   and kept as low as possible (they serve as an array indices),
+ * - arrays mustn't be shared between objects and must hold
+ *   values of single type (but objects of different class are fine),
+ * - for now shared objects are not recognized (but this can be fixed easly).
+ */
+
 /**
  * @constructor
  */
@@ -84,7 +95,7 @@ network.ISynchronizable.prototype.synchronize = function (synchronizer) {};
 network.Synchronizer.prototype.synchronize = function (data) {
     var state, obj;
     if (goog.isArray(data)) {
-        throw new Error("not implemented");
+        return this.synchronizeArray_(data);
     }
     else if (typeof data === 'object') {
         return this.synchronizeObject_(data);
@@ -149,6 +160,92 @@ network.Synchronizer.createObject_ = function (typeId, id) {
     return obj;
 };
 
+/**
+ * @private
+ * @param {network.ISynchronizable} data
+ */
+network.Synchronizer.prototype.synchronizeArray_ = function (data) {
+    var childObj;
+    var state = this.stack_[this.top_];
+    var parentObj = state.objectBuffer;
+    var id;
+    var i;
+
+    if (this.modeWriting_) {
+        parentObj.data[state.index++] = this.snapshot_.arrays.length;
+        childObj = new network.ObjectBuffer();
+        childObj.size = data.length;
+        this.snapshot_.arrays.push(childObj);
+
+        this.stack_[++this.top_] = {
+            objectBuffer: childObj,
+            index: 0
+        };
+        
+        for (i = 0; i < data.length; ++i) {
+            this.synchronize(data[i]);
+        }
+        --this.top_;
+    } else {
+        id = parentObj.data[state.index++];
+        childObj = this.snapshot_.arrays[id];
+        goog.asserts.assert(goog.isDefAndNotNull(childObj));
+
+        this.stack_[++this.top_] = {
+            objectBuffer: childObj,
+            index: 0
+        };
+        
+        for (i = 0; i < childObj.data.length; ++i) {
+            data[i] = this.synchronize(data[i]);
+        }
+        --this.top_;
+    }        
+    
+    return data;    
+};
+
+/**
+ * @private
+ * @param {network.ISynchronizable} data
+ */
+network.Synchronizer.prototype.synchronizeObject_ = function (data) {
+    var childObj;
+    var state = this.stack_[this.top_];
+    var parentObj = state.objectBuffer;
+    var id;
+
+    if (this.modeWriting_) {
+        parentObj.data[state.index++] = data.getId();
+        
+        childObj = new network.ObjectBuffer();
+        childObj.id = data.getId();
+        childObj.type = data.getType();
+        
+        this.snapshot_.objects[data.getId()] = childObj;
+    } else {
+        id = parentObj.data[state.index++];
+        childObj = this.snapshot_.objects[id];
+        if (goog.isDefAndNotNull(data)) {
+            goog.asserts.assert(data.getId() === id);
+        }
+        else {
+            data = network.Synchronizer.createObject_(childObj.type, id);
+        }
+        goog.asserts.assert(goog.isDefAndNotNull(childObj));
+        goog.asserts.assert(childObj.type === data.getType());
+    }        
+    
+    this.stack_[++this.top_] = {
+        objectBuffer: childObj,
+        index: 0
+    };
+    
+    data.synchronize(this);
+    --this.top_;
+    
+    return data;    
+};
 
 /**
  * @private
