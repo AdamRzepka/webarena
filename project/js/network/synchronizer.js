@@ -135,16 +135,33 @@ network.Synchronizer.Mode = {
  * @param {number} typeId
  * @param {function(): network.ISynchronizable} constructorFun
  */
-network.Synchronizer.registerClass = function (typeId, constructorFun) {
+network.Synchronizer.registerConstructor = function (typeId, constructorFun) {
     goog.asserts.assert(!goog.isDefAndNotNull(network.Synchronizer.constructors_[typeId]));
     network.Synchronizer.constructors_[typeId] = constructorFun;
 };
+
+/**
+ * @public
+ * @param {number} typeId
+ * @param {function(network.ISynchronizable)} destructorFun
+ */
+network.Synchronizer.registerDestructor = function (typeId, destructorFun) {
+    goog.asserts.assert(!goog.isDefAndNotNull(network.Synchronizer.destructors_[typeId]));
+    network.Synchronizer.destructors_[typeId] = destructorFun;
+};
+
 
 /**
  * @private
  * @type {Array.<function(): network.ISynchronizable>}
  */
 network.Synchronizer.constructors_ = [];
+
+/**
+ * @private
+ * @type {Array.<function(network.ISynchronizable)>}
+ */
+network.Synchronizer.destructors_ = [];
 
 /**
  * @private
@@ -162,10 +179,23 @@ network.Synchronizer.createObject_ = function (typeId, id) {
 
 /**
  * @private
+ * @param {number} typeId
+ * @param {network.ISynchronizable} obj
+ */
+network.Synchronizer.destroyObject_ = function (typeId, obj) {
+    var destructor = network.Synchronizer.destructors_[typeId];
+    if (goog.isDefAndNotNull(destructor)) {
+        destructor(obj);
+    }
+};
+
+
+/**
+ * @private
  * @param {Array.<*>} array
  */
 network.Synchronizer.prototype.synchronizeArray_ = function (array) {
-    var id, i, size;
+    var id, i, size, obj;
     var childBuffer;
     var state = this.stack_[this.top_];
     var parentBuffer = state.objectBuffer;
@@ -195,10 +225,17 @@ network.Synchronizer.prototype.synchronizeArray_ = function (array) {
             index: 0
         };
         size = childBuffer.data.length;
-        array.length = size;
         for (i = 0; i < size; ++i) {
             array[i] = this.synchronize(array[i]);
         }
+        for (i = size; i < array.length; ++i) {
+            obj = array[i];
+            if (typeof obj === 'object')
+                network.Synchronizer.destroyObject_(
+                    obj.getType(),
+                    (/**@type{network.ISynchronizable}*/obj));
+        }
+        array.length = size;
         --this.top_;
     }        
     
@@ -216,6 +253,10 @@ network.Synchronizer.prototype.synchronizeObject_ = function (obj) {
     var id;
 
     if (this.modeWriting_) {
+        if (!goog.isDefAndNotNull(obj)) {
+            parentBuffer.data[state.index++] = -1;
+            return obj;
+        } 
         parentBuffer.data[state.index++] = obj.getId();
         
         childBuffer = new network.ObjectBuffer();
@@ -226,15 +267,18 @@ network.Synchronizer.prototype.synchronizeObject_ = function (obj) {
     } else {
         id = /**@type{number}*/parentBuffer.data[state.index++];
         childBuffer = this.snapshot_.objects[id];
+        if (!goog.isDefAndNotNull(childBuffer)) {
+            network.Synchronizer.destroyObject_(obj.getType(), obj);
+            return null;
+        }
         if (goog.isDefAndNotNull(obj)) {
             goog.asserts.assert(obj.getId() === id);
         }
         else {
             obj = network.Synchronizer.createObject_(childBuffer.type, id);
         }
-        goog.asserts.assert(goog.isDefAndNotNull(childBuffer));
-        goog.asserts.assert(childBuffer.type === obj.getType());
     }        
+    goog.asserts.assert(childBuffer.type === obj.getType());
     
     this.stack_[++this.top_] = {
         objectBuffer: childBuffer,
