@@ -30,7 +30,7 @@ goog.provide('network.Synchronizer');
  * - type and object ids must be unique and should be continuous
  *   and kept as low as possible (they serve as an array indices),
  * - arrays mustn't be shared between objects and must hold
- *   values of single type (but objects of different class are fine),
+ *   values of single type,
  * - for now shared objects are not recognized (but this can be fixed easly).
  */
 
@@ -95,10 +95,10 @@ network.ISynchronizable.prototype.synchronize = function (synchronizer) {};
 network.Synchronizer.prototype.synchronize = function (data) {
     var state, obj;
     if (goog.isArray(data)) {
-        return this.synchronizeArray_(data);
+        return this.synchronizeArray_((/**@type{Array.<*>}*/data));
     }
     else if (typeof data === 'object') {
-        return this.synchronizeObject_(data);
+        return this.synchronizeObject_((/**@type{network.ISynchronizable}*/data));
     }
     else {
         return this.synchronizePrimitive_(data);
@@ -133,7 +133,7 @@ network.Synchronizer.Mode = {
 /**
  * @public
  * @param {number} typeId
- * @param {function(number)} constructorFun
+ * @param {function(): network.ISynchronizable} constructorFun
  */
 network.Synchronizer.registerClass = function (typeId, constructorFun) {
     goog.asserts.assert(!goog.isDefAndNotNull(network.Synchronizer.constructors_[typeId]));
@@ -142,7 +142,7 @@ network.Synchronizer.registerClass = function (typeId, constructorFun) {
 
 /**
  * @private
- * @type {Array.<function(number)>}
+ * @type {Array.<function(): network.ISynchronizable>}
  */
 network.Synchronizer.constructors_ = [];
 
@@ -150,7 +150,7 @@ network.Synchronizer.constructors_ = [];
  * @private
  * @param {number} typeId
  * @param {number} id
- * @return {Object}
+ * @return {network.ISynchronizable}
  */
 network.Synchronizer.createObject_ = function (typeId, id) {
     var constructor = network.Synchronizer.constructors_[typeId];
@@ -162,131 +162,88 @@ network.Synchronizer.createObject_ = function (typeId, id) {
 
 /**
  * @private
- * @param {network.ISynchronizable} data
+ * @param {Array.<*>} array
  */
-network.Synchronizer.prototype.synchronizeArray_ = function (data) {
-    var childObj;
+network.Synchronizer.prototype.synchronizeArray_ = function (array) {
+    var id, i;
+    var childBuffer;
     var state = this.stack_[this.top_];
-    var parentObj = state.objectBuffer;
-    var id;
-    var i;
+    var parentBuffer = state.objectBuffer;
 
     if (this.modeWriting_) {
-        parentObj.data[state.index++] = this.snapshot_.arrays.length;
-        childObj = new network.ObjectBuffer();
-        childObj.size = data.length;
-        this.snapshot_.arrays.push(childObj);
+        parentBuffer.data[state.index++] = this.snapshot_.arrays.length;
+        childBuffer = new network.ObjectBuffer();
+        childBuffer.size = array.length;
+        this.snapshot_.arrays.push(childBuffer);
 
         this.stack_[++this.top_] = {
-            objectBuffer: childObj,
+            objectBuffer: childBuffer,
             index: 0
         };
         
-        for (i = 0; i < data.length; ++i) {
-            this.synchronize(data[i]);
+        for (i = 0; i < array.length; ++i) {
+            this.synchronize(array[i]);
         }
         --this.top_;
     } else {
-        id = parentObj.data[state.index++];
-        childObj = this.snapshot_.arrays[id];
-        goog.asserts.assert(goog.isDefAndNotNull(childObj));
+        id = parentBuffer.data[state.index++];
+        childBuffer = this.snapshot_.arrays[id];
+        goog.asserts.assert(goog.isDefAndNotNull(childBuffer));
 
         this.stack_[++this.top_] = {
-            objectBuffer: childObj,
+            objectBuffer: childBuffer,
             index: 0
         };
         
-        for (i = 0; i < childObj.data.length; ++i) {
-            data[i] = this.synchronize(data[i]);
+        for (i = 0; i < childBuffer.data.length; ++i) {
+            array[i] = this.synchronize(array[i]);
         }
         --this.top_;
     }        
     
-    return data;    
+    return array;    
 };
 
 /**
  * @private
- * @param {network.ISynchronizable} data
+ * @param {network.ISynchronizable} obj
  */
-network.Synchronizer.prototype.synchronizeObject_ = function (data) {
-    var childObj;
+network.Synchronizer.prototype.synchronizeObject_ = function (obj) {
+    var childBuffer;
     var state = this.stack_[this.top_];
-    var parentObj = state.objectBuffer;
+    var parentBuffer = state.objectBuffer;
     var id;
 
     if (this.modeWriting_) {
-        parentObj.data[state.index++] = data.getId();
+        parentBuffer.data[state.index++] = obj.getId();
         
-        childObj = new network.ObjectBuffer();
-        childObj.id = data.getId();
-        childObj.type = data.getType();
+        childBuffer = new network.ObjectBuffer();
+        childBuffer.id = obj.getId();
+        childBuffer.type = obj.getType();
         
-        this.snapshot_.objects[data.getId()] = childObj;
+        this.snapshot_.objects[obj.getId()] = childBuffer;
     } else {
-        id = parentObj.data[state.index++];
-        childObj = this.snapshot_.objects[id];
-        if (goog.isDefAndNotNull(data)) {
-            goog.asserts.assert(data.getId() === id);
+        id = /**@type{number}*/parentBuffer.data[state.index++];
+        childBuffer = this.snapshot_.objects[id];
+        if (goog.isDefAndNotNull(obj)) {
+            goog.asserts.assert(obj.getId() === id);
         }
         else {
-            data = network.Synchronizer.createObject_(childObj.type, id);
+            obj = network.Synchronizer.createObject_(childBuffer.type, id);
         }
-        goog.asserts.assert(goog.isDefAndNotNull(childObj));
-        goog.asserts.assert(childObj.type === data.getType());
+        goog.asserts.assert(goog.isDefAndNotNull(childBuffer));
+        goog.asserts.assert(childBuffer.type === obj.getType());
     }        
     
     this.stack_[++this.top_] = {
-        objectBuffer: childObj,
+        objectBuffer: childBuffer,
         index: 0
     };
     
-    data.synchronize(this);
+    obj.synchronize(this);
     --this.top_;
     
-    return data;    
-};
-
-/**
- * @private
- * @param {network.ISynchronizable} data
- */
-network.Synchronizer.prototype.synchronizeObject_ = function (data) {
-    var childObj;
-    var state = this.stack_[this.top_];
-    var parentObj = state.objectBuffer;
-    var id;
-
-    if (this.modeWriting_) {
-        parentObj.data[state.index++] = data.getId();
-        
-        childObj = new network.ObjectBuffer();
-        childObj.id = data.getId();
-        childObj.type = data.getType();
-        
-        this.snapshot_.objects[data.getId()] = childObj;
-    } else {
-        id = parentObj.data[state.index++];
-        childObj = this.snapshot_.objects[id];
-        if (goog.isDefAndNotNull(data)) {
-            goog.asserts.assert(data.getId() === id);
-        }
-        else {
-            data = network.Synchronizer.createObject_(childObj.type, id);
-        }
-        goog.asserts.assert(goog.isDefAndNotNull(childObj));
-        goog.asserts.assert(childObj.type === data.getType());
-    }        
-    
-    this.stack_[++this.top_] = {
-        objectBuffer: childObj,
-        index: 0
-    };
-    
-    data.synchronize(this);
-    --this.top_;
-    
-    return data;    
+    return obj;    
 };
 
 /**
@@ -295,11 +252,11 @@ network.Synchronizer.prototype.synchronizeObject_ = function (data) {
  */
 network.Synchronizer.prototype.synchronizePrimitive_ = function (data) {
     var state = this.stack_[this.top_];
-    var obj = state.objectBuffer;
+    var buffer = state.objectBuffer;
     if (this.modeWriting_) {
-        obj.data[state.index++] = data;
+        buffer.data[state.index++] = data;
         return data;
     } else {
-        return obj.data[state.index++];
+        return buffer.data[state.index++];
     }  
 };
