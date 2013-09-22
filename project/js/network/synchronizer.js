@@ -19,6 +19,7 @@
 
 goog.require('goog.asserts');
 goog.require('network.Snapshot');
+goog.require('network.ISynchronizer');
 
 goog.provide('network.ISynchronizable');
 goog.provide('network.Synchronizer');
@@ -36,6 +37,7 @@ goog.provide('network.Synchronizer');
 
 /**
  * @constructor
+ * @implements {network.ISynchronizer}
  */
 network.Synchronizer = function () {
     /**
@@ -66,29 +68,6 @@ network.Synchronizer = function () {
 };
 
 /**
- * @interface
- * A class must implement this to be synchronized.
- */
-network.ISynchronizable = function () {};
-/**
- * @return {number}
- */
-network.ISynchronizable.prototype.getId = function () {};
-/**
- * @param {number} id
- */
-network.ISynchronizable.prototype.setId = function (id) {};
-/**
- * @return {number}
- */
-network.ISynchronizable.prototype.getType = function () {};
-/**
- * @param {network.Synchronizer} synchronizer
- */
-network.ISynchronizable.prototype.synchronize = function (synchronizer) {};
-
-
-/**
  * @public
  * @param {*} data
  */
@@ -102,7 +81,7 @@ network.Synchronizer.prototype.synchronize = function (data) {
     }
     else {
         return this.synchronizePrimitive_(data);
-    }    
+    }
 };
 
 /**
