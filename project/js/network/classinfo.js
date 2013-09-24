@@ -22,6 +22,7 @@ goog.require('network.public');
 
 goog.provide('network.ClassInfo');
 goog.provide('network.ClassInfoBuilder');
+goog.provide('network.ClassInfoManager');
 
 /**
  * @constructor
@@ -70,7 +71,7 @@ network.ClassInfoBuilder = function (classId) {
      * @private
      * @type {network.ClassInfo}
      */
-    this.classInfo = new network.ClassInfo(classId);
+    this.classInfo_ = new network.ClassInfo(classId);
 };
 /**
  * @public
@@ -79,7 +80,7 @@ network.ClassInfoBuilder = function (classId) {
  * @param {network.Flags} flags
  */
 network.ClassInfoBuilder.prototype.synchronize = function (data, type, flags) {
-    var ci = this.classInfo;
+    var ci = this.classInfo_;
     ci.types.push(type);
     ci.flags.push(flags);
     ++ci.fieldsCount;
@@ -93,17 +94,77 @@ network.ClassInfoBuilder.prototype.synchronize = function (data, type, flags) {
 network.ClassInfoBuilder.prototype.addFunctions = function (factoryFunction, destroyCallback) {
     goog.asserts.assert(factoryFunction);
     goog.asserts.assert(destroyCallback);
-    this.factoryFunction = factoryFunction;
-    this.destroyCallback = destroyCallback;
+    this.classInfo_.factoryFunction = factoryFunction;
+    this.classInfo_.destroyCallback = destroyCallback;
 };
 /**
  * @public
  * @return {network.ClassInfo}
  */
 network.ClassInfoBuilder.prototype.getClassInfo = function () {
-    goog.asserts.assert(this.classInfo.fieldsCount > 0); // is classInfo already built?
-    goog.asserts.assert(this.factoryFunction);
-    goog.asserts.assert(this.destroyCallback);
-    return this.classInfo;
+    goog.asserts.assert(this.classInfo_.fieldsCount > 0); // is classInfo already built?
+    goog.asserts.assert(this.classInfo_.factoryFunction);
+    goog.asserts.assert(this.classInfo_.destroyCallback);
+    return this.classInfo_;
+};
+
+/**
+ * @constructor
+ */
+network.ClassInfoManager = function () {
+    /**
+     * @private
+     * @type {Array.<network.ClassInfo>}
+     */
+    this.classInfo_ = [];
+};
+
+/**
+ * @private
+ * @type {number}
+ */
+network.ClassInfoManager.nextId_ = 0;
+
+/**
+ * @private
+ * @param {Object} obj
+ */
+network.ClassInfoManager.dummyDestroyCallback_ = function (obj) {};
+
+/**
+ * @public
+ * @param {*} constructor
+ * @param {function(): network.ISynchronizable} factoryFunction
+ * @param {function(network.ISynchronizable)} destroyCallback
+ */
+network.ClassInfoManager.prototype.registerClass = function (constructor,
+                                                             factoryFunction,
+                                                             destroyCallback) {
+    goog.asserts.assert(factoryFunction);
+    goog.asserts.assert(this.classInfo_.length === network.ClassInfoManager.nextId_);
+    
+    var classInfo;
+    var classId = network.ClassInfoManager.nextId_++;
+    var sampleObj = factoryFunction();
+    
+    // building class info
+    var builder = new network.ClassInfoBuilder(classId);
+    sampleObj.synchronize(builder);
+
+    destroyCallback = destroyCallback || network.ClassInfoManager.dummyDestroyCallback_;
+    builder.addFunctions(factoryFunction, destroyCallback);
+
+    classInfo = builder.getClassInfo();
+
+    this.classInfo_.push(classInfo);
+
+    // adding metadata to prototype
+    constructor.prototype.__networkClassId__ = classId;
+};
+
+network.ClassInfoManager.prototype.getClassInfo = function (id) {
+    var info = this.classInfo_[id];
+    goog.asserts.assert(goog.isDefAndNotNull(info));
+    return info;
 };
 

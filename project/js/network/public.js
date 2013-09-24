@@ -23,8 +23,6 @@ goog.provide('network.ISynchronizable');
 goog.provide('network.Type');
 goog.provide('network.Flags');
 
-goog.require('network.classInfo');
-
 /**
  * @interface
  */
@@ -36,42 +34,6 @@ network.ISynchronizer = function () {};
  * @param {network.Flags} flags
  */
 network.ISynchronizer.synchronize = function (data, type, flags) {};
-
-/**
- * @constructor
- */
-network.SynchronizeManager = function () {
-    this.classInfo = [];
-};
-
-network.SynchronizeManager.nextId_ = 0;
-
-network.SynchronizeManager.dummyDestroyCallback = function (obj) {};
-
-network.SynchronizeManager.prototype.registerClass = function (constructor,
-                                                               factoryFunction,
-                                                               destroyCallback) {
-    goog.asserts.assert(factoryFunction);
-    goog.asserts.assert(this.classInfo.length === network.SynchronizeManager.nextId_);
-    
-    var classInfo;
-    var classId = network.SynchronizeManager.nextId_++;
-    var sampleObj = factoryFunction();
-    
-    // building class info
-    var builder = new network.ClassInfoBuilder(classId);
-    sampleObj.synchronize(builder);
-
-    destroyCallback = destroyCallback || network.SynchronizeManager.dummyDestroyCallback;
-    builder.addFunctions(factoryFunction, destroyCallback);
-
-    classInfo = builder.getClassInfo;
-
-    this.classInfo.push(classInfo);
-
-    // adding metadata to prototype
-    constructor.prototype.__networkClassId__ = classId;
-};
 
 /**
  * @interface
