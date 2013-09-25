@@ -31,9 +31,21 @@ network.ISynchronizer = function () {};
  * @public
  * @param {*} data
  * @param {network.Type} type
- * @param {network.Flags} flags
+ * @param {network.Flags} [flags]
  */
-network.ISynchronizer.synchronize = function (data, type, flags) {};
+network.ISynchronizer.prototype.synchronize = function (data, type, flags) {};
+/**
+ * @public
+ * @return {network.ISynchronizer.Mode}
+ */
+network.ISynchronizer.prototype.getMode = function () {};
+/**
+ * @enum {number}
+ */
+network.ISynchronizer.Mode = {
+    WRITE: 0,
+    READ: 1
+};
 
 /**
  * @interface
@@ -63,7 +75,7 @@ network.Type = {
     CHAR: 10,
     STRING: 11, // currently not supported
 
-    OBJECT: 12    
+    OBJECT: 12
 };
 
 /**

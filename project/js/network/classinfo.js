@@ -77,14 +77,21 @@ network.ClassInfoBuilder = function (classId) {
  * @public
  * @param {*} data
  * @param {network.Type} type
- * @param {network.Flags} flags
+ * @param {network.Flags} [flags]
  */
 network.ClassInfoBuilder.prototype.synchronize = function (data, type, flags) {
     var ci = this.classInfo_;
     ci.types.push(type);
-    ci.flags.push(flags);
+    ci.flags.push(flags || 0);
     ++ci.fieldsCount;
     return data;
+};
+/**
+ * @public
+ * @return {network.ISynchronizer.Mode}
+ */
+network.ClassInfoBuilder.prototype.getMode = function () {
+    return network.ISynchronizer.Mode.READ;
 };
 /**
  * @public

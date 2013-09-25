@@ -34,7 +34,7 @@ network.ObjectBuffer = function () {
      * @public
      * @type {number}
      */
-    this.type = -1;
+    this.classId = -1;
     /**
      * @public
      * @type {Array.<*>}
