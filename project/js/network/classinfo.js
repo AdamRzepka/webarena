@@ -142,7 +142,7 @@ network.ClassInfoManager.dummyDestroyCallback_ = function (obj) {};
  * @public
  * @param {*} constructor
  * @param {function(): network.ISynchronizable} factoryFunction
- * @param {function(network.ISynchronizable)} destroyCallback
+ * @param {function(network.ISynchronizable)} [destroyCallback]
  */
 network.ClassInfoManager.prototype.registerClass = function (constructor,
                                                              factoryFunction,

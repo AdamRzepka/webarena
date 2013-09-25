@@ -43,6 +43,8 @@ function testClassInfoManager() {
         destroyed = true;
     }
 
+    network.ClassInfoManager.nextId_ = 0;
+
     var classInfoMng = new network.ClassInfoManager();
     classInfoMng.registerClass(Mock, factory, destroy);
 

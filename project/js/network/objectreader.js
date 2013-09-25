@@ -45,7 +45,7 @@ network.ObjectReader = function (classInfoManager) {
      * @private
      * @type {network.Snapshot}
      */
-    this.snapshot_ = new network.Snapshot();;
+    this.snapshot_ = new network.Snapshot();
     /**
      * @private
      * @type {Array.<{objectBuffer: network.ObjectBuffer, index: number}>}
@@ -76,7 +76,7 @@ network.ObjectReader = function (classInfoManager) {
      * @private
      * @type {number}
      */
-    this.lastId = -1;
+    this.lastId_ = -1;
 };
 
 /**
@@ -110,14 +110,19 @@ network.ObjectReader.prototype.synchronize = function (data, type, flags) {
 
 /**
  * @public
+ * @param {network.ISynchronizable} scene
+ * @return {network.Snapshot}
  */
-network.ObjectReader.prototype.reset = function () {
-    this.lastSnapshot_ = this.Snapshot_;
+network.ObjectReader.prototype.readScene = function (scene) {
+    this.lastSnapshot_ = this.snapshot_;
     this.snapshot_ = new network.Snapshot();
     this.stack_.legth = 1;
     this.stack_[0].index = 0;
     this.top_ = 0;    
     this.lastId_ = -1;
+
+    this.readObject_(scene);
+    return this.snapshot_;
 };
 
 /**
@@ -172,7 +177,7 @@ network.ObjectReader.prototype.findFreeId_ = function () {
  * @private
  * @param {Array.<*>} array
  */
-network.Synchronizer.prototype.readArray_ = function (array) {
+network.ObjectReader.prototype.readArray_ = function (array) {
     var id, i, obj;
     var childBuffer;
     var state = this.stack_[this.top_];
@@ -199,7 +204,7 @@ network.Synchronizer.prototype.readArray_ = function (array) {
  * @private
  * @param {network.ISynchronizable} obj
  */
-network.Synchronizer.prototype.readObject_ = function (obj) {
+network.ObjectReader.prototype.readObject_ = function (obj) {
     var childBuffer;
     var state = this.stack_[this.top_];
     var parentBuffer = state.objectBuffer;
@@ -235,7 +240,7 @@ network.Synchronizer.prototype.readObject_ = function (obj) {
  * @private
  * @param {*} data
  */
-network.Synchronizer.prototype.readPrimitive_ = function (data) {
+network.ObjectReader.prototype.readPrimitive_ = function (data) {
     var state = this.stack_[this.top_];
     var buffer = state.objectBuffer;
     buffer.data[state.index++] = data;
