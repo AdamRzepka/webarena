@@ -94,18 +94,20 @@ network.ObjectReader.prototype.synchronize = function (data, type, flags) {
 
     goog.asserts.assert(type === ci.types[state.index]);
     goog.asserts.assert(flags === ci.flags[state.index]);
+
+    return this.read_(data, type, flags);
     
-    if (flags & network.Flags.ARRAY) {
-        goog.asserts.assert(goog.isArray(data));
-        return this.readArray_((/**@type{Array.<*>}*/data));
-    }
-    else if (type === network.Type.OBJECT) {
-        goog.asserts.assert(typeof data === 'object');
-        return this.readObject_((/**@type{network.ISynchronizable}*/data));
-    }
-    else {
-        return this.readPrimitive_(data);
-    }
+    // if (flags & network.Flags.ARRAY) {
+    //     goog.asserts.assert(goog.isArray(data));
+    //     return this.readArray_((/**@type{Array.<*>}*/data));
+    // }
+    // else if (type === network.Type.OBJECT) {
+    //     goog.asserts.assert(typeof data === 'object');
+    //     return this.readObject_((/**@type{network.ISynchronizable}*/data));
+    // }
+    // else {
+    //     return this.readPrimitive_(data);
+    // }
 };
 
 /**
@@ -175,25 +177,50 @@ network.ObjectReader.prototype.findFreeId_ = function () {
 
 /**
  * @private
- * @param {Array.<*>} array
+ * @param {*} data
+ * @param {network.Type} type
+ * @param {number} flags
  */
-network.ObjectReader.prototype.readArray_ = function (array) {
+network.ObjectReader.prototype.read_ = function (data, type, flags) {
+    if (flags & network.Flags.ARRAY) {
+        goog.asserts.assert(goog.isArray(data));
+        return this.readArray_((/**@type{Array.<*>}*/data), type, flags);
+    }
+    else if (type === network.Type.OBJECT) {
+        goog.asserts.assert(typeof data === 'object');
+        return this.readObject_((/**@type{network.ISynchronizable}*/data));
+    }
+    else {
+        return this.readPrimitive_(data);
+    }
+};
+
+/**
+ * @private
+ * @param {Array.<*>} array
+ * @param {network.Type} type
+ * @param {number} flags
+ */
+network.ObjectReader.prototype.readArray_ = function (array, type, flags) {
     var id, i, obj;
     var childBuffer;
     var state = this.stack_[this.top_];
     var parentBuffer = state.objectBuffer;
 
-    parentBuffer.data[state.index++] = this.snapshot_.arrays.length;
     childBuffer = new network.ObjectBuffer();
+    childBuffer.id = this.snapshot_.arrays.length;
+    parentBuffer.data[state.index++] = childBuffer.id;
     this.snapshot_.arrays.push(childBuffer);
 
     this.stack_[++this.top_] = {
         objectBuffer: childBuffer,
         index: 0
     };
+
+    flags &= ~network.Flags.ARRAY;
     
     for (i = 0; i < array.length; ++i) {
-        this.synchronize(array[i]);
+        this.read_(array[i], type, flags);
     }
     --this.top_;
     
