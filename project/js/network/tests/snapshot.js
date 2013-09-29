@@ -144,7 +144,7 @@ function testDiff() {
         arrays: [{
             id: 0,
             classId: -1,
-            data: []
+            data: [1, 2, 4, 5]
         }, {
             id: 1,
             classId: -1,
@@ -161,7 +161,7 @@ function testDiff() {
         objects: [{
             id: 0,
             classId: 3,
-            data: [1, 2, 4, 5]
+            data: [0]
         }, {
             id: 1,
             classId: 1,
@@ -170,7 +170,7 @@ function testDiff() {
             id: 2,
             classId: 1,
             data: [-1, 'c']
-        }, {
+        }, null, {
             id: 4,
             classId: 2,
             data: [1, 15]
@@ -186,7 +186,7 @@ function testDiff() {
         arrays: [{
             id: 0,
             classId: -1,
-            data: [1, 2, 3, 5]
+            data: [1, 2, 4, 5]
         }, {
             id: 1,
             classId: -1,
@@ -268,7 +268,7 @@ function testSum () {
         arrays: [{
             id: 0,
             classId: -1,
-            data: []
+            data: [1, 2, 4, 5]
         }, {
             id: 1,
             classId: -1,
@@ -285,7 +285,7 @@ function testSum () {
         objects: [{
             id: 0,
             classId: 3,
-            data: [1, 2, 4, 5]
+            data: [0]
         }, {
             id: 1,
             classId: 1,
@@ -310,7 +310,7 @@ function testSum () {
         arrays: [{
             id: 0,
             classId: -1,
-            data: [1, 2, 3, 5]
+            data: [1, 2, 4, 5]
         }, {
             id: 1,
             classId: -1,
@@ -358,8 +358,7 @@ function testSum () {
     
     var snapshot2 = new network.Snapshot();
     network.Snapshot.sum(snapshot1, delta, snapshot2);
-    assertTrue(deepCompare(snapshot2, modelSnapshot2));
-    
+    assertTrue(deepCompare(snapshot2, modelSnapshot2));    
 }
 
 
