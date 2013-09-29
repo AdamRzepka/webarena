@@ -17,7 +17,6 @@
 
 'use strict';
 
-goog.provide('network.ArrayBuffer');
 goog.provide('network.ObjectBuffer');
 goog.provide('network.Snapshot');
 
@@ -64,5 +63,61 @@ network.Snapshot = function () {
     this.arrays = [];
 };
 
+/**
+ * @constructor
+ */
+network.SnapshotDelta = function () {
+    /**
+     * @public
+     * @type {number}
+     */
+    this.timestampA = 0;
+    /**
+     * @public
+     * @type {number}
+     */
+    this.timestampB = 0;
+    /**
+     * @public
+     * @type {Array.<network.ObjectBuffer>}
+     */
+    this.objects = [];
+    /**
+     * @public
+     * @type {Array.<network.ObjectBuffer>}
+     */
+    this.arrays = [];
+    
+    /**
+     * @public
+     * @type {Array.<network.ObjectBuffer>}
+     */
+    this.addedObjects = [];
+    /**
+     * @public
+     * @type {Array.<number>}
+     */
+    this.removedObjects = [];
+    /**
+     * @public
+     * @type {Array.<number>}
+     */
+    this.removedArrays = [];
+};
 
+/**
+ * @param {network.Snapshot} snapshot1
+ * @param {network.Snapshot} snapshot2
+ * @param {network.SnapshotDelta} dalta
+ */
+network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
+    
+};
 
+/**
+ * @param {network.Snapshot} snapshot1
+ * @param {network.SnapshotDelta} dalta
+ * @param {network.Snapshot} snapshot2
+ */
+network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
+};
