@@ -23,7 +23,7 @@ goog.require('network.Snapshot');
 goog.require('network.ClassInfo');
 goog.require('network.ClassInfoManager');
 
-goog.provide('network.ObjectReader');
+goog.provide('network.ObjectWriter');
 
 /*
  * Simple, yet quite powerful serialization API.
@@ -40,12 +40,12 @@ goog.provide('network.ObjectReader');
  * @constructor
  * @implements {network.ISynchronizer}
  */
-network.ObjectReader = function (classInfoManager) {
+network.ObjectWriter = function (classInfoManager) {
     /**
      * @private
      * @type {network.Snapshot}
      */
-    this.snapshot_ = new network.Snapshot();
+    this.snapshot_ = null;
     /**
      * @private
      * @type {Array.<{objectBuffer: network.ObjectBuffer, index: number}>}
@@ -66,17 +66,7 @@ network.ObjectReader = function (classInfoManager) {
      * @type {network.ClassInfoManager}
      */
     this.classInfoManager_ = classInfoManager;
-    /**
-     * @private
-     * @type {network.Snapshot}
-     * For searching free object id
-     */
-    this.lastSnapshot_ = new network.Snapshot();
-    /**
-     * @private
-     * @type {number}
-     */
-    this.lastId_ = -1;
+
 };
 
 /**
@@ -85,7 +75,7 @@ network.ObjectReader = function (classInfoManager) {
  * @param {network.Type} type
  * @param {number} flags
  */
-network.ObjectReader.prototype.synchronize = function (data, type, flags) {
+network.ObjectWriter.prototype.synchronize = function (data, type, flags) {
     var state = this.stack_[this.top_];
     var objBuffer = state.objectBuffer;
     var ci = this.classInfoManager_.getClassInfo(objBuffer.classId);
@@ -94,57 +84,59 @@ network.ObjectReader.prototype.synchronize = function (data, type, flags) {
 
     goog.asserts.assert(type === ci.types[state.index]);
     goog.asserts.assert(flags === ci.flags[state.index]);
-
-    return this.read_(data, type, flags);
     
-    // if (flags & network.Flags.ARRAY) {
-    //     goog.asserts.assert(goog.isArray(data));
-    //     return this.readArray_((/**@type{Array.<*>}*/data));
-    // }
-    // else if (type === network.Type.OBJECT) {
-    //     goog.asserts.assert(typeof data === 'object');
-    //     return this.readObject_((/**@type{network.ISynchronizable}*/data));
-    // }
-    // else {
-    //     return this.readPrimitive_(data);
-    // }
+    return this.write_(data, type, flags);
 };
 
 /**
  * @public
  * @param {network.ISynchronizable} scene
- * @return {network.Snapshot}
+ * @param {network.Snapshot} snapshot
  */
-network.ObjectReader.prototype.readScene = function (scene) {
-    this.lastSnapshot_ = this.snapshot_;
-    this.snapshot_ = new network.Snapshot();
+network.ObjectWriter.prototype.writeScene = function (scene, snapshot) {
+    this.snapshot_ = snapshot;
     this.stack_.legth = 1;
     this.stack_[0].index = 0;
-    this.top_ = 0;    
-    this.lastId_ = -1;
+    this.stack_[0].objectBuffer.data[0] = 0;
+    this.top_ = 0;
 
-    this.readObject_(scene);
-    return this.snapshot_;
+    this.writeObject_(scene);
 };
 
 /**
  * @public
  * @return {network.ISynchronizer.Mode}
  */
-network.ObjectReader.prototype.getMode = function () {
-    return network.ISynchronizer.Mode.READ;
+network.ObjectWriter.prototype.getMode = function () {
+    return network.ISynchronizer.Mode.WRITE;
 };
 
 /**
  * @private
- * @return number
+ * @param {number} classId
+ * @param {number} id
+ * @return {network.ISynchronizable}
  */
-network.ObjectReader.prototype.findFreeId_ = function () {
-    var i;
-    for (i = this.lastId_ + 1; goog.isDefAndNotNull(this.lastSnapshot_.objects[i]); ++i) {
-    }
-    this.lastId_ = i;
-    return i;
+network.ObjectWriter.prototype.createObject_ = function (classId, id) {
+    var ci = this.classInfoManager_.getClassInfo(classId);
+    var constructor = ci.factoryFunction;
+    
+    goog.asserts.assert(goog.isDefAndNotNull(constructor));
+    var obj = constructor();
+    obj.__networkObjectId__ = id;
+    return obj;
+};
+
+/**
+ * @private
+ * @param {number} classId
+ * @param {network.ISynchronizable} obj
+ */
+network.ObjectWriter.prototype.destroyObject_ = function (classId, obj) {
+    var ci = this.classInfoManager_.getClassInfo(classId);
+    var destructor = ci.destroyCallback;
+    goog.asserts.assert(goog.isDefAndNotNull(destructor));
+    destructor(obj);
 };
 
 /**
@@ -153,47 +145,54 @@ network.ObjectReader.prototype.findFreeId_ = function () {
  * @param {network.Type} type
  * @param {number} flags
  */
-network.ObjectReader.prototype.read_ = function (data, type, flags) {
+network.ObjectWriter.prototype.write_ = function (data, type, flags) {
     if (flags & network.Flags.ARRAY) {
         goog.asserts.assert(goog.isArray(data));
-        return this.readArray_((/**@type{Array.<*>}*/data), type, flags);
+        return this.writeArray_((/**@type{Array.<*>}*/data), type, flags);
     }
     else if (type === network.Type.OBJECT) {
-        goog.asserts.assert(typeof data === 'object');
-        return this.readObject_((/**@type{network.ISynchronizable}*/data));
+        goog.asserts.assert(typeof data === 'object' || data === undefined);
+        return this.writeObject_((/**@type{network.ISynchronizable}*/data));
     }
     else {
-        return this.readPrimitive_(data);
+        return this.writePrimitive_(data);
     }
 };
 
 /**
  * @private
  * @param {Array.<*>} array
- * @param {network.Type} type
- * @param {number} flags
  */
-network.ObjectReader.prototype.readArray_ = function (array, type, flags) {
-    var id, i, obj;
+network.ObjectWriter.prototype.writeArray_ = function (array, type, flags) {
+    var id, i, size, obj;
     var childBuffer;
     var state = this.stack_[this.top_];
     var parentBuffer = state.objectBuffer;
 
-    childBuffer = new network.ObjectBuffer();
-    childBuffer.id = this.snapshot_.arrays.length;
-    parentBuffer.data[state.index++] = childBuffer.id;
-    this.snapshot_.arrays.push(childBuffer);
+    id = parentBuffer.data[state.index++];
+    childBuffer = this.snapshot_.arrays[id];
+    goog.asserts.assert(goog.isDefAndNotNull(childBuffer));
 
     this.stack_[++this.top_] = {
         objectBuffer: childBuffer,
         index: 0
     };
-
-    flags &= ~network.Flags.ARRAY;
+    size = childBuffer.data.length;
     
-    for (i = 0; i < array.length; ++i) {
-        this.read_(array[i], type, flags);
+    flags &= ~network.Flags.ARRAY;
+    for (i = 0; i < size; ++i) {
+        array[i] = this.write_(array[i], type, flags);
     }
+    if (type === network.Type.OBJECT) {
+        for (i = size; i < array.length; ++i) {
+            obj = array[i];
+            if (goog.isDefAndNotNull(obj))
+                this.destroyObject_(
+                    obj.__networkClassId__,
+                    (/**@type{network.ISynchronizable}*/obj));
+        }
+    }
+    array.length = size;
     --this.top_;
     
     return array;    
@@ -203,26 +202,31 @@ network.ObjectReader.prototype.readArray_ = function (array, type, flags) {
  * @private
  * @param {network.ISynchronizable} obj
  */
-network.ObjectReader.prototype.readObject_ = function (obj) {
+network.ObjectWriter.prototype.writeObject_ = function (obj) {
     var childBuffer;
     var state = this.stack_[this.top_];
     var parentBuffer = state.objectBuffer;
-    var id = obj.__networkObjectId__;
+    var id;
 
-    if (!goog.isDefAndNotNull(obj)) {
-        parentBuffer.data[state.index++] = -1;
-        return obj;
+    id = /**@type{number}*/parentBuffer.data[state.index++];
+    if (id === -1) {
+        if (obj !== null) {
+            this.destroyObject_(obj.__networkClassId__, obj);
+        }
+        return null;
     }
-    if (id === undefined) {
-        id = obj.__networkObjectId__ = this.findFreeId_();
+    childBuffer = this.snapshot_.objects[id];
+    if (goog.isDefAndNotNull(obj)) {
+        if (!goog.isDef(obj.__networkObjectId__)) {
+            obj.__networkObjectId__ = id;
+        }
+        goog.asserts.assert(obj.__networkObjectId__ === id);
     }
-    parentBuffer.data[state.index++] = id;
-    
-    childBuffer = new network.ObjectBuffer();
-    childBuffer.id = id;
-    childBuffer.classId = obj.__networkClassId__;
-    
-    this.snapshot_.objects[id] = childBuffer;
+    else {
+        obj = this.createObject_(childBuffer.classId, id);
+    }
+
+    goog.asserts.assert(childBuffer.classId === obj.__networkClassId__);
     
     this.stack_[++this.top_] = {
         objectBuffer: childBuffer,
@@ -239,9 +243,8 @@ network.ObjectReader.prototype.readObject_ = function (obj) {
  * @private
  * @param {*} data
  */
-network.ObjectReader.prototype.readPrimitive_ = function (data) {
+network.ObjectWriter.prototype.writePrimitive_ = function (data) {
     var state = this.stack_[this.top_];
     var buffer = state.objectBuffer;
-    buffer.data[state.index++] = data;
-    return data;
+    return buffer.data[state.index++];
 };

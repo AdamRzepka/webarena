@@ -3,9 +3,8 @@
 goog.addDependency('../../js/network/classinfo.js', ['network.ClassInfo', 'network.ClassInfoBuilder', 'network.ClassInfoManager'], ['goog.asserts', 'network.public']);
 goog.addDependency('../../js/network/client.js', ['network.Client'], ['goog.asserts', 'network.public']);
 goog.addDependency('../../js/network/objectreader.js', ['network.ObjectReader'], ['goog.asserts', 'network.ClassInfo', 'network.ClassInfoManager', 'network.Snapshot', 'network.public']);
-goog.addDependency('../../js/network/objectwriter.js', ['network.Synchronizer'], ['goog.asserts', 'network.Snapshot', 'network.public']);
+goog.addDependency('../../js/network/objectwriter.js', ['network.ObjectWriter'], ['goog.asserts', 'network.ClassInfo', 'network.ClassInfoManager', 'network.Snapshot', 'network.public']);
 goog.addDependency('../../js/network/public.js', ['network.Flags', 'network.ISynchronizable', 'network.ISynchronizer', 'network.Type', 'network.public'], []);
 goog.addDependency('../../js/network/serializer.js', ['network.serializer'], []);
 goog.addDependency('../../js/network/server.js', ['network.Server'], ['goog.asserts', 'network.public']);
 goog.addDependency('../../js/network/snapshot.js', ['network.ArrayBuffer', 'network.ObjectBuffer', 'network.Snapshot'], []);
-goog.addDependency('../../js/network/synchronizer.js', ['network.Synchronizer'], ['goog.asserts', 'network.Snapshot', 'network.public']);

@@ -72,15 +72,17 @@ D.prototype.synchronize = function (synchronizer) {
     this.a = synchronizer.synchronize(this.a, network.Type.OBJECT, network.Flags.ARRAY);
 };
 
-var destroyed = false;
+var destroyedA = false;
+var destroyedC = false;
 function setUp() {
-    destroyed = false;
+    destroyedA = false;
+    destroyedC = false;
     network.ClassInfoManager.nextId_ = 0;
     classInfoManager = new network.ClassInfoManager();
     classInfoManager.registerClass(A, function () {
         return new A();
     }, function () {
-        destroyed = true;
+        destroyedA = true;
     });
     
     classInfoManager.registerClass(B, function () {
@@ -89,6 +91,8 @@ function setUp() {
 
     classInfoManager.registerClass(C, function () {
         return new C();
+    }, function () {
+        destroyedC = true;
     });
     
     classInfoManager.registerClass(D, function () {
