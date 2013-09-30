@@ -141,6 +141,7 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
             delta.addedObjects.push(b);
         } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
             delta.removedObjects.push(a.id);
+            delta.objects[a.id] = null;
         }
     }
     count = Math.max(snapshot1.arrays.length, snapshot2.arrays.length);
@@ -160,6 +161,8 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
                     } else {
                         objBuf.data[j] = (db === da ? 0 : db);
                     }
+                } else {
+                    objBuf.data[j] = db;
                 }
             }
             delta.arrays[objBuf.id] = objBuf;
@@ -177,14 +180,77 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
  * @param {network.Snapshot} snapshot2
  */
 network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
+    var i = 0, j = 0;
+    var a, b, da, db;
+    var objBuf;
+    var count = Math.max(snapshot1.objects.length, delta.objects.length);
+    goog.asserts.assert(snapshot1.timestamp === delta.timestampA);
+    snapshot2.timestamp = delta.timestampB;
+
+    for (i = 0; i < count; ++i) {
+        a = snapshot1.objects[i];
+        b = delta.objects[i];
+        if (goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
+            goog.asserts.assert(a.id === b.id);
+            objBuf = new network.ObjectBuffer();
+            objBuf.id = a.id;
+            for (j = 0; j < b.data.length; ++j) {
+                da = a.data[j];
+                db = b.data[j];
+                goog.asserts.assert(goog.isDefAndNotNull(da));
+                objBuf.classId = a.classId;
+                if (typeof da === 'number') {
+                    objBuf.data[j] = db + da;
+                } else {
+                    objBuf.data[j] = (db === 0 ? da : db);
+                }                
+            }
+            snapshot2.objects[objBuf.id] = objBuf;
+        } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
+            goog.asserts.fail();
+        } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
+            if (delta.removedObjects.indexOf(a.id) !== -1) {
+                snapshot2.objects[a.id] = null;
+            } else {
+                snapshot2.objects[a.id] = a; // !!! without clonning, should be working for now
+            }
+        }
+    }
+    count = delta.addedObjects.length;
+    for (i = 0; i < count; ++i) {
+        snapshot2.objects[delta.addedObjects[i].id] = delta.addedObjects[i];
+    }
+    count = Math.max(snapshot1.arrays.length,delta.arrays.length);
+    for (i = 0; i < count; ++i) {
+        a = snapshot1.arrays[i];
+        b = delta.arrays[i];
+        if (goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
+            goog.asserts.assert(a.id === b.id);
+            objBuf = new network.ObjectBuffer();
+            objBuf.id = a.id;
+            for (j = 0; j < b.data.length; ++j) {
+                da = a.data[j];
+                db = b.data[j];
+                if (goog.isDefAndNotNull(da)) {
+                    if (typeof da === 'number') {
+                        objBuf.data[j] = db + da;
+                    } else {
+                        objBuf.data[j] = (db === 0 ? da : db);
+                    }
+                } else {
+                    objBuf.data[j] = db;
+                }
+            }
+            snapshot2.arrays[objBuf.id] = objBuf;
+        } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
+            snapshot2.arrays[b.id] = b;
+        } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
+            if (delta.removedObjects.indexOf(a.id) !== -1) {
+                snapshot2.arrays[a.id] = null;
+            } else {
+                snapshot2.arrays[a.id] = a;
+            }            
+        }
+    }
 };
-
-
-
-
-
-
-
-
-
 

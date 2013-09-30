@@ -202,6 +202,10 @@ function testDiff() {
         timestampA: 0,
         timestampB: 1,
         objects: [{
+            id: 0,
+            classId: -1,
+            data: [0]
+        }, {
             id: 1,
             classId: -1,
             data: [7, 'g']
@@ -209,12 +213,20 @@ function testDiff() {
             id: 2,
             classId: -1,
             data: [-4, 0]
-        }, {
+        }, null, {
             id: 4,
             classId: -1,
             data: [0, 5]
+        }, {
+            id: 5,
+            classId: -1,
+            data: [0, 0]
         }],
         arrays: [{
+            id: 0,
+            classId: -1,
+            data: [0, 0, 0, 0]
+        },{
             id: 1,
             classId: -1,
             data: [-4, 0, 0, 4]
@@ -294,7 +306,7 @@ function testSum () {
             id: 2,
             classId: 1,
             data: [-1, 'c']
-        }, {
+        }, null, {
             id: 4,
             classId: 2,
             data: [1, 15]
@@ -325,28 +337,30 @@ function testSum () {
     var delta = {
         timestampA: 0,
         timestampB: 1,
-        objects: [{
-            id: 1,
-            classId: -1,
-            data: [7, 'g']
-        }, {
-            id: 2,
-            classId: -1,
-            data: [-4, 0]
-        }, {
-            id: 4,
-            classId: -1,
-            data: [0, 5]
-        }],
-        arrays: [{
-            id: 1,
-            classId: -1,
-            data: [-4, 0, 0, 4]
-        }, {
-            id: 2,
-            classId: -1,
-            data: [0]
-        }],
+        objects: [
+            null, {
+                id: 1,
+                classId: -1,
+                data: [7, 'g']
+            }, {
+                id: 2,
+                classId: -1,
+                data: [-4, 0]
+            }, null, {
+                id: 4,
+                classId: -1,
+                data: [0, 5]
+            }],
+        arrays: [
+            null, {
+                id: 1,
+                classId: -1,
+                data: [-4, 0, 0, 4]
+            }, {
+                id: 2,
+                classId: -1,
+                data: [0]
+            }],
         addedObjects: [{
             id: 6,
             classId: 0,
@@ -360,18 +374,4 @@ function testSum () {
     network.Snapshot.sum(snapshot1, delta, snapshot2);
     assertTrue(deepCompare(snapshot2, modelSnapshot2));    
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
