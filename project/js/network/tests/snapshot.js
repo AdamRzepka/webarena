@@ -203,24 +203,28 @@ function testDiff() {
         timestampB: 1,
         objects: [{
             id: 0,
-            classId: -1,
+            classId: 3,
             data: [0]
         }, {
             id: 1,
-            classId: -1,
+            classId: 1,
             data: [7, 'g']
         }, {
             id: 2,
-            classId: -1,
+            classId: 1,
             data: [-4, 0]
         }, null, {
             id: 4,
-            classId: -1,
+            classId: 2,
             data: [0, 5]
         }, {
             id: 5,
-            classId: -1,
+            classId: 2,
             data: [0, 0]
+        }, {
+            id: 6,
+            classId: 0,
+            data: [5, 5.5]
         }],
         arrays: [{
             id: 0,
@@ -234,11 +238,6 @@ function testDiff() {
             id: 2,
             classId: -1,
             data: [0]
-        }],
-        addedObjects: [{
-            id: 6,
-            classId: 0,
-            data: [5, 5.5]
         }],
         removedObjects: [3],
         removedArrays: []
@@ -340,16 +339,20 @@ function testSum () {
         objects: [
             null, {
                 id: 1,
-                classId: -1,
+                classId: 1,
                 data: [7, 'g']
             }, {
                 id: 2,
-                classId: -1,
+                classId: 1,
                 data: [-4, 0]
             }, null, {
                 id: 4,
-                classId: -1,
+                classId: 2,
                 data: [0, 5]
+            }, null, {
+                id: 6,
+                classId: 0,
+                data: [5, 5.5]
             }],
         arrays: [
             null, {
@@ -361,11 +364,6 @@ function testSum () {
                 classId: -1,
                 data: [0]
             }],
-        addedObjects: [{
-            id: 6,
-            classId: 0,
-            data: [5, 5.5]
-        }],
         removedObjects: [3],
         removedArrays: []
     };
