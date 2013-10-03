@@ -18,91 +18,12 @@
 'use strict';
 
 goog.require('goog.testing.jsunit');
+goog.require('network.tests.common');
 goog.require('network.ObjectReader');
 
-var classInfoManager = null;
-
-/**
- * @implements {network.ISynchronizable}
- */
-function A() {
-    this.a = 4;
-    this.b = 1.5;
-}
-
-A.prototype.synchronize = function (synchronizer) {
-    this.a = synchronizer.synchronize(this.a, network.Type.INT8);
-    this.b = synchronizer.synchronize(this.b, network.Type.FLOAT32);
-};
-
-/**
- * @implements {network.ISynchronizable}
- */
-function B() {
-    this.obj = new A();
-    this.c = 'c';
-};
-
-B.prototype.synchronize = function (synchronizer) {
-    this.obj = synchronizer.synchronize(this.obj, network.Type.OBJECT);
-    this.c = synchronizer.synchronize(this.c, network.Type.CHAR);
-};
-
-/**
- * @implements {network.ISynchronizable}
- */
-function C() {
-    this.a = [1,2];
-    this.b = 3;
-};
-
-C.prototype.synchronize = function (synchronizer) {
-    this.a = synchronizer.synchronize(this.a, network.Type.INT32, network.Flags.ARRAY);
-    this.b = synchronizer.synchronize(this.b, network.Type.INT32);
-};
-
-/**
- * @implements {network.ISynchronizable}
- */
-function D() {
-    this.a = [new A(), new B(), new C()];
-};
-
-D.prototype.synchronize = function (synchronizer) {
-    this.a = synchronizer.synchronize(this.a, network.Type.OBJECT, network.Flags.ARRAY);
-};
-
-var destroyedA = false;
-var destroyedC = false;
-function setUp() {
-    destroyedA = false;
-    destroyedC = false;
-    network.ClassInfoManager.nextId_ = 0;
-    classInfoManager = new network.ClassInfoManager();
-    classInfoManager.registerClass(A, function () {
-        return new A();
-    }, function () {
-        destroyedA = true;
-    });
-    
-    classInfoManager.registerClass(B, function () {
-        return new B();
-    });
-
-    classInfoManager.registerClass(C, function () {
-        return new C();
-    }, function () {
-        destroyedC = true;
-    });
-    
-    classInfoManager.registerClass(D, function () {
-        return new D();
-    });
-}
-
 function testReading() {
-    var reader = new network.ObjectReader(classInfoManager);
-    var a = new A();
+    var reader = new network.ObjectReader(network.tests.classInfoManager);
+    var a = new network.tests.A();
     var snapshot = reader.readScene(a);
     assertEquals("Returns the same value during reading", 4, a.a);
     assertEquals("Returns the same value during reading", 1.5, a.b);
@@ -116,8 +37,8 @@ function testReading() {
 }
 
 function testNestedObjectsReading() {
-    var reader = new network.ObjectReader(classInfoManager);
-    var b = new B();
+    var reader = new network.ObjectReader(network.tests.classInfoManager);
+    var b = new network.tests.B();
     var a = b.obj;
     var snapshot = reader.readScene(b);
     assertEquals("Returns the same object during reading", a, b.obj);
@@ -137,8 +58,8 @@ function testNestedObjectsReading() {
 }
 
 function testArrayReading() {
-    var reader = new network.ObjectReader(classInfoManager);
-    var c = new C();
+    var reader = new network.ObjectReader(network.tests.classInfoManager);
+    var c = new network.tests.C();
     var arr = c.a;
     var snapshot = reader.readScene(c);
     assertEquals("Returns the same value during reading", arr, c.a);
@@ -150,13 +71,14 @@ function testArrayReading() {
     assertEquals("Data count in objectBuffer", 2, snapshot.objects[0].data.length);
     assertEquals("Snapshot data of object", 0, snapshot.objects[0].data[0]);
     assertEquals("Snapshot data of object", 3, snapshot.objects[0].data[1]);
+    assertEquals("Array type", network.Type.INT32, snapshot.arrays[0].classId);
     assertEquals("Snapshot data of array", 1, snapshot.arrays[0].data[0]);
     assertEquals("Snapshot data of array", 2, snapshot.arrays[0].data[1]);
 }
 
 function testObjectsInArrayReading() {
-    var reader = new network.ObjectReader(classInfoManager);
-    var d = new D();
+    var reader = new network.ObjectReader(network.tests.classInfoManager);
+    var d = new network.tests.D();
     var arr = d.a;
     var aa = d.a[0];
     var snapshot = reader.readScene(d);
@@ -169,6 +91,8 @@ function testObjectsInArrayReading() {
     assertEquals("Object id in snapshot", 0, snapshot.objects[0].id);
     assertEquals("Object id in snapshot", 1, snapshot.objects[1].id);
     assertEquals("Array id in snapshot", 0, snapshot.arrays[0].id);
+    assertEquals("Array type", network.Type.OBJECT, snapshot.arrays[0].classId);
+    assertEquals("Array type", network.Type.INT32, snapshot.arrays[1].classId);
     assertEquals("Data in array snapshot", 3, snapshot.arrays[0].data.length);
     assertEquals("Data in array snapshot", 2, snapshot.arrays[1].data.length);
     assertEquals("Data count in objectBuffer", 1, snapshot.objects[0].data.length);
@@ -176,9 +100,3 @@ function testObjectsInArrayReading() {
     assertEquals("Snapshot data of object", 1.5, snapshot.objects[3].data[1]);
     assertEquals("Snapshot data of object", 1, snapshot.objects[4].data[0]);
 }
-
-function tearDown() {
-    classInfoManager = null;
-    network.ClassInfoManager.nextId_ = 0;
-}
-

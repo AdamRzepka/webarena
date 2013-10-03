@@ -18,6 +18,7 @@
 'use strict';
 
 goog.require('goog.testing.jsunit');
+goog.require('network.tests.common');
 goog.require('network.ObjectWriter');
 
 function testWriting() {
@@ -33,8 +34,8 @@ function testWriting() {
         arrays: []
     };
 
-    var writer = new network.ObjectWriter(classInfoManager);
-    var a = new A();
+    var writer = new network.ObjectWriter(network.tests.classInfoManager);
+    var a = new network.tests.A();
     writer.writeScene(a, snapshot);
 
     assertEquals("Object id", 0, a.__networkObjectId__);
@@ -59,8 +60,8 @@ function testNestedObjects() {
         ],
         arrays: []
     };
-    var writer = new network.ObjectWriter(classInfoManager);
-    var b = new B();
+    var writer = new network.ObjectWriter(network.tests.classInfoManager);
+    var b = new network.tests.B();
     writer.writeScene(b, snapshot);
     var a = b.obj;
 
@@ -92,8 +93,8 @@ function testArrayWriting() {
         ]
     };
     
-    var writer = new network.ObjectWriter(classInfoManager);
-    var c = new C();
+    var writer = new network.ObjectWriter(network.tests.classInfoManager);
+    var c = new network.tests.C();
     writer.writeScene(c, snapshot);
 
     assertEquals("Object id", 0, c.__networkObjectId__);
@@ -154,8 +155,8 @@ function testObjectsInArrayWriting() {
         ]
     };
 
-    var writer = new network.ObjectWriter(classInfoManager);
-    var d = new D();
+    var writer = new network.ObjectWriter(network.tests.classInfoManager);
+    var d = new network.tests.D();
     writer.writeScene(d, snapshot);
 
     assertEquals("Object id", 0, d.__networkObjectId__);
@@ -196,8 +197,8 @@ function testCreationObjects() {
         ]
     };
 
-    var writer = new network.ObjectWriter(classInfoManager);
-    var d = new D();
+    var writer = new network.ObjectWriter(network.tests.classInfoManager);
+    var d = new network.tests.D();
     writer.writeScene(d, snapshot);
 
     assertEquals("Object id", 0, d.__networkObjectId__);
@@ -208,8 +209,8 @@ function testCreationObjects() {
     assertEquals("d.a[1].c", 's', d.a[1].c);
     assertNull("d.a[1].obj", d.a[1].obj);
 
-    assertTrue("Checking if destructor callback A was called", destroyedA);
-    assertTrue("Checking if destructor callback C was called", destroyedC);
+    assertTrue("Checking if destructor callback A was called", network.tests.destroyedA);
+    assertTrue("Checking if destructor callback C was called", network.tests.destroyedC);
 
     snapshot.arrays[0].data = [2, 1, 3];
     snapshot.objects.push({

@@ -179,8 +179,12 @@ network.ObjectReader.prototype.readArray_ = function (array, type, flags) {
     var state = this.stack_[this.top_];
     var parentBuffer = state.objectBuffer;
 
+    flags &= ~network.Flags.ARRAY;
+
     childBuffer = new network.ObjectBuffer();
     childBuffer.id = this.snapshot_.arrays.length;
+    childBuffer.classId = type | (flags << 16);
+    
     parentBuffer.data[state.index++] = childBuffer.id;
     this.snapshot_.arrays.push(childBuffer);
 
@@ -189,7 +193,6 @@ network.ObjectReader.prototype.readArray_ = function (array, type, flags) {
         index: 0
     };
 
-    flags &= ~network.Flags.ARRAY;
     
     for (i = 0; i < array.length; ++i) {
         this.read_(array[i], type, flags);

@@ -79,6 +79,48 @@ network.Type = {
 };
 
 /**
+ * type {number}
+ */
+network.TypeSize = [
+    1, // INT8
+    2, // INT16
+    4, // INT32
+    1, // UINT8
+    2, // UINT16
+    4, // UINT32
+    4, // FLOAT32
+
+    12, // VEC3
+    48, // MTX4
+    
+    1, // CHAR
+    256, // STRING
+
+    2 // OBJECT
+];
+
+/**
+ * type {string}
+ */
+network.JsType = [
+    'number', // INT8
+    'number', // INT16
+    'number', // INT32
+    'number', // UINT8
+    'number', // UINT16
+    'number', // UINT32
+    'number', // FLOAT32
+
+    'object', // VEC3
+    'object', // MTX4
+    
+    'string', // CHAR
+    'string', // STRING
+
+    'object' // OBJECT
+];
+
+/**
  * enum {number}
  */
 network.Flags = {

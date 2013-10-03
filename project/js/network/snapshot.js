@@ -32,6 +32,8 @@ network.ObjectBuffer = function () {
     /**
      * @public
      * @type {number}
+     * Class id for objects;
+     * Type for arrays
      */
     this.classId = -1;
     /**
@@ -151,8 +153,10 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
         b = snapshot2.arrays[i];
         if (goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
             goog.asserts.assert(a.id === b.id);
+            goog.asserts.assert(a.classId === b.classId);
             objBuf = new network.ObjectBuffer();
             objBuf.id = a.id;
+            objBuf.classId = a.classId;
             for (j = 0; j < b.data.length; ++j) {
                 da = a.data[j];
                 db = b.data[j];
@@ -234,8 +238,10 @@ network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
         b = delta.arrays[i];
         if (goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
             goog.asserts.assert(a.id === b.id);
+            goog.asserts.assert(a.classId === b.classId);
             objBuf = new network.ObjectBuffer();
             objBuf.id = a.id;
+            objBuf.classId = a.classId;
             for (j = 0; j < b.data.length; ++j) {
                 da = a.data[j];
                 db = b.data[j];
