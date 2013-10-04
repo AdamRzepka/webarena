@@ -18,100 +18,8 @@
 'use strict';
 
 goog.require('goog.testing.jsunit');
+goog.require('network.tests.common');
 goog.require('network.Snapshot');
-
-function deepCompare(a, b) {
-    var x;
-    var fa;
-    var fb;
-    var result;
-    for( x in a ) {
-        if (a.hasOwnProperty(x)) {
-            if (b.hasOwnProperty(x)) {
-                fa = a[x];
-                fb = b[x];
-                if (typeof fa === 'object' && typeof fb === 'object'
-                    && fa !== null && fb !== null) {
-                    if (!deepCompare(fa, fb)) {
-                        return false;
-                    }                    
-                } else {
-                    if (fa !== fb) {
-                        return false;
-                    }
-                }
-            } else {
-                return false;
-            }
-        }
-    }
-    for( x in b )
-    {
-        if (b.hasOwnProperty(x)) {
-            if (!a.hasOwnProperty(x)) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-function testDeepCompare() {
-    var a = {
-        a: 1,
-        b: {
-            c: 2,
-            d: 3
-        },
-        e: [
-            'a',
-            'b'
-        ]
-    };
-    var b = {
-        a: 1,
-        b: {
-            c: 2,
-            d: 3
-        },
-        e: [
-            'a',
-            'b'
-        ]
-    };
-    assertTrue(deepCompare(a, b));
-    b.a = 2;
-    assertFalse(deepCompare(a, b));
-    b.a = 1;
-    assertTrue(deepCompare(a, b));
-    
-    b.b.c = 1;
-    assertFalse(deepCompare(a, b));
-    b.b.c = 2;
-    delete b.b.c;
-    assertFalse(deepCompare(a, b));
-    b.b.c = 2;
-    assertTrue(deepCompare(a, b));
-    b.b.e = 5;
-    assertFalse(deepCompare(a, b));
-    delete b.b.e;
-    assertTrue(deepCompare(a, b));
-    b.b = null;
-    assertFalse(deepCompare(a, b));
-    b.b = { c: 2, d: 3};
-    assertTrue(deepCompare(a, b));
-    
-    b.e[0] = 5;
-    assertFalse(deepCompare(a, b));
-    b.e[0] = 'a';
-    assertTrue(deepCompare(a, b));
-    b.e.length = 1;
-    assertFalse(deepCompare(a, b));
-    b.e[1] = 'b';
-    assertTrue(deepCompare(a, b));
-    b.e[2] = 'dupa';
-    assertFalse(deepCompare(a, b));
-}
 
 function testDiff() {
     var snapshot1 = {
@@ -201,51 +109,40 @@ function testDiff() {
     var modelDelta = {
         timestampA: 0,
         timestampB: 1,
-        objects: [{
-            id: 0,
-            classId: 3,
-            data: [0]
-        }, {
+        objects: [null, {
             id: 1,
             classId: 1,
-            data: [7, 'g']
+            changed: [true, true],
+            data: [6, 'g']
         }, {
             id: 2,
             classId: 1,
-            data: [-4, 0]
+            changed: [true, false],
+            data: [-1]
         }, null, {
             id: 4,
             classId: 2,
-            data: [0, 5]
-        }, {
-            id: 5,
-            classId: 2,
-            data: [0, 0]
-        }, {
+            changed: [false, true],
+            data: [15]
+        }, null, {
             id: 6,
             classId: 0,
+            changed: [true, true],
             data: [5, 5.5]
         }],
-        arrays: [{
-            id: 0,
-            classId: -1,
-            data: [0, 0, 0, 0]
-        },{
+        arrays: [null, {
             id: 1,
             classId: -1,
-            data: [-4, 0, 0, 4]
-        }, {
-            id: 2,
-            classId: -1,
-            data: [0]
-        }],
+            changed: [true, false, false, true],
+            data: [5, 4]
+        }, null],
         removedObjects: [3],
         removedArrays: []
     };
     
     var delta = new network.SnapshotDelta();
     network.Snapshot.diff(snapshot1, snapshot2, delta);
-    assertTrue(deepCompare(delta, modelDelta));
+    assertTrue(network.tests.deepCompare(delta, modelDelta));
 }
 
 function testSum () {
@@ -340,29 +237,35 @@ function testSum () {
             null, {
                 id: 1,
                 classId: 1,
-                data: [7, 'g']
+                changed: [true, true],
+                data: [6, 'g']
             }, {
                 id: 2,
                 classId: 1,
-                data: [-4, 0]
+                changed: [true, false],
+                data: [-1]
             }, null, {
                 id: 4,
                 classId: 2,
-                data: [0, 5]
+                changed: [false, true],
+                data: [15]
             }, null, {
                 id: 6,
                 classId: 0,
+                changed: [true, true],
                 data: [5, 5.5]
             }],
         arrays: [
             null, {
                 id: 1,
                 classId: -1,
-                data: [-4, 0, 0, 4]
+                changed: [true, false, false, true],
+                data: [5, 4]
             }, {
                 id: 2,
                 classId: -1,
-                data: [0]
+                changed: [false],
+                data: []
             }],
         removedObjects: [3],
         removedArrays: []
@@ -370,6 +273,6 @@ function testSum () {
     
     var snapshot2 = new network.Snapshot();
     network.Snapshot.sum(snapshot1, delta, snapshot2);
-    assertTrue(deepCompare(snapshot2, modelSnapshot2));    
+    assertTrue(network.tests.deepCompare(snapshot2, modelSnapshot2));    
 }
 

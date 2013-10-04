@@ -17,6 +17,9 @@
 
 'use strict';
 
+goog.require('goog.array');
+goog.require('goog.asserts');
+
 goog.provide('network.ObjectBuffer');
 goog.provide('network.Snapshot');
 
@@ -68,6 +71,36 @@ network.Snapshot = function () {
 /**
  * @constructor
  */
+network.ObjectBufferDelta = function () {
+    /**
+     * @public
+     * @type {number}
+     */
+    this.id = -1;
+    /**
+     * @public
+     * @type {number}
+     * Class id for objects;
+     * Type for arrays
+     */
+    this.classId = -1;
+    /**
+     * @public
+     * @type {Array.<boolean>}
+     * Whether field i has changed
+     */
+    this.changed = [];
+    /**
+     * @public
+     * @type {Array.<*>}
+     * Holding object data (only primitive type or other object id)
+     */
+    this.data = [];
+};
+
+/**
+ * @constructor
+ */
 network.SnapshotDelta = function () {
     /**
      * @public
@@ -81,12 +114,12 @@ network.SnapshotDelta = function () {
     this.timestampB = 0;
     /**
      * @public
-     * @type {Array.<network.ObjectBuffer>}
+     * @type {Array.<network.ObjectBufferDelta>}
      */
     this.objects = [];
     /**
      * @public
-     * @type {Array.<network.ObjectBuffer>}
+     * @type {Array.<network.ObjectBufferDelta>}
      */
     this.arrays = [];
     /**
@@ -108,7 +141,7 @@ network.SnapshotDelta = function () {
  * Generates delta from snapshots
  */
 network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
-    var i = 0, j = 0;
+    var i = 0, j = 0, k = 0;
     var a, b, da, db;
     var objBuf;
     
@@ -123,23 +156,24 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
             // if objects occurs in both snapshot count difference of all data
             goog.asserts.assert(a.id === b.id);
             goog.asserts.assert(a.classId === b.classId);
-            objBuf = new network.ObjectBuffer();
+            objBuf = new network.ObjectBufferDelta();
             objBuf.id = a.id;
             objBuf.classId = a.classId;
+            k = 0;
             for (j = 0; j < b.data.length; ++j) {
                 da = a.data[j];
                 db = b.data[j];
                 goog.asserts.assert(goog.isDefAndNotNull(da));
-                
-                if (typeof db === 'number') {
-                    objBuf.data[j] = db - da; // it supports subtraction, write difference
+                if (db !== da) {
+                    objBuf.data[k++] = db;
+                    objBuf.changed[j] = true;
                 } else {
-                    objBuf.data[j] = (db === da ? 0 : db); // if it doesn't change write 0, full value otherwise
-                }                
+                    objBuf.changed[j] = false;
+                }
             }
-            delta.objects[objBuf.id] = objBuf;
+            delta.objects[objBuf.id] = (objBuf.data.length > 0 ? objBuf : null);
         } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
-            delta.objects[b.id] = b;
+            delta.objects[b.id] = network.ObjectBufferDelta.fromObjectBuffer_(b);
         } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
             delta.removedObjects.push(a.id);
             delta.objects[a.id] = null;
@@ -154,25 +188,23 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
         if (goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
             goog.asserts.assert(a.id === b.id);
             goog.asserts.assert(a.classId === b.classId);
-            objBuf = new network.ObjectBuffer();
+            objBuf = new network.ObjectBufferDelta();
             objBuf.id = a.id;
             objBuf.classId = a.classId;
+            k = 0;
             for (j = 0; j < b.data.length; ++j) {
                 da = a.data[j];
                 db = b.data[j];
-                if (goog.isDefAndNotNull(da)) {
-                    if (typeof db === 'number') {
-                        objBuf.data[j] = db - da;
-                    } else {
-                        objBuf.data[j] = (db === da ? 0 : db);
-                    }
+                if (db !== da) {
+                    objBuf.data[k++] = db;
+                    objBuf.changed[j] = true;
                 } else {
-                    objBuf.data[j] = db;
+                    objBuf.changed[j] = false;
                 }
             }
-            delta.arrays[objBuf.id] = objBuf;
+            delta.arrays[objBuf.id] = (objBuf.data.length > 0 ? objBuf : null);
         } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
-            delta.arrays[b.id] = b;
+            delta.objects[b.id] = network.ObjectBufferDelta.fromObjectBuffer_(b);
         } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
             delta.removedArrays.push(a.id);
         }
@@ -186,7 +218,7 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
  * Progress snapshot1 by delta, creating snapshot2
  */
 network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
-    var i = 0, j = 0;
+    var i = 0, j = 0, k = 0;
     var a, b, da, db;
     var objBuf;
     var count = Math.max(snapshot1.objects.length, delta.objects.length);
@@ -202,20 +234,19 @@ network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
             goog.asserts.assert(a.classId === b.classId);
             objBuf = new network.ObjectBuffer();
             objBuf.id = a.id;
-            for (j = 0; j < b.data.length; ++j) {
+            objBuf.classId = a.classId;
+            k = 0;
+            for (j = 0; j < b.changed.length; ++j) {
                 da = a.data[j];
-                db = b.data[j];
-                goog.asserts.assert(goog.isDefAndNotNull(da));
-                objBuf.classId = a.classId;
-                if (typeof da === 'number') {
-                    objBuf.data[j] = db + da;
+                if (b.changed[j]) {
+                    objBuf.data[j] = b.data[k++];
                 } else {
-                    objBuf.data[j] = (db === 0 ? da : db);
-                }                
+                    objBuf.data[j] = a.data[j];
+                }
             }
             snapshot2.objects[objBuf.id] = objBuf;
         } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
-            snapshot2.objects[b.id] = b;
+            snapshot2.objects[b.id] = network.ObjectBufferDelta.toObjectBuffer_(b);
         } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
             if (delta.removedObjects.indexOf(a.id) !== -1) {
                 snapshot2.objects[a.id] = null;
@@ -242,22 +273,17 @@ network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
             objBuf = new network.ObjectBuffer();
             objBuf.id = a.id;
             objBuf.classId = a.classId;
-            for (j = 0; j < b.data.length; ++j) {
-                da = a.data[j];
-                db = b.data[j];
-                if (goog.isDefAndNotNull(da)) {
-                    if (typeof da === 'number') {
-                        objBuf.data[j] = db + da;
-                    } else {
-                        objBuf.data[j] = (db === 0 ? da : db);
-                    }
+            k = 0;
+            for (j = 0; j < b.changed.length; ++j) {
+                if (b.changed[j]) {
+                    objBuf.data[j] = b.data[k++];
                 } else {
-                    objBuf.data[j] = db;
+                    objBuf.data[j] = a.data[j];
                 }
             }
             snapshot2.arrays[objBuf.id] = objBuf;
         } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
-            snapshot2.arrays[b.id] = b;
+            snapshot2.arrays[b.id] = network.ObjectBufferDelta.toObjectBuffer_(b);
         } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
             if (delta.removedObjects.indexOf(a.id) !== -1) { // removed or just unchanged?
                 snapshot2.arrays[a.id] = null;
@@ -268,3 +294,29 @@ network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
     }
 };
 
+/**
+ * @private
+ * @param {network.ObjectBuffer} objBuffer
+ * @return {network.ObjectBufferDelta}
+ */
+network.ObjectBufferDelta.fromObjectBuffer_ = function (objBuffer) {
+    var delta = new network.ObjectBufferDelta();
+    delta.id = objBuffer.id;
+    delta.classId = objBuffer.classId;
+    delta.data = objBuffer.data; // shallow copy
+    delta.changed = goog.array.repeat(true, objBuffer.data.length);
+    return delta;
+};
+
+/**
+ * @private
+ * @param {network.ObjectBufferDelta} delta
+ * @return {network.ObjectBuffer}
+ */
+network.ObjectBufferDelta.toObjectBuffer_ = function (delta) {
+    var objBuffer = new network.ObjectBuffer();
+    objBuffer.id = delta.id;
+    objBuffer.classId = delta.classId;
+    objBuffer.data = delta.data;
+    return objBuffer;
+};

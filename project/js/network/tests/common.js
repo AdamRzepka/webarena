@@ -30,7 +30,7 @@ network.tests.classInfoManager = null;
 network.tests.A = function () {
     this.a = 4;
     this.b = 1.5;
-}
+};
 
 network.tests.A.prototype.synchronize = function (synchronizer) {
     this.a = synchronizer.synchronize(this.a, network.Type.INT8);
@@ -108,3 +108,96 @@ function tearDown() {
     network.ClassInfoManager.nextId_ = 0;
 }
 
+
+network.tests.deepCompare = function (a, b) {
+    var x;
+    var fa;
+    var fb;
+    var result;
+    for( x in a ) {
+        if (a.hasOwnProperty(x)) {
+            if (b.hasOwnProperty(x)) {
+                fa = a[x];
+                fb = b[x];
+                if (typeof fa === 'object' && typeof fb === 'object'
+                    && fa !== null && fb !== null) {
+                    if (!network.tests.deepCompare(fa, fb)) {
+                        return false;
+                    }                    
+                } else {
+                    if (fa !== fb) {
+                        return false;
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+    for( x in b )
+    {
+        if (b.hasOwnProperty(x)) {
+            if (!a.hasOwnProperty(x)) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+function testDeepCompare() {
+    var a = {
+        a: 1,
+        b: {
+            c: 2,
+            d: 3
+        },
+        e: [
+            'a',
+            'b'
+        ]
+    };
+    var b = {
+        a: 1,
+        b: {
+            c: 2,
+            d: 3
+        },
+        e: [
+            'a',
+            'b'
+        ]
+    };
+    assertTrue(network.tests.deepCompare(a, b));
+    b.a = 2;
+    assertFalse(network.tests.deepCompare(a, b));
+    b.a = 1;
+    assertTrue(network.tests.deepCompare(a, b));
+    
+    b.b.c = 1;
+    assertFalse(network.tests.deepCompare(a, b));
+    b.b.c = 2;
+    delete b.b.c;
+    assertFalse(network.tests.deepCompare(a, b));
+    b.b.c = 2;
+    assertTrue(network.tests.deepCompare(a, b));
+    b.b.e = 5;
+    assertFalse(network.tests.deepCompare(a, b));
+    delete b.b.e;
+    assertTrue(network.tests.deepCompare(a, b));
+    b.b = null;
+    assertFalse(network.tests.deepCompare(a, b));
+    b.b = { c: 2, d: 3};
+    assertTrue(network.tests.deepCompare(a, b));
+    
+    b.e[0] = 5;
+    assertFalse(network.tests.deepCompare(a, b));
+    b.e[0] = 'a';
+    assertTrue(network.tests.deepCompare(a, b));
+    b.e.length = 1;
+    assertFalse(network.tests.deepCompare(a, b));
+    b.e[1] = 'b';
+    assertTrue(network.tests.deepCompare(a, b));
+    b.e[2] = 'dupa';
+    assertFalse(network.tests.deepCompare(a, b));
+}
