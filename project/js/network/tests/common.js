@@ -74,6 +74,26 @@ network.tests.D.prototype.synchronize = function (synchronizer) {
     this.a = synchronizer.synchronize(this.a, network.Type.OBJECT, network.Flags.ARRAY);
 };
 
+network.tests.E = function () {
+    this.a = -1;
+    this.b = null;
+    this.c = 12;
+    this.d = 3;
+    this.e = [4];
+    this.f = 0.5;
+    this.g = 0.25;
+};
+
+network.tests.E.prototype.synchronize = function (synchronizer) {
+    this.a = synchronizer.synchronize(this.a, network.Type.INT8);
+    this.b = synchronizer.synchronize(this.b, network.Type.OBJECT);
+    this.c = synchronizer.synchronize(this.c, network.Type.UINT16);
+    this.d = synchronizer.synchronize(this.d, network.Type.INT32);
+    this.e = synchronizer.synchronize(this.e, network.Type.INT32, network.Flags.ARRAY);
+    this.f = synchronizer.synchronize(this.f, network.Type.FLOAT32);
+    this.g = synchronizer.synchronize(this.g, network.Type.FLOAT32);
+};
+
 network.tests.destroyedA = false;
 network.tests.destroyedC = false;
 
@@ -101,6 +121,11 @@ function setUp() {
     network.tests.classInfoManager.registerClass(network.tests.D, function () {
         return new network.tests.D();
     });
+    
+    network.tests.classInfoManager.registerClass(network.tests.E, function () {
+        return new network.tests.E();
+    });
+
 }
 
 function tearDown() {

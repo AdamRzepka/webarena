@@ -5,6 +5,6 @@ goog.addDependency('../../js/network/client.js', ['network.Client'], ['goog.asse
 goog.addDependency('../../js/network/objectreader.js', ['network.ObjectReader'], ['goog.asserts', 'network.ClassInfo', 'network.ClassInfoManager', 'network.Snapshot', 'network.public']);
 goog.addDependency('../../js/network/objectwriter.js', ['network.ObjectWriter'], ['goog.asserts', 'network.ClassInfo', 'network.ClassInfoManager', 'network.Snapshot', 'network.public']);
 goog.addDependency('../../js/network/public.js', ['network.Flags', 'network.ISynchronizable', 'network.ISynchronizer', 'network.Type', 'network.public'], []);
-goog.addDependency('../../js/network/serialize.js', ['network.serialize'], ['network.ClassInfo', 'network.Snapshot']);
+goog.addDependency('../../js/network/serializer.js', ['network.Serializer'], ['network.ClassInfo', 'network.Snapshot']);
 goog.addDependency('../../js/network/snapshot.js', ['network.ObjectBuffer', 'network.Snapshot'], ['goog.asserts', 'goog.array']);
 goog.addDependency('../../js/network/tests/common.js', ['network.tests.common'], ['goog.testing.jsunit', 'network.ClassInfo', 'network.public']);
