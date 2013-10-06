@@ -20,7 +20,7 @@
 goog.require('goog.testing.jsunit');
 goog.require('network.tests.common');
 goog.require('network.Serializer');
-goog.require('network.common');
+goog.require('network');
 
 function testWriteChanged() {
     var dataView = new DataView(new ArrayBuffer(1024));

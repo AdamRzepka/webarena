@@ -17,7 +17,7 @@
 
 'use strict';
 goog.require('goog.testing.jsunit');
-goog.require('network.public');
+goog.require('network');
 goog.require('network.ClassInfo');
 
 goog.provide('network.tests.common');
