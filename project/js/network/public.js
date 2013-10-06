@@ -72,10 +72,12 @@ network.Type = {
     VEC3: 8,
     MTX4: 9,
     
-    CHAR: 10,
-    STRING: 11, // currently not supported
+    CHAR8: 10,
+    STRING8: 11,
+    CHAR16: 12,
+    STRING16: 13,
 
-    OBJECT: 12
+    OBJECT: 14
 };
 
 /**
@@ -93,8 +95,10 @@ network.TypeSize = [
     12, // VEC3
     48, // MTX4
     
-    1, // CHAR
-    256, // STRING
+    1, // CHAR8
+    -1, // STRING8
+    2, // CHAR16
+    -1, // STRING16
 
     2 // OBJECT
 ];
@@ -114,8 +118,10 @@ network.JsType = [
     'object', // VEC3
     'object', // MTX4
     
-    'string', // CHAR
-    'string', // STRING
+    'string', // CHAR8
+    'string', // STRING8
+    'string', // CHAR16
+    'string', // STRING16
 
     'object' // OBJECT
 ];

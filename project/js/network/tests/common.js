@@ -47,7 +47,7 @@ network.tests.B = function () {
 
 network.tests.B.prototype.synchronize = function (synchronizer) {
     this.obj = synchronizer.synchronize(this.obj, network.Type.OBJECT);
-    this.c = synchronizer.synchronize(this.c, network.Type.CHAR);
+    this.c = synchronizer.synchronize(this.c, network.Type.CHAR8);
 };
 
 /**
@@ -82,6 +82,7 @@ network.tests.E = function () {
     this.e = [4];
     this.f = 0.5;
     this.g = 0.25;
+    this.h = 'le dupa';
 };
 
 network.tests.E.prototype.synchronize = function (synchronizer) {
@@ -92,6 +93,7 @@ network.tests.E.prototype.synchronize = function (synchronizer) {
     this.e = synchronizer.synchronize(this.e, network.Type.INT32, network.Flags.ARRAY);
     this.f = synchronizer.synchronize(this.f, network.Type.FLOAT32);
     this.g = synchronizer.synchronize(this.g, network.Type.FLOAT32);
+    this.h = synchronizer.synchronize(this.h, network.Type.STRING8);
 };
 
 network.tests.destroyedA = false;

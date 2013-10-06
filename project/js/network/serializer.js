@@ -302,9 +302,27 @@ network.Serializer.prototype.writeData_ = function (data, type, flags) {
             this.offset_ += 4;
         }
         break;
-    case network.Type.CHAR:
-        dataView.setInt8(this.offset_, data.charCodeAt(0));
-        ++this.offset_;
+    case network.Type.CHAR8:
+        dataView.setUint8(this.offset_++, data.charCodeAt(0));
+        break;
+    case network.Type.STRING8:
+        goog.asserts.assert(data.length < 256);
+        dataView.setUint8(this.offset_++, data.length);
+        for (i = 0; i < data.length; ++i) {
+            dataView.setUint8(this.offset_++, data.charCodeAt(i));
+        }
+        break;
+    case network.Type.CHAR16:
+        dataView.setUint16(this.offset_, data.charCodeAt(0), true);
+        this.offset_ += 2;
+        break;
+    case network.Type.STRING16:
+        goog.asserts.assert(data.length < 256);
+        dataView.setUint8(this.offset_++, data.length);
+        for (i = 0; i < data.length; ++i) {
+            dataView.setUint16(this.offset_, data.charCodeAt(i), true);
+            this.offset_ += 2;
+        }
         break;
     default: // not supported
         goog.asserts.fail();
@@ -398,6 +416,7 @@ network.Serializer.prototype.readData_ = function (type, flags) {
     var i = 0;
     var dataView = this.dataView_;
     var data;
+    var len = 0;
 
     if (flags & network.Flags.ARRAY) {
         data = dataView.getInt16(this.offset_, true); // just array id
@@ -447,8 +466,26 @@ network.Serializer.prototype.readData_ = function (type, flags) {
             this.offset_ += 4;
         }
         break;
-    case network.Type.CHAR:
-        data = String.fromCharCode(dataView.getInt8(this.offset_++));
+    case network.Type.CHAR8:
+        data = String.fromCharCode(dataView.getUint8(this.offset_++));
+        break;
+    case network.Type.STRING8:
+        len = dataView.getUint8(this.offset_++);
+        data = "";
+        for (i = 0; i < len; ++i) {
+            data += String.fromCharCode(dataView.getUint8(this.offset_++));
+        }
+        break;
+    case network.Type.CHAR16:
+        data = String.fromCharCode(dataView.getUint16(this.offset_++, true));
+        break;
+    case network.Type.STRING16:
+        len = dataView.getUint8(this.offset_++);
+        data = "";
+        for (i = 0; i < len; ++i) {
+            data += String.fromCharCode(dataView.getUint16(this.offset_, true));
+            this.offset_ += 2;
+        }
         break;
     default: // not supported
         goog.asserts.fail();

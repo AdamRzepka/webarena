@@ -42,21 +42,24 @@ function testWriteData() {
     serializer.writeData_(15, network.Type.UINT16, 0);
     serializer.writeData_(123, network.Type.INT8, 0);
     serializer.writeData_(0.5, network.Type.FLOAT32, 0);
-    serializer.writeData_('a', network.Type.CHAR, 0);
+    serializer.writeData_('a', network.Type.CHAR8, 0);
+    serializer.writeData_('hello world', network.Type.STRING8, 0);
 
     assertEquals("Int32", 8, dataView.getInt32(0, true));
     assertEquals("Uint16", 15, dataView.getUint16(4, true));
     assertEquals("Int8", 123, dataView.getInt8(6, true));
     assertEquals("Float", 0.5, dataView.getFloat32(7, true));
-    assertEquals("Char", 'a'.charCodeAt(0), dataView.getInt8(11, true));
-    assertEquals("Offset", 12, serializer.offset_);
+    assertEquals("Char", 'a'.charCodeAt(0), dataView.getInt8(11));
+    assertEquals("String length", 11, dataView.getUint8(12));
+    assertEquals("First letter", 'h'.charCodeAt(0), dataView.getUint8(13));
+    assertEquals("Offset", 24, serializer.offset_);
 }
 
 function testWriteObject() {
     var objBuff = {
         id: 4,
         classId: 4,
-        changed: [true, false, false, true, false, true, false],
+        changed: [true, false, false, true, false, true, false, false],
         data: [-1, 345, 0.5]
     };
 
@@ -116,25 +119,6 @@ function testReadChanged() {
     assertTrue(network.tests.deepCompare(result, modelChanged));
 }
 
-function testWriteData() {
-    var serializer = new network.Serializer(network.tests.classInfoManager);
-    var dataView = new DataView(new ArrayBuffer(1024));
-    serializer.dataView_ = dataView;
-    
-    serializer.writeData_(8, network.Type.INT32, 0);
-    serializer.writeData_(15, network.Type.UINT16, 0);
-    serializer.writeData_(123, network.Type.INT8, 0);
-    serializer.writeData_(0.5, network.Type.FLOAT32, 0);
-    serializer.writeData_('a', network.Type.CHAR, 0);
-
-    assertEquals("Int32", 8, dataView.getInt32(0, true));
-    assertEquals("Uint16", 15, dataView.getUint16(4, true));
-    assertEquals("Int8", 123, dataView.getInt8(6, true));
-    assertEquals("Float", 0.5, dataView.getFloat32(7, true));
-    assertEquals("Char", 'a'.charCodeAt(0), dataView.getInt8(11, true));
-    assertEquals("Offset", 12, serializer.offset_);
-}
-
 function testReadData() {
     var serializer = new network.Serializer(network.tests.classInfoManager);
     var dataView = new DataView(new ArrayBuffer(1024));
@@ -144,22 +128,26 @@ function testReadData() {
     dataView.setUint16(4, 15, true);
     dataView.setInt8(6, 123, true);
     dataView.setFloat32(7, 0.5, true);
-    dataView.setInt8(11, 'a'.charCodeAt(0), true);
-
+    dataView.setUint8(11, 'a'.charCodeAt(0));
+    dataView.setUint8(12, 2);
+    dataView.setUint8(13, 'h'.charCodeAt(0));
+    dataView.setUint8(14, 'e'.charCodeAt(0));
+    
     assertEquals("Int32", 8, serializer.readData_(network.Type.INT32, 0));
     assertEquals("Uint16", 15, serializer.readData_(network.Type.UINT16, 0));
     assertEquals("Int8", 123, serializer.readData_(network.Type.INT8, 0));
     assertEquals("Float32", 0.5, serializer.readData_(network.Type.FLOAT32, 0));
-    assertEquals("Char", 'a', serializer.readData_(network.Type.CHAR, 0));
-    assertEquals("Offset", 12, serializer.offset_);
+    assertEquals("Char", 'a', serializer.readData_(network.Type.CHAR8, 0));
+    assertEquals("String", 'he', serializer.readData_(network.Type.STRING8, 0));
+    assertEquals("Offset", 15, serializer.offset_);
 }
 
 function testReadObject() {
     var modelObjBuff = {
         id: 4,
         classId: 4,
-        changed: [true, false, false, true, false, true, false],
-        data: [-1, 345, 0.5]
+        changed: [true, false, false, true, false, true, false, true],
+        data: [-1, 345, 0.5, 'aaa']
     };
     var serializer = new network.Serializer(network.tests.classInfoManager);
     var dataView = new DataView(new ArrayBuffer(1024));
