@@ -18,7 +18,7 @@
 'use strict';
 
 goog.require('goog.asserts');
-goog.require('network.public');
+goog.require('network');
 goog.require('network.Snapshot');
 goog.require('network.ClassInfo');
 goog.require('network.ClassInfoManager');
@@ -83,7 +83,8 @@ network.ObjectReader = function (classInfoManager) {
  * @public
  * @param {*} data
  * @param {network.Type} type
- * @param {number} flags
+ * @param {number} [flags]
+ * @return {*}
  */
 network.ObjectReader.prototype.synchronize = function (data, type, flags) {
     var state = this.stack_[this.top_];

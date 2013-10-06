@@ -213,7 +213,7 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
 
 /**
  * @param {network.Snapshot} snapshot1
- * @param {network.SnapshotDelta} dalta
+ * @param {network.SnapshotDelta} delta
  * @param {network.Snapshot} snapshot2
  * Progress snapshot1 by delta, creating snapshot2
  */

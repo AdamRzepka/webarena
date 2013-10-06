@@ -17,7 +17,7 @@
 
 'use strict';
 
-goog.provide('network.public');
+goog.provide('network');
 goog.provide('network.ISynchronizer');
 goog.provide('network.ISynchronizable');
 goog.provide('network.Type');
@@ -31,7 +31,8 @@ network.ISynchronizer = function () {};
  * @public
  * @param {*} data
  * @param {network.Type} type
- * @param {network.Flags} [flags]
+ * @param {number} [flags] from network.Flags
+ * @return {*}
  */
 network.ISynchronizer.prototype.synchronize = function (data, type, flags) {};
 /**
@@ -58,7 +59,7 @@ network.ISynchronizable = function () {};
 network.ISynchronizable.prototype.synchronize = function (synchronizer) {};
 
 /**
- * enum {number}
+ * @enum {number}
  */
 network.Type = {
     INT8: 0,
@@ -81,7 +82,7 @@ network.Type = {
 };
 
 /**
- * type {number}
+ * @type {Array.<number>}
  */
 network.TypeSize = [
     1, // INT8
@@ -104,7 +105,7 @@ network.TypeSize = [
 ];
 
 /**
- * type {string}
+ * @type {Array.<string>}
  */
 network.JsType = [
     'number', // INT8
@@ -127,7 +128,7 @@ network.JsType = [
 ];
 
 /**
- * enum {number}
+ * @enum {number}
  */
 network.Flags = {
     ARRAY: 1,

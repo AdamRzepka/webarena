@@ -18,7 +18,7 @@
 'use strict';
 
 goog.require('goog.asserts');
-goog.require('network.public');
+goog.require('network');
 
 goog.provide('network.ClassInfo');
 goog.provide('network.ClassInfoBuilder');
@@ -47,24 +47,25 @@ network.ClassInfo = function (classId) {
     this.types = [];
     /**
      * @public
-     * @type {Array.<network.Flags>}
+     * @type {Array.<number>}
+     * Flags from network.Flags
      */
     this.flags = [];
     /**
      * @public
-     * @type {function(): network.ISynchronizable}
+     * @type {function(): network.ISynchronizable|null}
      */
     this.factoryFunction = null;
     /**
      * @public
-     * @type {function(network.ISynchronizable)}
+     * @type {function(network.ISynchronizable)|null}
      */
     this.destroyCallback = null;
 };
 
 /**
  * @constructor
- * @implements {ISynchronizer}
+ * @implements {network.ISynchronizer}
  */
 network.ClassInfoBuilder = function (classId) {
     /**
@@ -77,7 +78,8 @@ network.ClassInfoBuilder = function (classId) {
  * @public
  * @param {*} data
  * @param {network.Type} type
- * @param {network.Flags} [flags]
+ * @param {number} [flags]
+ * @return {*}
  */
 network.ClassInfoBuilder.prototype.synchronize = function (data, type, flags) {
     var ci = this.classInfo_;

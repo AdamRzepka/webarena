@@ -17,6 +17,7 @@
 
 'use strict';
 
+goog.require('network');
 goog.require('network.Snapshot');
 goog.require('network.ClassInfo');
 
@@ -111,8 +112,8 @@ network.Serializer.prototype.write = function (snapshotDelta, dataView, offset) 
     dataView.setUint16(8, snapshotDelta.objects.length, true);
     dataView.setUint16(10, snapshotDelta.arrays.length, true);
     // skip objectsCount and arraysCount for now
-    dataView.setUint8(16, snapshotDelta.removedObjects.length, true);
-    dataView.setUint8(17, snapshotDelta.removedArrays.length, true);
+    dataView.setUint8(16, snapshotDelta.removedObjects.length);
+    dataView.setUint8(17, snapshotDelta.removedArrays.length);
 
     this.offset_ += 18;
 
@@ -170,8 +171,8 @@ network.Serializer.prototype.read = function (snapshotDelta, dataView, offset) {
     snapshotDelta.arrays = goog.array.repeat(null, dataView.getUint16(10, true));
     objectsCount = dataView.getUint16(12, true);
     arraysCount = dataView.getUint16(14, true);
-    removedObjectsCount = dataView.getUint8(16, true);
-    removedArraysCount = dataView.getUint8(17, true);
+    removedObjectsCount = dataView.getUint8(16);
+    removedArraysCount = dataView.getUint8(17);
 
     this.offset_ += 18;
 
@@ -209,7 +210,7 @@ network.Serializer.prototype.writeObject_ = function (obj) {
 
 
     dataView.setInt16(this.offset_, obj.id, true);
-    dataView.setUint8(this.offset_+2, obj.classId, true);
+    dataView.setUint8(this.offset_+2, obj.classId);
     this.offset_ += 3;
 
     this.writeChanged_(obj.changed);
@@ -232,14 +233,14 @@ network.Serializer.prototype.writeArray_ = function (arr) {
     var dataView = this.dataView_;
 
     dataView.setInt16(this.offset_, arr.id, true);
-    dataView.setUint8(this.offset_+2, arr.classId, true);
+    dataView.setUint8(this.offset_+2, arr.classId);
     dataView.setUint16(this.offset_+3, len, true);
     this.offset_ += 5;
 
     this.writeChanged_(arr.changed);
     for (j = 0; j < len; ++j) {
         if (arr.changed[j]) {
-            this.writeData_(arr.data[k++], arr.classId, 0);
+            this.writeData_(arr.data[k++], (/**@type{network.Type}*/arr.classId), 0);
         }
     }
 };
@@ -249,6 +250,7 @@ network.Serializer.prototype.writeArray_ = function (arr) {
  * @param {*} data
  * @param {network.Type} type
  * @param {number} flags
+ * @suppress {checkTypes}
  */
 network.Serializer.prototype.writeData_ = function (data, type, flags) {
     var i = 0;
@@ -332,7 +334,7 @@ network.Serializer.prototype.writeData_ = function (data, type, flags) {
 
 /**
  * @private
- * @param {Array.<boolean>}
+ * @param {Array.<boolean>} changed
  */
 network.Serializer.prototype.writeChanged_ = function (changed) {
     var i = 0, j = 0;
@@ -362,7 +364,7 @@ network.Serializer.prototype.readObject_ = function () {
     var classInfo;
         
     objBuf.id = dataView.getInt16(this.offset_, true);
-    objBuf.classId = dataView.getUint8(this.offset_+2, true);
+    objBuf.classId = dataView.getUint8(this.offset_+2);
     this.offset_ += 3;
 
     classInfo = this.classInfoManager_.getClassInfo(objBuf.classId);
@@ -391,7 +393,7 @@ network.Serializer.prototype.readArray_ = function () {
     var objBuf = new network.ObjectBufferDelta();
 
     objBuf.id = dataView.getInt16(this.offset_, true);
-    objBuf.classId = dataView.getUint8(this.offset_+2, true);
+    objBuf.classId = dataView.getUint8(this.offset_+2);
     len = dataView.getUint16(this.offset_+3, true);
     this.offset_ += 5;
 
@@ -399,7 +401,7 @@ network.Serializer.prototype.readArray_ = function () {
     
     for (j = 0; j < len; ++j) {
         if (objBuf.changed[j]) {
-            objBuf.data[k++] = this.readData_(objBuf.classId, 0);
+            objBuf.data[k++] = this.readData_((/**@type{network.Type}*/objBuf.classId), 0);
         }
     }
     
