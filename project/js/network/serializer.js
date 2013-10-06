@@ -67,17 +67,35 @@ goog.provide('network.Serializer');
  * cleared, it means that the field hasn't changed and it is not carried by message.
  */
 
+/**
+ * @constructor
+ * @param {network.ClassInfoManager} classInfoManager
+ */
 network.Serializer = function (classInfoManager) {
-    this.classInfoManager = classInfoManager;
-    
+    /**
+     * @private
+     * @type {network.ClassInfoManager}
+     */
+    this.classInfoManager_ = classInfoManager;
+
+    /**
+     * @private
+     * @type {DataView}
+     */
     this.dataView_ = null;
+    /**
+     * @private
+     * @type {number}
+     */
     this.offset_ = 0;
 };
 
 /**
+ * @public
  * @param {network.SnapshotDelta} snapshotDelta
  * @param {DataView} dataView
  * @param {number} offset
+ * @return {number} new offset
  */
 network.Serializer.prototype.write = function (snapshotDelta, dataView, offset) {
     var i = 0, j = 0, k = 0;
@@ -132,9 +150,11 @@ network.Serializer.prototype.write = function (snapshotDelta, dataView, offset) 
 };
 
 /**
+ * @public
  * @param {network.SnapshotDelta} snapshotDelta
  * @param {DataView} dataView
  * @param {number} offset
+ * @return {number} new offset
  */
 network.Serializer.prototype.read = function (snapshotDelta, dataView, offset) {
     var i = 0, j = 0, k = 0;
@@ -177,13 +197,15 @@ network.Serializer.prototype.read = function (snapshotDelta, dataView, offset) {
     return this.offset_;    
 };
 
-network.Serializer.BUFFER_SIZE = 4096;
-
+/**
+ * @private
+ * @param {network.ObjectBufferDelta} obj
+ */
 network.Serializer.prototype.writeObject_ = function (obj) {
     var j = 0, k = 0;
     var len = obj.changed.length;
     var dataView = this.dataView_;
-    var classInfo = this.classInfoManager.getClassInfo(obj.classId);
+    var classInfo = this.classInfoManager_.getClassInfo(obj.classId);
 
 
     dataView.setInt16(this.offset_, obj.id, true);
@@ -199,6 +221,10 @@ network.Serializer.prototype.writeObject_ = function (obj) {
     }
 };
 
+/**
+ * @private
+ * @param {network.ObjectBufferDelta} arr
+ */
 network.Serializer.prototype.writeArray_ = function (arr) {
     var chLen = 0, changed = 0;
     var j = 0, k = 0;
@@ -218,6 +244,12 @@ network.Serializer.prototype.writeArray_ = function (arr) {
     }
 };
 
+/**
+ * @private
+ * @param {*} data
+ * @param {network.Type} type
+ * @param {number} flags
+ */
 network.Serializer.prototype.writeData_ = function (data, type, flags) {
     var i = 0;
     var dataView = this.dataView_;
@@ -282,6 +314,7 @@ network.Serializer.prototype.writeData_ = function (data, type, flags) {
 
 /**
  * @private
+ * @param {Array.<boolean>}
  */
 network.Serializer.prototype.writeChanged_ = function (changed) {
     var i = 0, j = 0;
@@ -301,22 +334,66 @@ network.Serializer.prototype.writeChanged_ = function (changed) {
 
 /**
  * @private
+ * @return {network.ObjectBufferDelta}
  */
-network.Serializer.prototype.readChanged_ = function (length) {
-    var i = 0, j = 0;
-    var bits = 0;
-    var chLen = Math.ceil(length / 8);
-    var result = [];
+network.Serializer.prototype.readObject_ = function () {
+    var j = 0, k = 0;
+    var len = 0;
+    var dataView = this.dataView_;
+    var objBuf = new network.ObjectBufferDelta();
+    var classInfo;
+        
+    objBuf.id = dataView.getInt16(this.offset_, true);
+    objBuf.classId = dataView.getUint8(this.offset_+2, true);
+    this.offset_ += 3;
 
-    for (i = 0; i < chLen; ++i) {
-        bits = this.dataView_.getUint8(this.offset_++);
-        for (j = i * 8; j < length && j < (i + 1) * 8; ++j) {
-            result[j] = ((bits & (1 << (j % 8))) !== 0); // getting j-th bit
+    classInfo = this.classInfoManager_.getClassInfo(objBuf.classId);
+    len = classInfo.fieldsCount;
+    
+    objBuf.changed = this.readChanged_(len);
+    
+    for (j = 0; j < len; ++j) {
+        if (objBuf.changed[j]) {
+            objBuf.data[k++] = this.readData_(classInfo.types[j],
+                                              classInfo.flags[j]);
         }
     }
-    return result;
+    
+    return objBuf;
 };
 
+/**
+ * @private
+ * @return {network.ObjectBufferDelta}
+ */
+network.Serializer.prototype.readArray_ = function () {
+    var j = 0, k = 0;
+    var dataView = this.dataView_;
+    var len = 0;
+    var objBuf = new network.ObjectBufferDelta();
+
+    objBuf.id = dataView.getInt16(this.offset_, true);
+    objBuf.classId = dataView.getUint8(this.offset_+2, true);
+    len = dataView.getUint16(this.offset_+3, true);
+    this.offset_ += 5;
+
+    objBuf.changed = this.readChanged_(len);
+    
+    for (j = 0; j < len; ++j) {
+        if (objBuf.changed[j]) {
+            objBuf.data[k++] = this.readData_(objBuf.classId, 0);
+        }
+    }
+    
+    return objBuf;
+};
+
+/**
+ * @private
+ * @param {network.Type} type
+ * @param {number} flags
+ * @return {*}
+ */
 network.Serializer.prototype.readData_ = function (type, flags) {
     var i = 0;
     var dataView = this.dataView_;
@@ -380,50 +457,22 @@ network.Serializer.prototype.readData_ = function (type, flags) {
     return data;
 };
 
-network.Serializer.prototype.readObject_ = function () {
-    var j = 0, k = 0;
-    var len = 0;
-    var dataView = this.dataView_;
-    var objBuf = new network.ObjectBufferDelta();
-    var classInfo;
-        
-    objBuf.id = dataView.getInt16(this.offset_, true);
-    objBuf.classId = dataView.getUint8(this.offset_+2, true);
-    this.offset_ += 3;
+/**
+ * @private
+ * @param {number} length
+ * @return {Array.<boolean>}
+ */
+network.Serializer.prototype.readChanged_ = function (length) {
+    var i = 0, j = 0;
+    var bits = 0;
+    var chLen = Math.ceil(length / 8);
+    var result = [];
 
-    classInfo = this.classInfoManager.getClassInfo(objBuf.classId);
-    len = classInfo.fieldsCount;
-    
-    objBuf.changed = this.readChanged_(len);
-    
-    for (j = 0; j < len; ++j) {
-        if (objBuf.changed[j]) {
-            objBuf.data[k++] = this.readData_(classInfo.types[j],
-                                              classInfo.flags[j]);
+    for (i = 0; i < chLen; ++i) {
+        bits = this.dataView_.getUint8(this.offset_++);
+        for (j = i * 8; j < length && j < (i + 1) * 8; ++j) {
+            result[j] = ((bits & (1 << (j % 8))) !== 0); // getting j-th bit
         }
     }
-    
-    return objBuf;
-};
-
-network.Serializer.prototype.readArray_ = function () {
-    var j = 0, k = 0;
-    var dataView = this.dataView_;
-    var len = 0;
-    var objBuf = new network.ObjectBufferDelta();
-
-    objBuf.id = dataView.getInt16(this.offset_, true);
-    objBuf.classId = dataView.getUint8(this.offset_+2, true);
-    len = dataView.getUint16(this.offset_+3, true);
-    this.offset_ += 5;
-
-    objBuf.changed = this.readChanged_(len);
-    
-    for (j = 0; j < len; ++j) {
-        if (objBuf.changed[j]) {
-            objBuf.data[k++] = this.readData_(objBuf.classId, 0);
-        }
-    }
-    
-    return objBuf;
+    return result;
 };
