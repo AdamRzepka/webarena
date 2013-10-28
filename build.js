@@ -8,7 +8,7 @@
                         "project/js/base/map.js", "project/js/base/material.js",
                         "project/js/base/mat3.js", "project/js/base/mat4.js",
                         "project/js/base/vec3.js", "project/js/base/quat4.js",
-                        "project/js/base/workers/broker.js"],
+                        "project/js/base/broker.js"],
 	    "deps": []
 	},
 	"main": {

@@ -26,14 +26,14 @@
 goog.require('goog.asserts');
 goog.require('goog.array');
 
-goog.provide('base.workers.IBroker');
-goog.provide('base.workers.Broker');
-goog.provide('base.workers.FakeBroker');
+goog.provide('base.IBroker');
+goog.provide('base.Broker');
+goog.provide('base.FakeBroker');
 
 /**
  * @interface
  */
-base.workers.IBroker = function () {
+base.IBroker = function () {
 };
 /**
  * @public
@@ -41,7 +41,7 @@ base.workers.IBroker = function () {
  * @param {Object} intface
  * @return {Object}
  */
-base.workers.IBroker.prototype.createProxy = function (name, intface) {
+base.IBroker.prototype.createProxy = function (name, intface) {
 };
 /**
  * @public
@@ -49,16 +49,16 @@ base.workers.IBroker.prototype.createProxy = function (name, intface) {
  * @param {Object} obj
  * Registers proxy call receiver.
  */
-base.workers.IBroker.prototype.registerReceiver = function (name, obj) {
+base.IBroker.prototype.registerReceiver = function (name, obj) {
 };
 
 /**
  * @constructor
- * @implements {base.workers.IBroker}
+ * @implements {base.IBroker}
  * @param {string} name human friendly name of the worker.
  * @param {Worker|DedicatedWorkerGlobalScope|Window} worker if we are in worker, this argument should be self.
  */
-base.workers.Broker = function (name, worker) {
+base.Broker = function (name, worker) {
     goog.asserts.assert(worker); // if we are inside worker, self shall be defined
     /**
      * @private
@@ -101,7 +101,7 @@ base.workers.Broker = function (name, worker) {
  * @const
  * @private
  */
-base.workers.Broker.MAX_PENDING_CALLBACKS = 256;
+base.Broker.MAX_PENDING_CALLBACKS = 256;
 
 /**
  * @public
@@ -109,7 +109,7 @@ base.workers.Broker.MAX_PENDING_CALLBACKS = 256;
  * @param {Object} obj
  * Registers proxy call receiver.
  */
-base.workers.Broker.prototype.registerReceiver = function (name, obj) {
+base.Broker.prototype.registerReceiver = function (name, obj) {
     goog.asserts.assert(!this.callReceivers_[name]);
     this.callReceivers_[name] = obj;
 };
@@ -124,7 +124,7 @@ base.workers.Broker.prototype.registerReceiver = function (name, obj) {
  * All cross-worker functions must have property _CROSS_WORKER_ = true
  * and if necessary _CROSS_WORKER_CALLBACK_ = true.
  */
-base.workers.Broker.prototype.createProxy = function (name, intface) {
+base.Broker.prototype.createProxy = function (name, intface) {
     var prop;
     var that = this;
     var proxy = {};
@@ -158,7 +158,7 @@ base.workers.Broker.prototype.createProxy = function (name, intface) {
  * @private
  * @enum
  */
-base.workers.Broker.MessageTypes = {
+base.Broker.MessageTypes = {
     EVENT: 0,
     FUNCTION_CALL: 1,
     FUNCTION_CALLBACK: 2,
@@ -166,39 +166,39 @@ base.workers.Broker.MessageTypes = {
 };
 
 
-base.workers.Broker.sumTime = 0;
-base.workers.Broker.countTime = 0;
+base.Broker.sumTime = 0;
+base.Broker.countTime = 0;
 /**
  * @private
  */
-base.workers.Broker.prototype.onMessage_ = function (event) {
+base.Broker.prototype.onMessage_ = function (event) {
     var time = Date.now();
     var msg = event.data;
     switch (msg.type) {
-    case base.workers.Broker.MessageTypes.FUNCTION_CALL:
+    case base.Broker.MessageTypes.FUNCTION_CALL:
         this.onProxyCall(msg.id, msg.proxyName, msg.functionName, msg.args, msg.withCallback);
         break;
-    case base.workers.Broker.MessageTypes.FUNCTION_CALLBACK:
+    case base.Broker.MessageTypes.FUNCTION_CALLBACK:
         this.onProxyCallback(msg.id, msg.args);
         break;
-    case base.workers.Broker.MessageTypes.EVENT:
+    case base.Broker.MessageTypes.EVENT:
         break;
-    case base.workers.Broker.MessageTypes.ARBITRARY:
+    case base.Broker.MessageTypes.ARBITRARY:
         break;        
     }
     var delta = Date.now() - msg.timestamp;
-    base.workers.Broker.sumTime += delta;
-    ++base.workers.Broker.countTime;
+    base.Broker.sumTime += delta;
+    ++base.Broker.countTime;
 };
 
 
 /**
  * @private
  */
-base.workers.Broker.prototype.sendProxyCall = function (proxyName, funName, args, callback) {
+base.Broker.prototype.sendProxyCall = function (proxyName, funName, args, callback) {
     var id = this.nextId_++;
     var withCallback = goog.isDefAndNotNull(callback);
-    id = id % base.workers.Broker.MAX_PENDING_CALLBACKS;
+    id = id % base.Broker.MAX_PENDING_CALLBACKS;
     
     if (withCallback) {
         goog.asserts.assert(!this.pendingCallbacks_[id]);
@@ -206,7 +206,7 @@ base.workers.Broker.prototype.sendProxyCall = function (proxyName, funName, args
     }
 //    var post = this.postMessage_;
     this.worker_.postMessage({
-        type: base.workers.Broker.MessageTypes.FUNCTION_CALL,
+        type: base.Broker.MessageTypes.FUNCTION_CALL,
         id: id,
         proxyName: proxyName,
         functionName: funName,
@@ -219,7 +219,7 @@ base.workers.Broker.prototype.sendProxyCall = function (proxyName, funName, args
 /**
  * @private
  */
-base.workers.Broker.prototype.onProxyCall = function (id, receiverName, funName, args,
+base.Broker.prototype.onProxyCall = function (id, receiverName, funName, args,
                                                       withCallback) {
     var that = this;
     var receiver = this.callReceivers_[receiverName];
@@ -229,7 +229,7 @@ base.workers.Broker.prototype.onProxyCall = function (id, receiverName, funName,
         args.push (function () {
 //            var post = that.postMessage_;
             that.worker_.postMessage({
-                type: base.workers.Broker.MessageTypes.FUNCTION_CALLBACK,
+                type: base.Broker.MessageTypes.FUNCTION_CALLBACK,
                 id: id,
                 args: goog.array.clone(arguments)
             });
@@ -243,7 +243,7 @@ base.workers.Broker.prototype.onProxyCall = function (id, receiverName, funName,
 /**
  * @private
  */
-base.workers.Broker.prototype.onProxyCallback = function (id, args) {
+base.Broker.prototype.onProxyCallback = function (id, args) {
     
     var cb = this.pendingCallbacks_[id];
     this.pendingCallbacks_[id] = null;
@@ -254,13 +254,13 @@ base.workers.Broker.prototype.onProxyCallback = function (id, args) {
 
 /**
  * @constructor
- * @implements {base.workers.IBroker}
+ * @implements {base.IBroker}
  * @param {string} name
  * Fake broker provides unified interface for single threaded version. Currently it has
  * a bit different semantic than Broker. Receiver must be registered before createProxy
  * call (not before any proxy function calls as in Broker). The reason is performance.
  */
-base.workers.FakeBroker = function (name) {
+base.FakeBroker = function (name) {
     this.callReceivers_ = [];
 };
 /**
@@ -269,7 +269,7 @@ base.workers.FakeBroker = function (name) {
  * @param {Object} intface
  * @return {Object}
  */
-base.workers.FakeBroker.prototype.createProxy = function (name, intface) {
+base.FakeBroker.prototype.createProxy = function (name, intface) {
     goog.asserts.assert(this.callReceivers_[name]);
     return this.callReceivers_[name];
 };
@@ -279,9 +279,9 @@ base.workers.FakeBroker.prototype.createProxy = function (name, intface) {
  * @param {Object} obj
  * Registers proxy call receiver.
  */
-base.workers.FakeBroker.prototype.registerReceiver = function (name, obj) {
+base.FakeBroker.prototype.registerReceiver = function (name, obj) {
     goog.asserts.assert(!this.callReceivers_[name]);
     this.callReceivers_[name] = obj;
 };
 
-goog.exportSymbol('base.workers.Broker', base.workers.Broker);
+goog.exportSymbol('base.Broker', base.Broker);

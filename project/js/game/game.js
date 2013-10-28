@@ -21,7 +21,7 @@
 goog.require('flags');
 goog.require('base');
 goog.require('base.IRendererScene');
-goog.require('base.workers.Broker');
+goog.require('base.Broker');
 goog.require('base.Mat3');
 goog.require('files.ResourceManager');
 goog.require('files.bsp');
@@ -38,7 +38,7 @@ goog.require('game.Player');
 goog.provide('game');
 
 /**
- * @param {base.workers.IBroker} broker
+ * @param {base.IBroker} broker
  */
 game.init = function (broker) {
     var scene;
