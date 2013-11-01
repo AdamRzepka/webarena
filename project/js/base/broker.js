@@ -18,9 +18,8 @@
 'use strict';
 
 /**
- * @fileoverview High level is communication between workers. Cross-worker function calls
- * with callback and generating local object proxies itp. In future this class will also
- * broadcast some events accross workers.
+ * @fileoverview High level communication between workers. Cross-worker function calls
+ * with callbacks through local proxies.
  */
 
 goog.require('goog.asserts');
@@ -50,6 +49,31 @@ base.IBroker.prototype.createProxy = function (name, intface) {
  * Registers proxy call receiver.
  */
 base.IBroker.prototype.registerReceiver = function (name, obj) {
+};
+/**
+ * @public
+ * @param {string} eventType
+ * @param {function(string,*)} callback
+ * @return {number} listener id
+ */
+base.IBroker.prototype.registerEventListener = function (eventType, callback) {    
+};
+/**
+ * @public
+ * @param {string} eventType
+ * @param {*} data
+ * @param {base.IBroker.EventScope} [scope] default id LOCAL_AND_REMOTE
+ * @param {Array.<*>} [transferables] objects which should be transferred to other worker
+ */
+base.IBroker.prototype.fireEvent = function (eventType, data, scope, transferables) {  
+};
+/**
+ * @enum {number}
+ */
+base.IBroker.EventScope = {
+    LOCAL_AND_REMOTE: 0,
+    LOCAL: 1,
+    REMOTE: 2
 };
 
 /**
@@ -93,7 +117,12 @@ base.Broker = function (name, worker) {
      * @type {Object.<string, Object>}
      */
     this.callReceivers_ = [];
-
+    /**
+     * @private
+     * @type {Object.<string, Array.<function(string,*)>>}
+     */
+    this.eventListeners_ = [];
+    
     this.worker_.onmessage = goog.bind(this.onMessage_, this);
 };
 
@@ -147,13 +176,48 @@ base.Broker.prototype.createProxy = function (name, intface) {
                         cb = args.pop();
                     }
                     
-                    that.sendProxyCall(name, funName, args, cb);
+                    that.sendProxyCall_(name, funName, args, cb);
                 };
             })();
         }
     }
     return proxy;
 };
+/**
+ * @public
+ * @param {string} eventType
+ * @param {function(string,*)} callback
+ * @return {number} listener id
+ */
+base.Broker.prototype.registerEventListener = function (eventType, callback) {
+    var listeners = this.eventListeners_[eventType];
+    if (!goog.isDefAndNotNull(listeners)) {
+        this.eventListeners_[eventType] = listeners = [];
+    }
+    listeners.push(callback);
+    return listeners.length - 1;
+};
+/**
+ * @public
+ * @param {string} eventType
+ * @param {*} data
+ * @param {base.IBroker.EventScope} [scope] default id LOCAL_AND_REMOTE
+ * @param {Array.<*>} [transferables] objects which should be transferred to other worker
+ */
+base.Broker.prototype.fireEvent = function (eventType, data, scope, transferables) {
+    scope = scope || base.IBroker.EventScope.LOCAL_AND_REMOTE;
+    if (scope != base.IBroker.EventScope.LOCAL) {
+        this.worker_.postMessage({
+            type: base.Broker.MessageTypes.EVENT,
+            eventType: eventType,
+            data: data
+        }, transferables || []);
+    }
+    if (scope != base.IBroker.EventScope.REMOTE) {
+        this.onEvent_(eventType, data);
+    }
+};
+
 /**
  * @private
  * @enum
@@ -165,7 +229,6 @@ base.Broker.MessageTypes = {
     ARBITRARY: 3
 };
 
-
 base.Broker.sumTime = 0;
 base.Broker.countTime = 0;
 /**
@@ -176,12 +239,13 @@ base.Broker.prototype.onMessage_ = function (event) {
     var msg = event.data;
     switch (msg.type) {
     case base.Broker.MessageTypes.FUNCTION_CALL:
-        this.onProxyCall(msg.id, msg.proxyName, msg.functionName, msg.args, msg.withCallback);
+        this.onProxyCall_(msg.id, msg.proxyName, msg.functionName, msg.args, msg.withCallback);
         break;
     case base.Broker.MessageTypes.FUNCTION_CALLBACK:
-        this.onProxyCallback(msg.id, msg.args);
+        this.onProxyCallback_(msg.id, msg.args);
         break;
     case base.Broker.MessageTypes.EVENT:
+        this.onEvent_(msg.eventType, msg.data);
         break;
     case base.Broker.MessageTypes.ARBITRARY:
         break;        
@@ -190,12 +254,10 @@ base.Broker.prototype.onMessage_ = function (event) {
     base.Broker.sumTime += delta;
     ++base.Broker.countTime;
 };
-
-
 /**
  * @private
  */
-base.Broker.prototype.sendProxyCall = function (proxyName, funName, args, callback) {
+base.Broker.prototype.sendProxyCall_ = function (proxyName, funName, args, callback) {
     var id = this.nextId_++;
     var withCallback = goog.isDefAndNotNull(callback);
     id = id % base.Broker.MAX_PENDING_CALLBACKS;
@@ -215,11 +277,10 @@ base.Broker.prototype.sendProxyCall = function (proxyName, funName, args, callba
         timestamp: Date.now()
     });
 };
-
 /**
  * @private
  */
-base.Broker.prototype.onProxyCall = function (id, receiverName, funName, args,
+base.Broker.prototype.onProxyCall_ = function (id, receiverName, funName, args,
                                                       withCallback) {
     var that = this;
     var receiver = this.callReceivers_[receiverName];
@@ -239,17 +300,27 @@ base.Broker.prototype.onProxyCall = function (id, receiverName, funName, args,
         receiver[funName].apply(receiver, args);
     }
 };
-
 /**
  * @private
  */
-base.Broker.prototype.onProxyCallback = function (id, args) {
-    
+base.Broker.prototype.onProxyCallback_ = function (id, args) {
     var cb = this.pendingCallbacks_[id];
     this.pendingCallbacks_[id] = null;
     goog.asserts.assert(cb);
     
     cb(args);
+};
+/**
+ * @private
+ */
+base.Broker.prototype.onEvent_ = function (evenType, data) {
+    var i = 0;
+    var listeners = this.eventListeners_[evenType];
+    if (goog.isDefAndNotNull(listeners)) {
+        for (i = 0; i < listeners.length; ++i) {
+            listeners[i](evenType, data);
+        }
+    }
 };
 
 /**
@@ -262,6 +333,12 @@ base.Broker.prototype.onProxyCallback = function (id, args) {
  */
 base.FakeBroker = function (name) {
     this.callReceivers_ = [];
+    /**
+     * @private
+     * @type {Object.<string, Array.<function(string,*)>>}
+     */
+    this.eventListeners_ = [];
+
 };
 /**
  * @public
@@ -283,5 +360,43 @@ base.FakeBroker.prototype.registerReceiver = function (name, obj) {
     goog.asserts.assert(!this.callReceivers_[name]);
     this.callReceivers_[name] = obj;
 };
+/**
+ * @public
+ * @param {string} eventType
+ * @param {function(string,*)} callback
+ * @return {number} listener id
+ */
+base.FakeBroker.prototype.registerEventListener = function (eventType, callback) {
+    var listeners = this.eventListeners_[eventType];
+    if (!goog.isDefAndNotNull(listeners)) {
+        this.eventListeners_[eventType] = listeners = [];
+    }
+    listeners.push(callback);
+    return listeners.length - 1;
+};
+/**
+ * @public
+ * @param {string} eventType
+ * @param {*} data
+ * @param {base.IBroker.EventScope} [scope] default id LOCAL_AND_REMOTE
+ * @param {Array.<*>} [transferables] objects which should be transferred to other worker
+ */
+base.FakeBroker.prototype.fireEvent = function (eventType, data, scope, transferables) {
+    this.onEvent_(eventType, data);
+};
+/**
+ * @private
+ */
+base.FakeBroker.prototype.onEvent_ = function (evenType, data) {
+    var i = 0;
+    var listeners = this.eventListeners_[evenType];
+    if (goog.isDefAndNotNull(listeners)) {
+        for (i = 0; i < listeners.length; ++i) {
+            listeners[i](evenType, data);
+        }
+    }
+};
+
+
 
 goog.exportSymbol('base.Broker', base.Broker);
