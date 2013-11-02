@@ -18,7 +18,11 @@
 'use strict';
 
 goog.require('goog.debug.Logger');
+goog.require('goog.async.DeferredList');
+goog.require('goog.async.Deferred');
 goog.require('files.zipjs');
+goog.require('files.md3');
+goog.require('files.bsp');
 
 goog.provide('files.ResourceManager');
 
@@ -33,7 +37,7 @@ files.ResourceManager = function() {
      * @const
      * @type {string}
      */
-    this.basedir = '/resources/';//(COMPILED ? '../resources/' : '/resources/');
+    this.basedir = '/resources/';
     /**
      * @private
      * @type {Object.<string, string>}
@@ -42,12 +46,12 @@ files.ResourceManager = function() {
     this.textures = {};
     /**
      * @private
-     * @type {Object.<string, string>}
+     * @type {Object.<string, base.ShaderScript>}
      */
     this.scripts = {};
     /**
      * @private
-     * @type {Object.<string, ArrayBuffer>}
+     * @type {Object.<string, base.Model>}
      */
     this.models = {};
     /**
@@ -57,7 +61,7 @@ files.ResourceManager = function() {
     this.configFiles = {};
     /**
      * @private
-     * @type {ArrayBuffer}
+     * @type {base.Map}
      */
     this.map = null;
 
@@ -121,7 +125,7 @@ files.ResourceManager.prototype.getTextures = function () {
 /**
  * @public
  * @param {string} path
- * @return {?ArrayBuffer}
+ * @return {?base.Model}
  */
 files.ResourceManager.prototype.getModel = function (path) {
     var model = this.models[path];
@@ -138,7 +142,7 @@ files.ResourceManager.prototype.getModel = function (path) {
 /**
  * @public
  * @param {string} path
- * @return {?string}
+ * @return {?base.ShaderScript}
  */
 files.ResourceManager.prototype.getScript = function (path) {
     var script = this.scripts[path];
@@ -154,7 +158,7 @@ files.ResourceManager.prototype.getScript = function (path) {
 
 /**
  * @public
- * @return {Object.<string,string>}
+ * @return {Object.<string,base.ShaderScripts>}
  */
 files.ResourceManager.prototype.getScripts = function () {
     return this.scripts;
@@ -178,7 +182,7 @@ files.ResourceManager.prototype.getConfigFile = function (path) {
 
 /**
  * @public
- * @return {?ArrayBuffer}
+ * @return {?base.Map}
  */
 files.ResourceManager.prototype.getMap = function () {
     if (this.map === null){
@@ -218,7 +222,7 @@ files.ResourceManager.prototype.releaseAll = function () {
 /**
  * @private
  */
-files.ResourceManager.prototype.reportLoadedFile = function () {
+files.ResourceManager.prototype.reportLoadedFile_ = function () {
     this.filesToLoad--;
     if (this.filesToLoad === 0 && this.zipsToLoad === 0)
 	this.loadedCallback();
@@ -236,9 +240,7 @@ files.ResourceManager.prototype.loadArchive = function (archive) {
 			             function (entries) {
 				         self.filesToLoad += entries.length;
 				         self.zipsToLoad--;
-				         for (var i = 0; i < entries.length; ++i) {
-				             self.loadEntry(entries[i]);
-				         }
+                                         self.loadEntries(entries);
 			             });
 		             },
                             function () {
@@ -251,64 +253,128 @@ files.ResourceManager.prototype.loadArchive = function (archive) {
  * @private
  * @suppress {checkTypes|undefinedNames}
  */
-files.ResourceManager.prototype.loadEntry = function (entry) {
+files.ResourceManager.prototype.loadEntries = function (entries) {
     var self = this;
-    var filename = entry.filename;
-    var ext = filename.slice(filename.lastIndexOf('.') + 1);
-    switch (ext) {
-    case 'png': case 'jpg':
-	entry.getData(new files.zipjs.BlobWriter('image/' + ((ext === 'png') ? 'png' : 'jpeg')),
-		      function(blob) {
-                          // var url = ('URL' in window) ? window.URL.createObjectURL(blob) :
-                          //     window.webkitURL.createObjectURL(blob);
-			   // @todo there must be better way than data URL
-                          if (typeof(FileReaderSync) !== 'undefined') {
-			      var url = (new FileReaderSync()).readAsDataURL(blob);
-			      self.textures[filename.replace(/\.(jpg|png)$/, '')] = url;
-			      self.reportLoadedFile();
-                          } else {
-                              var reader = new FileReader();
-                              reader.readAsDataURL(blob);
-                              reader.onload = function (evt) {
-			          self.textures[filename.replace(/\.(jpg|png)$/, '')] =
-                                      evt.target.result;
-			          self.reportLoadedFile();   
-                              };
-                          }
-		      });
-	break;
-    case 'shader':
-	entry.getData(new files.zipjs.TextWriter(), function(text) {
-            if (self.scripts.hasOwnProperty(filename)) {
-                self.scripts[filename] += ('\n' + text);
-            } else {
-		self.scripts[filename] = text;
-            }
-	    self.reportLoadedFile();                
-	});
-	break;
-    case 'md3':
-	entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
-			  self.models[filename] = arrayBuffer;
-			  self.reportLoadedFile();
-		      });
-	break;
-    case 'bsp':
-	if (!self.map) {
-   	    entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
-			      self.map = arrayBuffer;
-			      self.reportLoadedFile();
-			  });
-	}
-        else
-	    self.reportLoadedFile();
-	break;
-    default:
-        entry.getData(new files.zipjs.TextWriter(), function(text) {
-                          self.configFiles[filename] = text;
-                          self.reportLoadedFile();
-                      });
-        break;
+    var i = 0;
+    var entry, filename, ext;
+    var deferreds = [];
+
+    for (i = 0; i < entries.length; ++i) {
+        entry = entries[i];
+        
+        filename = entry.filename;
+        ext = filename.slice(filename.lastIndexOf('.') + 1);
+        switch (ext) {
+        case 'png': case 'jpg':
+	    entry.getData(new files.zipjs.BlobWriter('image/' + ((ext === 'png') ? 'png' : 'jpeg')),
+		          function(blob) {
+                              var name = filename.replace(/\.(jpg|png)$/, '');
+                              function addTexture(url) {
+			          self.textures[name] = url;
+			          self.reportLoadedFile_();
+                              }
+                              
+                              var urlCreator = ('URL' in window) ? window.URL :
+                                      window.webkitURL;
+                              var url = null;
+                              
+                              if (urlCreator) {
+                                  url = urlCreator.createObjectURL(blob);
+                                  addTexture(url);
+                              } else if (typeof(FileReaderSync) !== 'undefined') {
+                                  // falback to dataURL
+			          url = (new FileReaderSync()).readAsDataURL(blob);
+                                  addTexture(url);
+                              } else {
+                                  var reader = new FileReader();
+                                  reader.readAsDataURL(blob);
+                                  reader.onload = function (evt) {
+                                      addTexture(evt.target.result);
+                                  };
+                              }
+		          });
+	    break;
+        case 'shader':
+	    entry.getData(new files.zipjs.TextWriter(), function(text) {
+                if (self.scripts.hasOwnProperty(filename)) {
+                    self.scripts[filename] += ('\n' + text);
+                } else {
+		    self.scripts[filename] = text;
+                }
+	        self.reportLoadedFile_();                
+	    });
+	    break;
+        case 'md3':
+	    entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
+	        self.models[filename] = files.md3.load(arrayBuffer);
+	        self.reportLoadedFile_();
+	    });
+	    break;
+        case 'bsp':
+	    if (!self.map) {
+   	        entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
+		    self.map = files.bsp.load(arrayBuffer);
+		    self.reportLoadedFile_();
+	        });
+	    }
+            else
+	        self.reportLoadedFile();
+	    break;
+        case 'skin':
+            // skip; will be loaded with appropriate model
+            break;
+        default:
+            entry.getData(new files.zipjs.TextWriter(), function(text) {
+                self.configFiles[filename] = text;
+                self.reportLoadedFile_();
+            });
+            break;
+        }
     }
+};
+
+/**
+ * @private
+ * @param {string} modelPath
+ * @return {Object.<string, string>}
+ */
+files.ResourceManager.prototype.loadMd3WithSkins_ = function (modelEntry, allEntries) {
+    var self = this;
+    var modelPath = modelEntry.filename;
+    var modelData, path, regexp, skins = {}, skinEntries = {};
+    var i = 0;
+    var deferreds = [new goog.async.Deferred()]; // first one is for modelEntry
+    
+    path = modelPath.replace('.md3', '');
+    regexp = new RegExp(path + '_(.*)\\.skin');
+    
+    skinEntries = allEntries.filter(function (entry) {
+        return regexp.test(entry.filename);
+    });
+
+    for (i = 0; i < skinEntries.length; ++i) {
+        (function () {
+            var entry = skinEntries[i];
+            var deferred = new goog.async.Deferred();
+            entry.getData(new files.zipjs.TextWriter(), function(text) {
+                var skinName;
+                skinName = regexp.exec(entry.filename)[1]; // get only skin name (eg. 'default')
+                skins[skinName] = text;
+                deferred.callback();
+            });
+            deferreds.push(deferred);
+        })();
+    }
+
+    modelEntry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
+        modelData = arrayBuffer;
+        deferreds[0].callback();
+    });
+
+    // wait for all skins and ArrayBuffer with md3 file to be available
+    goog.async.DeferredList.gatherResults(deferreds).addCallback(function () {
+        self[modelPath] = files.md3.load(modelData, skins);
+        self.reportLoadedFile_();
+    });
 };
 
