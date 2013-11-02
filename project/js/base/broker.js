@@ -90,14 +90,7 @@ base.Broker = function (name, worker) {
      * @type {Worker|DedicatedWorkerGlobalScope|Window}
      */
     this.worker_ = worker;
-    // /**
-    //  * @private
-    //  * @const
-    //  * @type {function(Object)}
-    //  */
-    // this.postMessage_ = worker ? goog.bind(worker.postMessage, worker)
-    //     : self.postMessage;
-    /**0
+    /**
      * @const
      * @type {string}
      */
@@ -116,7 +109,7 @@ base.Broker = function (name, worker) {
      * @private
      * @type {Object.<string, Object>}
      */
-    this.callReceivers_ = [];
+    this.callReceivers_ = {};
     /**
      * @private
      * @type {Object.<string, Array.<function(string,*)>>}
@@ -152,6 +145,8 @@ base.Broker.prototype.registerReceiver = function (name, obj) {
  * Interface passed here must have property _CROSS_WORKER_ = true.
  * All cross-worker functions must have property _CROSS_WORKER_ = true
  * and if necessary _CROSS_WORKER_CALLBACK_ = true.
+ * If _CROSS_WORKER_TRANSFERABLE_ = true is set for function, the last argument
+ * for that function should be array of transferables.
  */
 base.Broker.prototype.createProxy = function (name, intface) {
     var prop;
@@ -170,13 +165,18 @@ base.Broker.prototype.createProxy = function (name, intface) {
                 proxy[prop] = function() {
                     var args = goog.array.clone(arguments);
                     var cb = null;
+                    var transferables = null;
+
+                    if (proto[funName]._CROSS_WORKER_TRANSFERABLE_ && goog.isArray(args[args.length - 1])) {
+                        transferables = args.pop();
+                    }
 
                     if (goog.isFunction(args[args.length - 1])) {
                         goog.asserts.assert(proto[funName]._CROSS_WORKER_CALLBACK_);
                         cb = args.pop();
                     }
-                    
-                    that.sendProxyCall_(name, funName, args, cb);
+
+                    that.sendProxyCall_(name, funName, args, cb, transferables);
                 };
             })();
         }
@@ -211,7 +211,7 @@ base.Broker.prototype.fireEvent = function (eventType, data, scope, transferable
             type: base.Broker.MessageTypes.EVENT,
             eventType: eventType,
             data: data
-        }, transferables || []);
+        }, transferables);
     }
     if (scope != base.IBroker.EventScope.REMOTE) {
         this.onEvent_(eventType, data);
@@ -239,7 +239,8 @@ base.Broker.prototype.onMessage_ = function (event) {
     var msg = event.data;
     switch (msg.type) {
     case base.Broker.MessageTypes.FUNCTION_CALL:
-        this.onProxyCall_(msg.id, msg.proxyName, msg.functionName, msg.args, msg.withCallback);
+        this.onProxyCall_(msg.id, msg.proxyName, msg.functionName, msg.args,
+                          msg.withCallback);
         break;
     case base.Broker.MessageTypes.FUNCTION_CALLBACK:
         this.onProxyCallback_(msg.id, msg.args);
@@ -248,7 +249,7 @@ base.Broker.prototype.onMessage_ = function (event) {
         this.onEvent_(msg.eventType, msg.data);
         break;
     case base.Broker.MessageTypes.ARBITRARY:
-        break;        
+        break;
     }
     var delta = Date.now() - msg.timestamp;
     base.Broker.sumTime += delta;
@@ -257,7 +258,8 @@ base.Broker.prototype.onMessage_ = function (event) {
 /**
  * @private
  */
-base.Broker.prototype.sendProxyCall_ = function (proxyName, funName, args, callback) {
+base.Broker.prototype.sendProxyCall_ = function (proxyName, funName, args,
+                                                 callback, transferables) {
     var id = this.nextId_++;
     var withCallback = goog.isDefAndNotNull(callback);
     id = id % base.Broker.MAX_PENDING_CALLBACKS;
@@ -275,13 +277,13 @@ base.Broker.prototype.sendProxyCall_ = function (proxyName, funName, args, callb
         args: args,
         withCallback: withCallback,
         timestamp: Date.now()
-    });
+    }, transferables);
 };
 /**
  * @private
  */
 base.Broker.prototype.onProxyCall_ = function (id, receiverName, funName, args,
-                                                      withCallback) {
+                                               withCallback) {
     var that = this;
     var receiver = this.callReceivers_[receiverName];
     goog.asserts.assert(receiver && receiver[funName] && goog.isFunction(receiver[funName]));
