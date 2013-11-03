@@ -38,45 +38,67 @@ files.ResourceManager = function() {
      * @type {string}
      */
     this.basedir = '/resources/';
+    // /**
+    //  * @private
+    //  * @type {Object.<string, string>}
+    //  * Blob urls to texture image
+    //  */
+    // this.textures = {};
+    // /**
+    //  * @private
+    //  * @type {Object.<string, base.ShaderScript>}
+    //  */
+    // this.scripts = {};
+    // /**
+    //  * @private
+    //  * @type {Object.<string, base.Model>}
+    //  */
+    // this.models = {};
+    // /**
+    //  * @private
+    //  * @type {Object.<string, string>}
+    //  */
+    // this.configFiles = {};
+    // /**
+    //  * @private
+    //  * @type {base.Map}
+    //  */
+    // this.map = null;
     /**
      * @private
-     * @type {Object.<string, string>}
-     * Blob urls to texture image
+     * @type {files.ResourceManager.Archive}
      */
-    this.textures = {};
-    /**
-     * @private
-     * @type {Object.<string, base.ShaderScript>}
-     */
-    this.scripts = {};
-    /**
-     * @private
-     * @type {Object.<string, base.Model>}
-     */
-    this.models = {};
-    /**
-     * @private
-     * @type {Object.<string, string>}
-     */
-    this.configFiles = {};
-    /**
-     * @private
-     * @type {base.Map}
-     */
-    this.map = null;
+    this.archives = [];
+    
+    // this.onMd3Loaded = null;
+    // this.onBspLoaded = null;
+    // this.onShaderScriptsLoaded = null;
+    // this.onTexturesLoaded = null;
+};
 
-    /**
-     * @private
-     */
-    this.zipsToLoad = 0;
-    /**
-     * @private
-     */
-    this.filesToLoad = 0;
-    /**
-     * @private
-     */
-    this.loadedCallback = null;
+/**
+ * @constructor
+ * @param {string} name
+ * 
+ */
+files.ResourceManager.Archive = function (name, deferred) {
+    this.name = name;
+    this.scripts = {};
+    this.map = null;
+    this.models = {};
+    this.textures = {};
+    this.configs = {};
+    this.state = files.ResourceManager.Archive.State.LOADING;
+    this.loadingDeferred = deferred;
+};
+
+/**
+ * @enum {number}
+ */
+files.ResourceManager.Archive.State = {
+    LOADING: 0,
+    LOADED: 1,
+    ERROR: -1
 };
 
 /**
@@ -84,132 +106,98 @@ files.ResourceManager = function() {
  */
 files.ResourceManager.prototype.logger = goog.debug.Logger.getLogger('files.ResourceManager');
 
-/**
- * @public
- * @param {Array.<string>} archives
- * @param {function()} callback
- */
-files.ResourceManager.prototype.load = function (archives, callback) {
-    var i;
-    this.zipsToLoad = archives.length;
-    this.filesToLoad = 0;
-    this.loadedCallback = callback;
-    for (i = 0; i < archives.length; ++i)
-	this.loadArchive(archives[i]);
-};
+// /**
+//  * @public
+//  * @param {string} url
+//  * @return {?string} Blob url to texture image
+//  */
+// files.ResourceManager.prototype.getTexture = function (url) {
+//     var i = 0;
+//     for (i = 0; i < this.archives.length; ++i) {
+//         if (this.archives[i].state === files.ResourceManager.Archive.State.LOADED
+//             && url in this.archives[i].textures) {
+//             return this.archives[i].textures[url];
+//         }
+//     }
 
-/**
- * @public
- * @param {string} path
- * @return {?string} Blob url to texture image
- */
-files.ResourceManager.prototype.getTexture = function (path) {
-    var texture = this.textures[path];
-    if (texture === undefined) {
-	this.logger.log(goog.debug.Logger.Level.SEVERE,
-			'Texture ' + path + ' not loaded.');
-	return null;
-    }
-    else
-        return texture;
-};
+//     this.logger.log(goog.debug.Logger.Level.SEVERE,
+// 		    'Texture ' + path + ' not loaded.');
+//     return null;
+// };
 
-/**
- * @public
- * @return {Object.<string,string>}
- */
-files.ResourceManager.prototype.getTextures = function () {
-    return this.textures;
-};
+// /**
+//  * @public
+//  * @param {string} url
+//  * @return {?base.Model}
+//  */
+// files.ResourceManager.prototype.getModel = function (url) {
+//     var i = 0;
+//     for (i = 0; i < this.archives.length; ++i) {
+//         if (this.archives[i].state === files.ResourceManager.Archive.State.LOADED
+//             && url in this.archives[i].models) {
+//             return this.archives[i].models[url];
+//         }
+//     }
+//     this.logger.log(goog.debug.Logger.Level.SEVERE,
+// 		    'Model ' + url + ' not loaded.');
+//     return null;
+// };
 
-/**
- * @public
- * @param {string} path
- * @return {?base.Model}
- */
-files.ResourceManager.prototype.getModel = function (path) {
-    var model = this.models[path];
-    if (model === undefined) {
-	this.logger.log(goog.debug.Logger.Level.SEVERE,
-			'Model ' + path + ' not loaded.');
-	return null;
-    }
-    else {
-        return model;
-    }
-};
+// /**
+//  * @public
+//  * @param {string} url
+//  * @return {?base.ShaderScript}
+//  */
+// files.ResourceManager.prototype.getScript = function (url) {
+//     var i = 0;
+//     for (i = 0; i < this.archives.length; ++i) {
+//         if (this.archives[i].state === files.ResourceManager.Archive.State.LOADED
+//             && url in this.archives[i].scripts) {
+//             return this.archives[i].scripts[url];
+//         }
+//     }
 
-/**
- * @public
- * @param {string} path
- * @return {?base.ShaderScript}
- */
-files.ResourceManager.prototype.getScript = function (path) {
-    var script = this.scripts[path];
-    if (script === undefined) {
-	this.logger.log(goog.debug.Logger.Level.SEVERE,
-			'Script ' + path + ' not loaded.');
-	return null;
-    }
-    else {
-        return script;
-    }
-};
+//     this.logger.log(goog.debug.Logger.Level.SEVERE,
+// 		    'Script ' + url + ' not loaded.');
+//     return null;
+// };
 
-/**
- * @public
- * @return {Object.<string,base.ShaderScripts>}
- */
-files.ResourceManager.prototype.getScripts = function () {
-    return this.scripts;
-};
+// /**
+//  * @public
+//  * @param {string} url
+//  * @return {?string}
+//  */
+// files.ResourceManager.prototype.getConfigFile = function (url) {
+//     var i = 0;
+//     for (i = 0; i < this.archives.length; ++i) {
+//         if (this.archives[i].state === files.ResourceManager.Archive.State.LOADED
+//             && url in this.archives[i].configs) {
+//             return this.archives[i].configs[url];
+//         }
+//     }
 
-/**
- * @public
- * @param {string} path
- * @return {?string}
- */
-files.ResourceManager.prototype.getConfigFile = function (path) {
-    var file = this.configFiles[path];
-    if (file === undefined) {
-	this.logger.log(goog.debug.Logger.Level.SEVERE,
-			'File ' + path + ' not loaded.');
-	return null;
-    }
-    else
-        return file;
-};
+//     this.logger.log(goog.debug.Logger.Level.SEVERE,
+// 		    'File ' + url + ' not loaded.');
+//     return null;
+// };
 
-/**
- * @public
- * @return {?base.Map}
- */
-files.ResourceManager.prototype.getMap = function () {
-    if (this.map === null){
-	this.logger.log(goog.debug.Logger.Level.SEVERE,
-		'Map not loaded.');
-	return null;
-    }
-    else
-        return this.map;
-};
+// /**
+//  * @public
+//  * @return {?base.Map}
+//  */
+// files.ResourceManager.prototype.getMap = function () {
+//     var i = 0;
+//     for (i = 0; i < this.archives.length; ++i) {
+//         if (this.archives[i].state === files.ResourceManager.Archive.State.LOADED
+//             && this.archives[i].map) {
+//             return this.archives[i].map;
+//         }
+//     }
 
-/**
- * @public
- * @param {RegExp} regexp
- * @return {Object.<string, string>}
- */
-files.ResourceManager.prototype.findConfigFiles = function (regexp) {
-    var key, file;
-    var result = {};
-    for( key in this.configFiles )
-    {
-        if (this.configFiles.hasOwnProperty(key) && regexp.test(key)) {
-            result[key] = this.configFiles[key];
-        }
-    }
-    return result;
-};
+//     this.logger.log(goog.debug.Logger.Level.SEVERE,
+// 		    'Map not loaded.');
+//     return null;
+// };
 
 /**
  * @public
@@ -218,46 +206,67 @@ files.ResourceManager.prototype.releaseAll = function () {
     // TODO
 };
 
+/**
+ * @public
+ */
+files.ResourceManager.prototype.release = function (archiveName) {
+    // TODO
+};
+
 
 /**
- * @private
+ * @public
+ * @param {string} archiveName
+ * @returns {goog.async.Deferred}
+ * @suppress {checkTypes|undefinedNames}
  */
-files.ResourceManager.prototype.reportLoadedFile_ = function () {
-    this.filesToLoad--;
-    if (this.filesToLoad === 0 && this.zipsToLoad === 0)
-	this.loadedCallback();
+files.ResourceManager.prototype.load = function (archiveName) {
+    var that = this;
+    var deferred = null;
+    var archive = goog.arrays.find(this.archives, function (elem) {
+        return elem.name === archiveName;
+    });
+
+    if (archive) {
+        return archive.loadingDeferred;
+    } else {
+        deferred = new goog.async.Deferred();
+        archive = new files.ResourceManager.Archive(archiveName, deferred);
+        this.archives.push(archive);
+        files.zipjs.createReader(new files.zipjs.HttpReader(this.basedir + archiveName + '.zip'),
+		                 function (reader) {
+			             reader.getEntries(
+			                 function (entries) {
+                                             var entriesDeferred = that.loadEntries(archive,
+                                                                                    entries);
+                                             entriesDeferred.addCallback(function () {
+                                                 archive.state = files.ResourceManager.
+                                                     Archive.State.LOADED;
+                                                 deferred.callback(archive);
+                                                 return archive;
+                                             });
+			                 });
+		                 },
+                                 function () {
+                                     that.logger.log(goog.debug.Logger.Level.SEVERE,
+			                             'Unable to load archive ' + archiveName);
+                                     archive.state = files.ResourceManager.Archive.State.ERROR;
+                                     deferred.errback(archive);
+                                 });
+        return deferred;
+    }
 };
 
 /**
  * @private
  * @suppress {checkTypes|undefinedNames}
  */
-files.ResourceManager.prototype.loadArchive = function (archive) {
-    var self = this;
-    files.zipjs.createReader(new files.zipjs.HttpReader(this.basedir + archive + '.zip'),
-		             function (reader) {
-			         reader.getEntries(
-			             function (entries) {
-				         self.filesToLoad += entries.length;
-				         self.zipsToLoad--;
-                                         self.loadEntries(entries);
-			             });
-		             },
-                            function () {
-                                self.logger.log(goog.debug.Logger.Level.SEVERE,
-			                        'Unable to load archive ' + archive);
-                            });
-};
-
-/**
- * @private
- * @suppress {checkTypes|undefinedNames}
- */
-files.ResourceManager.prototype.loadEntries = function (entries) {
-    var self = this;
+files.ResourceManager.prototype.loadEntries = function (archive, entries) {
+    var that = this;
     var i = 0;
     var entry, filename, ext;
-    var deferreds = [];
+    var deferred = goog.async.Deferred.succeed();
+    var localDeferred = null;
 
     for (i = 0; i < entries.length; ++i) {
         entry = entries[i];
@@ -266,84 +275,39 @@ files.ResourceManager.prototype.loadEntries = function (entries) {
         ext = filename.slice(filename.lastIndexOf('.') + 1);
         switch (ext) {
         case 'png': case 'jpg':
-	    entry.getData(new files.zipjs.BlobWriter('image/' + ((ext === 'png') ? 'png' : 'jpeg')),
-		          function(blob) {
-                              var name = filename.replace(/\.(jpg|png)$/, '');
-                              function addTexture(url) {
-			          self.textures[name] = url;
-			          self.reportLoadedFile_();
-                              }
-                              
-                              var urlCreator = ('URL' in window) ? window.URL :
-                                      window.webkitURL;
-                              var url = null;
-                              
-                              if (urlCreator) {
-                                  url = urlCreator.createObjectURL(blob);
-                                  addTexture(url);
-                              } else if (typeof(FileReaderSync) !== 'undefined') {
-                                  // falback to dataURL
-			          url = (new FileReaderSync()).readAsDataURL(blob);
-                                  addTexture(url);
-                              } else {
-                                  var reader = new FileReader();
-                                  reader.readAsDataURL(blob);
-                                  reader.onload = function (evt) {
-                                      addTexture(evt.target.result);
-                                  };
-                              }
-		          });
+            localDeferred = this.loadTexture_(archive, entry, ext);
 	    break;
         case 'shader':
-	    entry.getData(new files.zipjs.TextWriter(), function(text) {
-                if (self.scripts.hasOwnProperty(filename)) {
-                    self.scripts[filename] += ('\n' + text);
-                } else {
-		    self.scripts[filename] = text;
-                }
-	        self.reportLoadedFile_();                
-	    });
+            localDeferred = this.loadShaders_(archive, entry);
 	    break;
         case 'md3':
-	    entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
-	        self.models[filename] = files.md3.load(arrayBuffer);
-	        self.reportLoadedFile_();
-	    });
+            localDeferred = this.loadMd3WithSkins_(archive, entry, entries);
 	    break;
         case 'bsp':
-	    if (!self.map) {
-   	        entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
-		    self.map = files.bsp.load(arrayBuffer);
-		    self.reportLoadedFile_();
-	        });
-	    }
-            else
-	        self.reportLoadedFile();
-	    break;
+            localDeferred = this.loadBsp_(archive, entry);
         case 'skin':
             // skip; will be loaded with appropriate model
             break;
         default:
-            entry.getData(new files.zipjs.TextWriter(), function(text) {
-                self.configFiles[filename] = text;
-                self.reportLoadedFile_();
-            });
+            localDeferred = this.loadConfigFile_(archive, entry);
             break;
         }
+        deferred.awaitDeferred(localDeferred);
     }
+    
+    return deferred;
 };
 
 /**
  * @private
  * @param {string} modelPath
- * @return {Object.<string, string>}
+ * @return {goog.async.Deferred}
  */
-files.ResourceManager.prototype.loadMd3WithSkins_ = function (modelEntry, allEntries) {
-    var self = this;
+files.ResourceManager.prototype.loadMd3WithSkins_ = function (archive, modelEntry, allEntries) {
     var modelPath = modelEntry.filename;
     var modelData, path, regexp, skins = {}, skinEntries = {};
     var i = 0;
-    var deferreds = [new goog.async.Deferred()]; // first one is for modelEntry
+    var deferred = new goog.async.Deferred();
     
     path = modelPath.replace('.md3', '');
     regexp = new RegExp(path + '_(.*)\\.skin');
@@ -355,26 +319,101 @@ files.ResourceManager.prototype.loadMd3WithSkins_ = function (modelEntry, allEnt
     for (i = 0; i < skinEntries.length; ++i) {
         (function () {
             var entry = skinEntries[i];
-            var deferred = new goog.async.Deferred();
+            var localDeferred = new goog.async.Deferred();
             entry.getData(new files.zipjs.TextWriter(), function(text) {
                 var skinName;
                 skinName = regexp.exec(entry.filename)[1]; // get only skin name (eg. 'default')
                 skins[skinName] = text;
-                deferred.callback();
+                localDeferred.callback();
             });
-            deferreds.push(deferred);
+            deferred.awaitDeferred(localDeferred);
         })();
     }
 
     modelEntry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
         modelData = arrayBuffer;
-        deferreds[0].callback();
+        deferred.callback();
     });
 
     // wait for all skins and ArrayBuffer with md3 file to be available
-    goog.async.DeferredList.gatherResults(deferreds).addCallback(function () {
-        self[modelPath] = files.md3.load(modelData, skins);
-        self.reportLoadedFile_();
+    deferred.addCallback(function () {
+        archive[modelPath] = files.md3.load(modelData, skins);
     });
+    return deferred;
+};
+
+files.ResourceManager.prototype.loadTexture_ = function (archive, entry, ext) {
+    var filename = entry.filename;
+    var deferred = new goog.async.Deferred();
+    
+    entry.getData(new files.zipjs.BlobWriter('image/' + ((ext === 'png') ? 'png' : 'jpeg')),
+		  function(blob) {
+                      var name = filename.replace(/\.(jpg|png)$/, '');
+                      function addTexture(url) {
+			  archive.textures[name] = url;
+		          deferred.callback();
+                      }
+                      
+                      var urlCreator = ('URL' in window) ? window.URL :
+                              window.webkitURL;
+                      var url = null;
+                      
+                      if (urlCreator) {
+                          url = urlCreator.createObjectURL(blob);
+                          addTexture(url);
+                      } else if (typeof(FileReaderSync) !== 'undefined') {
+                          // falback to dataURL
+			  url = (new FileReaderSync()).readAsDataURL(blob);
+                          addTexture(url);
+                      } else {
+                          var reader = new FileReader();
+                          reader.readAsDataURL(blob);
+                          reader.onload = function (evt) {
+                              addTexture(evt.target.result);
+                          };
+                      }
+		  });
+    return deferred;
+};
+
+files.ResourceManager.prototype.loadShaders_ = function (archive, entry) {
+    var deferred = new goog.async.Deferred();
+    var filename = entry.filename;
+    
+    entry.getData(new files.zipjs.TextWriter(), function(text) {
+        var i = 0;
+        var shaders = files.ShaderScriptLoader.load(text);
+        for (i = 0; i < shaders.length; ++i) {
+            archive.scripts[shaders[i].name] = shaders[i];
+        }
+        deferred.callback();
+    });
+    
+    return deferred;
+};
+
+files.ResourceManager.prototype.loadBsp_ = function (archive, entry) {
+    var deferred = new goog.async.Deferred();
+
+    goog.asserts.assert(archive.map === null);
+    
+    entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
+	archive.map = files.bsp.load(arrayBuffer);
+        deferred.callback();
+    });
+
+    return deferred;
+};
+
+files.ResourceManager.prototype.loadConfigFile_ = function (archive, entry) {
+    var deferred = new goog.async.Deferred();
+    var filename = entry.filename;
+    
+    entry.getData(new files.zipjs.TextWriter(), function(text) {
+        archive.configFiles[filename] = text;
+        deferred.callback();
+    });
+
+    return deferred;
 };
 

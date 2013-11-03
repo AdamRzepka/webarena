@@ -55,29 +55,11 @@ goog.provide('files.ShaderScriptLoader');
 // Shader Loading
 //
 
-files.ShaderScriptLoader = {
-    /** @type Array.<base.ShaderScript> */
-    shaderScripts: []
-};
-
-/**
- * @param {Object.<string, string>} scripts
- */
-files.ShaderScriptLoader.loadAll = function(scripts) {
-    var shaderFile;
-
-    for (shaderFile in scripts) {
-	if (scripts.hasOwnProperty(shaderFile)) {
-	    files.ShaderScriptLoader.load(shaderFile, scripts[shaderFile]);
-	}
-    }
-};
-
 /**
  * @private
  */
-files.ShaderScriptLoader.load = function(url, src) {
-    var shaderScripts = files.ShaderScriptLoader.shaderScripts,
+files.ShaderScriptLoader.load = function(src) {
+    var shaderScripts = [],
 	shaders = [],
 	shader,
 	tokens = new files.ShaderScriptTokenizer(src),
@@ -89,10 +71,10 @@ files.ShaderScriptLoader.load = function(url, src) {
         name = tokens.next();
         shader = files.ShaderScriptLoader.parseShader(name, tokens);
         if(shader) {
-//            shader.url = url;
             shaderScripts.push(shader);
         }
     }
+    return shaderScripts;
 };
 
 /**
