@@ -416,7 +416,7 @@ game.CharacterController.prototype.groundCheck = function() {
     base.Vec3.setValues(checkPoint, this.position[0], this.position[1],
                         this.position[2] - game.CharacterController.PLAYER_RADIUS - 0.25);
     
-    this.groundTrace = this.bsp.trace(this.position, checkPoint,
+    this.groundTrace = base.Bsp.trace(this.bsp, this.position, checkPoint,
                                       game.CharacterController.PLAYER_RADIUS);
     
     if(this.groundTrace.fraction == 1.0) { // falling
@@ -594,7 +594,7 @@ game.CharacterController.prototype.slideMove = function(gravity) {
                                       tmpVec), end);
         
         // see if we can make it there
-        var trace = this.bsp.trace(this.position, end, game.CharacterController.PLAYER_RADIUS);
+        var trace = base.Bsp.trace(this.bsp, this.position, end, game.CharacterController.PLAYER_RADIUS);
 
         if (trace.allSolid) {
             // entity is completely trapped in another solid
@@ -710,7 +710,7 @@ game.CharacterController.prototype.stepSlideMove = function(gravity) {
 
     var down = base.Vec3.set(start_o, base.Vec3.pool.acquire());
     down[2] -= game.CharacterController.STEP_SIZE;
-    var trace = this.bsp.trace(start_o, down, game.CharacterController.PLAYER_RADIUS);
+    var trace = base.Bsp.trace(this.bsp, start_o, down, game.CharacterController.PLAYER_RADIUS);
     
     var up = base.Vec3.pool.acquire();
     up[2] = 1;
@@ -728,7 +728,7 @@ game.CharacterController.prototype.stepSlideMove = function(gravity) {
     up[2] += game.CharacterController.STEP_SIZE;
     
     // test the player position if they were a stepheight higher
-    trace = this.bsp.trace(start_o, up, game.CharacterController.PLAYER_RADIUS);
+    trace = base.Bsp.trace(this.bsp, start_o, up, game.CharacterController.PLAYER_RADIUS);
     if ( trace.allSolid ) { return; } // can't step up
     
     var stepSize = trace.endPos[2] - start_o[2];
@@ -741,7 +741,7 @@ game.CharacterController.prototype.stepSlideMove = function(gravity) {
     // push down the final amount
     base.Vec3.set(this.position, down);
     down[2] -= stepSize;
-    trace = this.bsp.trace(this.position, down, game.CharacterController.PLAYER_RADIUS);
+    trace = base.Bsp.trace(this.bsp, this.position, down, game.CharacterController.PLAYER_RADIUS);
     if ( !trace.allSolid ) {
         base.Vec3.set(trace.endPos, this.position);
     }

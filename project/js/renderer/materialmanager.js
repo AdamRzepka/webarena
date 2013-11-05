@@ -74,12 +74,6 @@ renderer.MaterialManager = function(gl) {
     this.gl = gl;
     /**
      * @private
-     * @type {Object.<string, renderer.Shader>}
-     * Cache for compiled shaders
-     */
-    this.shaders = {};
-    /**
-     * @private
      * @type {Object.<string, WebGLTexture>}
      * Cache for textures
      */
@@ -144,7 +138,7 @@ renderer.MaterialManager.prototype.logger =
 
 /**
  * @public
- * @param {Array.<base.ShaderScript>} shaderScripts
+ * @param {Object.<string, base.ShaderScript>} shaderScripts
  * @param {Object.<string, string>} images Map of image paths and blob URLs to images
  */
 renderer.MaterialManager.prototype.buildShaders = function (shaderScripts, images) {
@@ -158,14 +152,24 @@ renderer.MaterialManager.prototype.buildShaders = function (shaderScripts, image
 	}
     }
 
-    for (i = 0; i < shaderScripts.length; ++i) {
-	shaderScript = shaderScripts[i];
-	name = shaderScript.name;
-	this.materials[name] = new renderer.Material(
-	    this.build(this.gl, shaderScript),
-	    null,
-	    base.LightningType.LIGHT_CUSTOM);
+    for( name in shaderScripts )
+    {
+        if (shaderScripts.hasOwnProperty(name)) {
+	    shaderScript = shaderScripts[name];
+	    this.materials[name] = new renderer.Material(
+	        this.build(this.gl, shaderScript),
+	        null,
+	        base.LightningType.LIGHT_CUSTOM);
+        }
     }
+    // for (i = 0; i < shaderScripts.length; ++i) {
+    //     shaderScript = shaderScripts[i];
+    //     name = shaderScript.name;
+    //     this.materials[name] = new renderer.Material(
+    //         this.build(this.gl, shaderScript),
+    //         null,
+    //         base.LightningType.LIGHT_CUSTOM);
+    // }
 };
 
 /**

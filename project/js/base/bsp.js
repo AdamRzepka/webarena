@@ -71,12 +71,13 @@ base.Bsp.TraceOutput;
 // From q3bsp, B. Jones
 /**
  * @public
+ * @param {base.Bsp} bsp
  * @param {base.Vec3} start
  * @param {base.Vec3} end
  * @param {number} [radius]
  * @return {base.Bsp.TraceOutput}
  */
-base.Bsp.prototype.trace = function(start, end, radius) {
+base.Bsp.trace = function(bsp, start, end, radius) {
     var i;
     var output = {
         allSolid: false,
@@ -88,7 +89,7 @@ base.Bsp.prototype.trace = function(start, end, radius) {
     
     if(!radius) { radius = 0; }
     
-    this.traceNode(0, 0, 1, start, end, radius, output);
+    base.Bsp.traceNode(bsp, 0, 0, 1, start, end, radius, output);
     
     if(output.fraction != 1.0) { // collided with something
         for (i = 0; i < 3; i++) {
@@ -107,6 +108,7 @@ base.Bsp.TRACE_OFFSET = 0.03125;
 
 /**
  * @private
+ * @param {base.Bsp} bsp
  * @param {number} nodeIdx
  * @param {number} startFraction
  * @param {number} endFraction
@@ -115,34 +117,37 @@ base.Bsp.TRACE_OFFSET = 0.03125;
  * @param {number} radius
  * @param {base.Bsp.TraceOutput} output
  */
-base.Bsp.prototype.traceNode = function(nodeIdx, startFraction, endFraction, start, end, radius, output) {
+base.Bsp.traceNode = function(bsp, nodeIdx, startFraction, endFraction,
+                              start, end, radius, output) {
     var i,
         leaf, brush, surface,
         node, plane, startDist, endDist,
         side, fraction1, fraction2, middleFraction, middle,
         iDist;
     if (nodeIdx < 0) { // Leaf node?
-        leaf = this.leaves[-(nodeIdx + 1)];
+        leaf = bsp.leaves[-(nodeIdx + 1)];
         for (i = 0; i < leaf.leafBrushesCount; i++) {
-            brush = this.brushes[this.leafBrushes[leaf.firstLeafBrush + i]];
+            brush = bsp.brushes[bsp.leafBrushes[leaf.firstLeafBrush + i]];
             if (brush.brushSidesCount > 0 && brush.flags & base.Bsp.BrushFlags.SOLID) {
-                this.traceBrush(brush, start, end, radius, output);
+                base.Bsp.traceBrush(bsp, brush, start, end, radius, output);
             }
         }
         return;
     }
     
     // Tree node
-    node = this.nodes[nodeIdx];
-    plane = this.planes[node.plane];
+    node = bsp.nodes[nodeIdx];
+    plane = bsp.planes[node.plane];
     
     startDist = base.Vec3.dot(plane.normal, start) - plane.distance;
     endDist = base.Vec3.dot(plane.normal, end) - plane.distance;
     
     if (startDist >= radius && endDist >= radius) {
-        this.traceNode(node.children[0], startFraction, endFraction, start, end, radius, output );
+        base.Bsp.traceNode(bsp, node.children[0], startFraction,
+                           endFraction, start, end, radius, output );
     } else if (startDist < -radius && endDist < -radius) {
-        this.traceNode(node.children[1], startFraction, endFraction, start, end, radius, output );
+        base.Bsp.traceNode(bsp, node.children[1], startFraction,
+                           endFraction, start, end, radius, output );
     } else {
         middle = base.Vec3.create([0, 0, 0]);
 
@@ -173,7 +178,8 @@ base.Bsp.prototype.traceNode = function(nodeIdx, startFraction, endFraction, sta
             middle[i] = start[i] + fraction1 * (end[i] - start[i]);
         }
         
-        this.traceNode(node.children[side], startFraction, middleFraction, start, middle, radius, output );
+        base.Bsp.traceNode(bsp, node.children[side], startFraction,
+                           middleFraction, start, middle, radius, output );
         
         middleFraction = startFraction + (endFraction - startFraction) * fraction2;
         
@@ -181,11 +187,12 @@ base.Bsp.prototype.traceNode = function(nodeIdx, startFraction, endFraction, sta
             middle[i] = start[i] + fraction2 * (end[i] - start[i]);
         }
         
-        this.traceNode(node.children[side===0?1:0], middleFraction, endFraction, middle, end, radius, output );
+        base.Bsp.traceNode(bsp, node.children[side===0?1:0],
+                           middleFraction, endFraction, middle, end, radius, output );
     }
 };
 
-base.Bsp.prototype.traceBrush = function(brush, start, end, radius, output) {
+base.Bsp.traceBrush = function(bsp, brush, start, end, radius, output) {
     var startFraction = -1;
     var endFraction = 1;
     var startsOut = false;
@@ -194,8 +201,8 @@ base.Bsp.prototype.traceBrush = function(brush, start, end, radius, output) {
     var i, brushSide, plane, startDist, endDist, fraction;
     
     for (i = 0; i < brush.brushSidesCount; i++) {
-        brushSide = this.brushSides[brush.firstBrushSide + i];
-        plane = this.planes[brushSide.plane];
+        brushSide = bsp.brushSides[brush.firstBrushSide + i];
+        plane = bsp.planes[brushSide.plane];
         
         startDist = base.Vec3.dot( start, plane.normal ) - (plane.distance + radius);
         endDist = base.Vec3.dot( end, plane.normal ) - (plane.distance + radius);

@@ -47,7 +47,8 @@ goog.provide('base.GeometryData');
  * @param {Array.<string>} [skins]
  */
 base.Model = function (id, meshes, framesCount, framesData, type, tags, skins) {
-    goog.asserts.assert(meshes.length > 0);
+    // turns out, there exist md3 models with no surfaces
+    // goog.asserts.assert(meshes.length > 0);
     goog.asserts.assert(framesCount > 0);
 
     /**

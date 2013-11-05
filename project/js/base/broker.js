@@ -211,7 +211,7 @@ base.Broker.prototype.fireEvent = function (eventType, data, scope, transferable
             type: base.Broker.MessageTypes.EVENT,
             eventType: eventType,
             data: data
-        }, transferables);
+        });
     }
     if (scope != base.IBroker.EventScope.REMOTE) {
         this.onEvent_(eventType, data);
@@ -379,7 +379,7 @@ base.FakeBroker.prototype.registerEventListener = function (eventType, callback)
 /**
  * @public
  * @param {string} eventType
- * @param {*} data
+ * @param {*} [data]
  * @param {base.IBroker.EventScope} [scope] default id LOCAL_AND_REMOTE
  * @param {Array.<*>} [transferables] objects which should be transferred to other worker
  */

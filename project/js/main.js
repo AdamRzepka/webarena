@@ -25,6 +25,7 @@ goog.require('base.Mat4');
 goog.require('base.IInputHandler');
 goog.require('renderer.Scene');
 goog.require('base.Broker');
+goog.require('files.ResourceManager');
 
 if (!flags.GAME_WORKER) {
     goog.require('game');
@@ -134,6 +135,56 @@ function initInput(broker) {
     document.addEventListener('mozpointerlockerror', pointerLockError, false);
 }
 
+function initResources(broker, scene, mapArchive, archives, callback) {
+    var i;
+    var rm = new files.ResourceManager();
+    var deferred;
+    var deferreds = [];
+    function onload (archive) {
+        var key;
+        scene.buildShaders(archive.scripts, archive.textures);
+        for ( key in archive.models )
+        {
+            if (archive.models.hasOwnProperty(key)) {
+                broker.fireEvent('model_loaded', {
+                    url: key,
+                    model: archive.models[key]
+                });
+                scene.registerMd3(archive.models[key]);
+            }
+        }
+        for( key in archive.configs )
+        {
+            if (archive.configs.hasOwnProperty(key)) {
+                broker.fireEvent('config_loaded', {
+                    url: key,
+                    config: archive.configs[key]
+                });
+            }
+        }
+        if (archive.map) {
+            broker.fireEvent('map_loaded', {
+                models: archive.map.models,
+                lightmapData: null,  // game worker doesn't need lightmap
+                bsp: archive.map.bsp,
+                entities: archive.map.entities
+            });
+            scene.registerMap(archive.map.models, archive.map.lightmapData);
+
+        }
+    };
+
+    deferreds[0] = rm.load(mapArchive).addCallback(onload);
+
+    for (i = 0; i < archives.length; ++i) {
+        deferred = rm.load(archives[i]);
+//        deferred.awaitDeferred(deferreds[0]);
+        deferred.addCallback(onload);
+        deferreds.push(deferred);
+    }
+    goog.async.DeferredList.gatherResults(deferreds).addCallback(callback);
+};
+
 window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
     window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
     window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
@@ -188,6 +239,10 @@ function main() {
 
     broker.registerReceiver('base.IRendererScene', scene);
 
+    initResources(broker, scene, map, ['assassin', 'weapons'], function () {
+        broker.fireEvent('game_start');
+    });
+    
     if (!flags.GAME_WORKER) {
         game.init(broker);
     }

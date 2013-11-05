@@ -23,10 +23,10 @@ goog.require('base');
 goog.require('base.IRendererScene');
 goog.require('base.Broker');
 goog.require('base.Mat3');
-goog.require('files.ResourceManager');
-goog.require('files.bsp');
-goog.require('files.md3');
-goog.require('files.ShaderScriptLoader');
+//goog.require('files.ResourceManager');
+//goog.require('files.bsp');
+//goog.require('files.md3');
+//goog.require('files.ShaderScriptLoader');
 goog.require('game.InputBuffer');
 goog.require('game.InputHandler');
 goog.require('game.FreeCamera');
@@ -42,40 +42,45 @@ goog.provide('game');
  */
 game.init = function (broker) {
     var scene;
+    var modelManager;
+    var map;
+    var configs = {};
     var inputBuffer = new game.InputBuffer();
     var inputHandler = new game.InputHandler();
-    var rm = new files.ResourceManager();
-    var mapName = 'aggressor';
+
+    //var rm = new files.ResourceManager();
+    //var mapName = 'aggressor';
     
     broker.registerReceiver('base.IInputHandler', inputHandler);
     
     scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                               base.IRendererScene);
+    modelManager = new game.ModelManager(scene);
     
-    rm.load([mapName, 'assassin', 'weapons'], function () {
-	var map, md3;
-	files.ShaderScriptLoader.loadAll(rm.getScripts());
-        scene.buildShaders(files.ShaderScriptLoader.shaderScripts,
-					     rm.getTextures());
-	
-	map = files.bsp.load(rm.getMap());
-        scene.registerMap(map.models, map.lightmapData);
+    broker.registerEventListener('model_loaded', function (evt, data) {
+        modelManager.registerModel(data.url, data.model);
+    });
 
-	map.models.forEach(function (model) {
-            scene.registerModelInstance(model.id,
-	                                base.Mat4.identity(),
-                                        0,
-                                        function (id) {
-                                            model.id = id;
-                                        });
-	});
+    broker.registerEventListener('map_loaded', function (evt, data) {
+        var i = 0;
+        map = data;
+        for (i = 0; i < map.models.length; ++i) {
+            scene.registerModelInstance(map.models[i].id, base.Mat4.identity(), 0,
+                                        function (id) {});
+        }
+    });
+
+    broker.registerEventListener('config_loaded', function (evt, data) {
+        configs[data.url] = data.config;
+    });
+
+    broker.registerEventListener('game_start', function (evt, data) {
 	
         var camera = new game.FreeCamera(inputBuffer, base.Vec3.create([0,0,0]));
         
-        var modelManager = new game.ModelManager(scene, rm);
-        var player = new game.Player(modelManager, rm, 'assassin', 'default');
+        var player = new game.Player(modelManager, configs, 'assassin', 'default');
         var characterController = new game.CharacterController(map.bsp, inputBuffer, player);
-        var spawnPoints = map.getSpawnPoints();
+        var spawnPoints = base.Map.getSpawnPoints(map);
         var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
         
         characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],

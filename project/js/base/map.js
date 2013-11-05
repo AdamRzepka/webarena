@@ -107,8 +107,8 @@ base.Map.LightmapData = function(lightmaps, size) {
     this.size = size;
 };
 
-base.Map.prototype.getSpawnPoints = function() {
-    return this.entities['info_player_deathmatch'] || null;
+base.Map.getSpawnPoints = function (map) {
+    return map.entities['info_player_deathmatch'] || null;
     // return this.entities.filter(function (ent) {
     //    return ent['classname'] == 'info_player_deathmatch'; 
     // });

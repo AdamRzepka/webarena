@@ -28,11 +28,10 @@ goog.provide('game.Player');
 /**
  * @constructor
  * @param {game.ModelManager} mm
- * @param {files.ResourceManager} rm
  * @param {string} name
  * @param {string} [skin]
  */
-game.Player = function (mm, rm, name, skin) {
+game.Player = function (mm, configs, name, skin) {
     var path = game.Player.PLAYERS_PATH + name + '/';
     var that = this;
     var visible = game.globals.tppMode;
@@ -86,7 +85,7 @@ game.Player = function (mm, rm, name, skin) {
      * @const
      * @type {Array.<game.Player.Animation>}
      */
-    this.animations = this.loadAnimations(path, rm);
+    this.animations = this.loadAnimations(path, configs);
     /**
      * @private
      * @type {game.Player.LegsStates}
@@ -418,14 +417,13 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
 /**
  * @private
  * @param {string} playerPath
- * @param {files.ResourceManager} rm
  * @return {Array.<game.Player.Animation>}
  * Parse file animation.cfg
  */
-game.Player.prototype.loadAnimations = function (playerPath, rm) {
+game.Player.prototype.loadAnimations = function (playerPath, configs) {
     var res;
     var i = 0;
-    var file = rm.getConfigFile(playerPath + 'animation.cfg');
+    var file = configs[playerPath + 'animation.cfg'];
     var re = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/gm;
     var animations = [];
 

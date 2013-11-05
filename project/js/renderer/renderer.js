@@ -100,6 +100,7 @@ renderer.Renderer = function(gl) {
         renderer.Renderer.bindMd3Mesh
     ];
     
+
     /**
      * @private
      * @type {Array.<function(WebGLRenderingContext,
@@ -403,11 +404,13 @@ renderer.Renderer.bindBspMesh = function (gl, state, indexBuffers, vertexBuffers
 
     goog.asserts.assert(state.meshInstance.modelInstance.baseModel.type === base.Model.Type.BSP);
 
-    if (indexBufferId !== state.prevMeshInstance.baseMesh.geometry.indexBufferId) {
+    if (state.prevMeshInstance === null
+        || indexBufferId !== state.prevMeshInstance.baseMesh.geometry.indexBufferId) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
 		      indexBuffers[indexBufferId]);
     }
-    if (vertexBufferId !== state.prevMeshInstance.baseMesh.geometry.vertexBufferIds[0]) {
+    if (state.prevMeshInstance === null
+        || vertexBufferId !== state.prevMeshInstance.baseMesh.geometry.vertexBufferIds[0]) {
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBufferId]);
         changed = true;
     }
@@ -454,7 +457,7 @@ renderer.Renderer.bindBspMesh = function (gl, state, indexBuffers, vertexBuffers
 renderer.Renderer.renderBspMeshInstance = function (gl, state, indexBuffers, vertexBuffers) {
     if (state.prevMeshInstance === null ||
         state.prevStage !== state.stage ||
-        state.prevMeshInstance.modelInstance !== state.prevMeshInstance.modelInstance) {
+        state.meshInstance.modelInstance !== state.prevMeshInstance.modelInstance) {
         gl.uniformMatrix4fv(state.stage.program.uniforms['mvpMat'], false, state.mvpMat);
     }
     
@@ -477,7 +480,8 @@ renderer.Renderer.bindMd3Mesh = function (gl, state, indexBuffers, vertexBuffers
     
     goog.asserts.assert(state.meshInstance.modelInstance.baseModel.type === base.Model.Type.MD3);
     
-    if (indexBufferId !== state.prevMeshInstance.baseMesh.geometry.indexBufferId) {
+    if (state.prevMeshInstance === null
+        || indexBufferId !== state.prevMeshInstance.baseMesh.geometry.indexBufferId) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,
 		      indexBuffers[indexBufferId]);
     }
@@ -499,10 +503,12 @@ renderer.Renderer.renderMd3MeshInstance = function (gl, state, indexBuffers, ver
     var mesh = state.meshInstance.baseMesh;
     var shader = state.stage.program;
     var modelInst = state.meshInstance.modelInstance;
-    var prevModelInst = state.prevMeshInstance.modelInstance;
+    var prevModelInst = state.prevMeshInstance !== null ?
+            state.prevMeshInstance.modelInstance : null;
     var changed = (state.prevStage !== state.stage);
 
-    if (modelInst.baseModel !== prevModelInst.baseModel
+    if (prevModelInst === null
+        || modelInst.baseModel !== prevModelInst.baseModel
         || modelInst.getFrameA() !== prevModelInst.getFrameA()) {
         vertexBufferIdA = mesh.geometry.vertexBufferIds[modelInst.getFrameA()];
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBufferIdA]);
@@ -524,7 +530,8 @@ renderer.Renderer.renderMd3MeshInstance = function (gl, state, indexBuffers, ver
 //        gl.vertexAttrib4fv(shader.attribs['color'], [1,1,1,1]);
     }
 
-    if (modelInst.baseModel !== prevModelInst.baseModel
+    if (prevModelInst === null
+        || modelInst.baseModel !== prevModelInst.baseModel
         || modelInst.getFrameB() !== prevModelInst.getFrameB()) {
         vertexBufferIdB = mesh.geometry.vertexBufferIds[modelInst.getFrameB()];
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBufferIdB]

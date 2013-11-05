@@ -20,9 +20,11 @@
 goog.require('goog.debug.Logger');
 goog.require('goog.async.DeferredList');
 goog.require('goog.async.Deferred');
+goog.require('goog.array');
 goog.require('files.zipjs');
 goog.require('files.md3');
 goog.require('files.bsp');
+goog.require('files.ShaderScriptLoader');
 
 goog.provide('files.ResourceManager');
 
@@ -223,7 +225,7 @@ files.ResourceManager.prototype.release = function (archiveName) {
 files.ResourceManager.prototype.load = function (archiveName) {
     var that = this;
     var deferred = null;
-    var archive = goog.arrays.find(this.archives, function (elem) {
+    var archive = goog.array.find(this.archives, function (elem) {
         return elem.name === archiveName;
     });
 
@@ -337,7 +339,7 @@ files.ResourceManager.prototype.loadMd3WithSkins_ = function (archive, modelEntr
 
     // wait for all skins and ArrayBuffer with md3 file to be available
     deferred.addCallback(function () {
-        archive[modelPath] = files.md3.load(modelData, skins);
+        archive.models[modelPath] = files.md3.load(modelData, skins);
     });
     return deferred;
 };
@@ -410,7 +412,7 @@ files.ResourceManager.prototype.loadConfigFile_ = function (archive, entry) {
     var filename = entry.filename;
     
     entry.getData(new files.zipjs.TextWriter(), function(text) {
-        archive.configFiles[filename] = text;
+        archive.configs[filename] = text;
         deferred.callback();
     });
 
