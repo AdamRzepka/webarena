@@ -21,6 +21,7 @@ goog.require('goog.debug.Logger');
 goog.require('goog.async.DeferredList');
 goog.require('goog.async.Deferred');
 goog.require('goog.array');
+goog.require('base');
 goog.require('files.zipjs');
 goog.require('files.md3');
 goog.require('files.bsp');
@@ -40,6 +41,7 @@ files.ResourceManager = function() {
      * @type {string}
      */
     this.basedir = '/resources/';
+    this.bspWorker = new Worker('js/files/bspworker.js');
     // /**
     //  * @private
     //  * @type {Object.<string, string>}
@@ -339,7 +341,9 @@ files.ResourceManager.prototype.loadMd3WithSkins_ = function (archive, modelEntr
 
     // wait for all skins and ArrayBuffer with md3 file to be available
     deferred.addCallback(function () {
-        archive.models[modelPath] = files.md3.load(modelData, skins);
+        var model = files.md3.load(modelData, skins);
+        model.id = files.ResourceManager.getNextModelId_();
+        archive.models[modelPath] = model;
     });
     return deferred;
 };
@@ -395,13 +399,32 @@ files.ResourceManager.prototype.loadShaders_ = function (archive, entry) {
 };
 
 files.ResourceManager.prototype.loadBsp_ = function (archive, entry) {
+    var that = this;
     var deferred = new goog.async.Deferred();
 
     goog.asserts.assert(archive.map === null);
     
     entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
-	archive.map = files.bsp.load(arrayBuffer);
-        deferred.callback();
+        var time = window.performance.now();
+        var worker = that.bspWorker;
+        worker.onmessage = function(evt) {
+            var map = evt.data;//files.bsp.load(arrayBuffer);
+            map.models.forEach(function (model) {
+                model.id = files.ResourceManager.getNextModelId_();
+            });
+            archive.map = map;
+            console.log('bsp load time:', window.performance.now() - time);
+            deferred.callback();
+        };
+        worker.postMessage({
+            buffer: arrayBuffer
+        }, [arrayBuffer]);
+        // var map = files.bsp.load(arrayBuffer);
+        // map.models.forEach(function (model) {
+        //     model.id = files.ResourceManager.getNextModelId_();
+        // });
+        // archive.map = map;
+        // console.log('bsp load time:', window.performance.now() - time);
     });
 
     return deferred;
@@ -418,4 +441,15 @@ files.ResourceManager.prototype.loadConfigFile_ = function (archive, entry) {
 
     return deferred;
 };
+
+/**
+ * @private
+ * @return {number}
+ */
+files.ResourceManager.getNextModelId_ = (function() {
+    var id = -1;
+    return function() {
+	return ++id;
+    };
+})();
 

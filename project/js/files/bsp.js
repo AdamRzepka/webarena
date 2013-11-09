@@ -725,7 +725,7 @@ files.bsp.compileMapModels_ = function(verts, faces, meshVerts, lightmapData, sh
 	}
     }
 
-    var model = new base.Model(base.Model.getNextId(), meshes, 1, [], base.Model.Type.BSP);
+    var model = new base.Model(-1, meshes, 1, [], base.Model.Type.BSP);
 
     return [model];
 };

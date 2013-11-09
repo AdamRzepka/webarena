@@ -241,7 +241,7 @@ files.md3.load = function(arrayBuffer, skinFiles) {
             return s.name;
         }));
         
-	model = new base.Model(base.Model.getNextId(), meshes, header.framesCount,
+	model = new base.Model(-1, meshes, header.framesCount,
 			       frames, base.Model.Type.MD3, tagNames, skinNames);
     }
 
