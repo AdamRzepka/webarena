@@ -1,15 +1,19 @@
-// bootstrap webworker with gamecode in debug mode
+// bootstrap a webworker
 if (typeof COMPILED == 'undefined') {
-  var CLOSURE_BASE_PATH = '../closure/closure/goog/';
-  importScripts(
-      CLOSURE_BASE_PATH + 'bootstrap/webworkers.js',
-      CLOSURE_BASE_PATH + 'base.js',
-      CLOSURE_BASE_PATH + 'deps.js',
-      '../deps.js');
+    // debug mode
+    var CLOSURE_BASE_PATH = '../closure/closure/goog/';
+    importScripts(
+        CLOSURE_BASE_PATH + 'bootstrap/webworkers.js',
+        CLOSURE_BASE_PATH + 'base.js',
+        CLOSURE_BASE_PATH + 'deps.js',
+        '../deps.js');
+    
+    goog.require('base.Broker');
+} else {
+    // release mode
+    importScripts('base.js');
 }
-goog.require('base.Broker');
-importScripts('game/game.js');
+
 (function () {
-    var broker = new base.Broker('main', self);
-    game.init(broker);
+    base.IBroker.parentInstance = new base.Broker('parent', self);    
 })();

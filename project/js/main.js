@@ -230,8 +230,12 @@ function main() {
     scene = new renderer.Scene(gl);
 
     if (flags.GAME_WORKER) {
-        worker = new Worker('js/initworker.js');
-        broker = new base.Broker('game', worker);
+//        worker = new Worker('js/initworker.js');
+//        broker = new base.Broker('game', worker);
+        broker = base.Broker.createWorker(['game'], ['base.js', 'game.js']);
+        broker.executeFunction(function () {
+            game.init(base.IBroker.parentInstance);
+        }, null, null, null);
     }
     else {
         broker = new base.FakeBroker('game');

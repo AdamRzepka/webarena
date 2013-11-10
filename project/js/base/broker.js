@@ -123,7 +123,7 @@ base.Broker = function (name, worker) {
  * @const
  * @private
  */
-base.Broker.MAX_PENDING_CALLBACKS = 256;
+base.Broker.MAX_PENDING_CALLBACKS = 512;
 
 /**
  * @public
@@ -217,6 +217,43 @@ base.Broker.prototype.fireEvent = function (eventType, data, scope, transferable
         this.onEvent_(eventType, data);
     }
 };
+/**
+ *
+ */
+base.Broker.prototype.addDependency = function (debugDeps, compiledDeps) {
+    this.worker_.postMessage({
+        type: base.Broker.MessageTypes.ADD_DEPENDENCY,
+        debugDeps: debugDeps,
+        compiledDeps: compiledDeps
+    });
+};
+/**
+ *
+ */
+base.Broker.prototype.executeFunction = function (fun, args, transferables, callback) {
+    var funStr = fun.toString();
+    var re = /function[^\(]*\(([^\)]*)\)\s*\{([\s\S]*)\}/; // [\s\S], because dots don't match \n
+    var res = re.exec(funStr);
+    goog.asserts.assert(res.length === 3);
+    var params = res[1].split(/\*s,\s*/);
+    var body = res[2];
+
+    this.worker_.postMessage({
+        type: base.Broker.MessageTypes.EXECUTE_FUNCTION_STRING,
+        body: body,
+        params: params,
+        args: args,
+        callbackId: this.addPendingCallback_(callback)
+    }, transferables);
+};
+/**
+ */
+base.Broker.createWorker = function (debugDeps, compiledDeps, name) {
+    var worker = new Worker('js/initworker.js');
+    var broker = new base.Broker(name, worker);
+    broker.addDependency(debugDeps, compiledDeps);
+    return broker;
+};
 
 /**
  * @private
@@ -226,7 +263,8 @@ base.Broker.MessageTypes = {
     EVENT: 0,
     FUNCTION_CALL: 1,
     FUNCTION_CALLBACK: 2,
-    ARBITRARY: 3
+    ADD_DEPENDENCY: 3,
+    EXECUTE_FUNCTION_STRING: 4
 };
 
 base.Broker.sumTime = 0;
@@ -239,16 +277,20 @@ base.Broker.prototype.onMessage_ = function (event) {
     var msg = event.data;
     switch (msg.type) {
     case base.Broker.MessageTypes.FUNCTION_CALL:
-        this.onProxyCall_(msg.id, msg.proxyName, msg.functionName, msg.args,
-                          msg.withCallback);
+        this.onProxyCall_(msg.callbackId, msg.proxyName, msg.functionName, msg.args,
+                          msg.callbackId !== -1);
         break;
     case base.Broker.MessageTypes.FUNCTION_CALLBACK:
-        this.onProxyCallback_(msg.id, msg.args);
+        this.onCallback_(msg.callbackId, msg.args);
         break;
     case base.Broker.MessageTypes.EVENT:
         this.onEvent_(msg.eventType, msg.data);
         break;
-    case base.Broker.MessageTypes.ARBITRARY:
+    case base.Broker.MessageTypes.ADD_DEPENDENCY:
+        this.onAddDependency_(msg.debugDeps, msg.compiledDeps);
+        break;
+    case base.Broker.MessageTypes.EXECUTE_FUNCTION_STRING:
+        this.onExecuteFunction_(msg.body, msg.params, msg.args, msg.callbackId);
         break;
     }
     var delta = Date.now() - msg.timestamp;
@@ -260,24 +302,27 @@ base.Broker.prototype.onMessage_ = function (event) {
  */
 base.Broker.prototype.sendProxyCall_ = function (proxyName, funName, args,
                                                  callback, transferables) {
-    var id = this.nextId_++;
-    var withCallback = goog.isDefAndNotNull(callback);
-    id = id % base.Broker.MAX_PENDING_CALLBACKS;
-    
-    if (withCallback) {
-        goog.asserts.assert(!this.pendingCallbacks_[id]);
-        this.pendingCallbacks_[id] = callback;
-    }
-//    var post = this.postMessage_;
     this.worker_.postMessage({
         type: base.Broker.MessageTypes.FUNCTION_CALL,
-        id: id,
         proxyName: proxyName,
         functionName: funName,
         args: args,
-        withCallback: withCallback,
+        callbackId: this.addPendingCallback_(callback),
         timestamp: Date.now()
     }, transferables);
+};
+/**
+ * @private
+ */
+base.Broker.prototype.addPendingCallback_ = function (callback) {
+    var id = -1;
+    if (goog.isDefAndNotNull(callback)) {
+        id = this.nextId_++;
+        id = id % base.Broker.MAX_PENDING_CALLBACKS;
+        goog.asserts.assert(!this.pendingCallbacks_[id]);
+        this.pendingCallbacks_[id] = callback;
+    }
+    return id;        
 };
 /**
  * @private
@@ -290,10 +335,9 @@ base.Broker.prototype.onProxyCall_ = function (id, receiverName, funName, args,
 
     if (withCallback) {
         args.push (function () {
-//            var post = that.postMessage_;
             that.worker_.postMessage({
                 type: base.Broker.MessageTypes.FUNCTION_CALLBACK,
-                id: id,
+                callbackId: id,
                 args: goog.array.clone(arguments)
             });
         });
@@ -305,12 +349,12 @@ base.Broker.prototype.onProxyCall_ = function (id, receiverName, funName, args,
 /**
  * @private
  */
-base.Broker.prototype.onProxyCallback_ = function (id, args) {
+base.Broker.prototype.onCallback_ = function (id, args) {
     var cb = this.pendingCallbacks_[id];
     this.pendingCallbacks_[id] = null;
     goog.asserts.assert(cb);
     
-    cb(args);
+    cb.apply(self, args);
 };
 /**
  * @private
@@ -322,6 +366,36 @@ base.Broker.prototype.onEvent_ = function (evenType, data) {
         for (i = 0; i < listeners.length; ++i) {
             listeners[i](evenType, data);
         }
+    }
+};
+/**
+ * @private
+ */
+base.Broker.prototype.onAddDependency_ = function (debugDeps, compiledDeps) {
+    var i;
+    if (goog.DEBUG) {
+        for (i = 0; i < debugDeps.length; ++i) {
+            goog.require(debugDeps[i]);
+        }
+    } else {
+        for (i = 0; i < compiledDeps.length; ++i) {
+            importScripts(compiledDeps[i]);
+        }
+    }
+};
+/**
+ * @private
+ */
+base.Broker.prototype.onExecuteFunction_ = function (body, params, args, callbackId) {
+    params.push(body);
+    var fn = Function.apply(self, params);
+    var ret = fn.apply(self, args);
+    if (callbackId !== -1) {
+        this.worker_.postMessage({
+            type: base.Broker.MessageTypes.FUNCTION_CALLBACK,
+            callbackId: callbackId,
+            args: [ret]
+        });
     }
 };
 

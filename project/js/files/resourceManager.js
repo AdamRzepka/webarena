@@ -41,7 +41,7 @@ files.ResourceManager = function() {
      * @type {string}
      */
     this.basedir = '/resources/';
-    this.bspWorker = new Worker('js/files/bspworker.js');
+    this.bspWorker = base.Broker.createWorker(['files.bsp'], ['base.js', 'files.js']);
     // /**
     //  * @private
     //  * @type {Object.<string, string>}
@@ -407,18 +407,29 @@ files.ResourceManager.prototype.loadBsp_ = function (archive, entry) {
     entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
         var time = window.performance.now();
         var worker = that.bspWorker;
-        worker.onmessage = function(evt) {
-            var map = evt.data;//files.bsp.load(arrayBuffer);
+        worker.executeFunction(function (buffer) {
+            var map = files.bsp.load(buffer);
+            return map;
+        }, [arrayBuffer], [arrayBuffer], function (map) {
             map.models.forEach(function (model) {
                 model.id = files.ResourceManager.getNextModelId_();
             });
             archive.map = map;
             console.log('bsp load time:', window.performance.now() - time);
             deferred.callback();
-        };
-        worker.postMessage({
-            buffer: arrayBuffer
-        }, [arrayBuffer]);
+        });
+        // worker.onmessage = function(evt) {
+        //     var map = evt.data;//files.bsp.load(arrayBuffer);
+        //     map.models.forEach(function (model) {
+        //         model.id = files.ResourceManager.getNextModelId_();
+        //     });
+        //     archive.map = map;
+        //     console.log('bsp load time:', window.performance.now() - time);
+        //     deferred.callback();
+        // };
+        // worker.postMessage({
+        //     buffer: arrayBuffer
+        // }, [arrayBuffer]);
         // var map = files.bsp.load(arrayBuffer);
         // map.models.forEach(function (model) {
         //     model.id = files.ResourceManager.getNextModelId_();
