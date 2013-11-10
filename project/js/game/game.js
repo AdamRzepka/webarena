@@ -38,10 +38,7 @@ goog.require('game.Player');
 
 goog.provide('game');
 
-/**
- * @param {base.IBroker} broker
- */
-game.init = function (broker) {
+game.init = function () {
     var scene;
     var modelManager;
     var map;
@@ -51,6 +48,8 @@ game.init = function (broker) {
 
     //var rm = new files.ResourceManager();
     //var mapName = 'aggressor';
+
+    var broker = base.IBroker.parentInstance;
     
     broker.registerReceiver('base.IInputHandler', inputHandler);
     

@@ -1,7 +1,2 @@
-// bootstrap webworker in compiled code
+// bootstrap a webworker in release mode
 importScripts('base.js');
-importScripts('game.js');
-(function () {
-    var broker = new base.Broker('main', self);
-    game.init(broker);
-})();

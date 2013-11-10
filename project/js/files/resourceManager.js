@@ -23,8 +23,8 @@ goog.require('goog.async.Deferred');
 goog.require('goog.array');
 goog.require('base');
 goog.require('files.zipjs');
-goog.require('files.md3');
-goog.require('files.bsp');
+// goog.require('files.md3');
+// goog.require('files.bsp');
 goog.require('files.ShaderScriptLoader');
 goog.require('base.JobsPool');
 
@@ -43,7 +43,8 @@ files.ResourceManager = function() {
      */
     this.basedir = '/resources/';
 
-    this.jobsPool = new base.JobsPool(4, ['files.bsp', 'files.md3'], ['base.js', 'files.js']);
+    this.jobsPool = new base.JobsPool(1, ['files.bsp', 'files.md3'], ['base.js', 'files.js'],
+                                      'files');
     // /**
     //  * @private
     //  * @type {Object.<string, string>}
@@ -72,7 +73,7 @@ files.ResourceManager = function() {
     // this.map = null;
     /**
      * @private
-     * @type {files.ResourceManager.Archive}
+     * @type {Array.<files.ResourceManager.Archive>}
      */
     this.archives = [];
     
@@ -306,7 +307,6 @@ files.ResourceManager.prototype.loadEntries = function (archive, entries) {
 
 /**
  * @private
- * @param {string} modelPath
  * @return {goog.async.Deferred}
  */
 files.ResourceManager.prototype.loadMd3WithSkins_ = function (archive, modelEntry, allEntries) {
@@ -416,7 +416,6 @@ files.ResourceManager.prototype.loadBsp_ = function (archive, entry) {
     goog.asserts.assert(archive.map === null);
     
     entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
-        var time = window.performance.now();
 //        var worker = that.bspWorker;
         var pool = that.jobsPool;
         pool.execute(function (buffer) {
@@ -427,7 +426,6 @@ files.ResourceManager.prototype.loadBsp_ = function (archive, entry) {
                 model.id = files.ResourceManager.getNextModelId_();
             });
             archive.map = map;
-            console.log('bsp load time:', window.performance.now() - time);
             deferred.callback();
         });
         // worker.onmessage = function(evt) {

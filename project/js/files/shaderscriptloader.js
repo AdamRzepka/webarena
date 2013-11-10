@@ -56,7 +56,9 @@ goog.provide('files.ShaderScriptLoader');
 //
 
 /**
- * @private
+ * @public
+ * @param {string} src
+ * @return {Array.<base.ShaderScript>}
  */
 files.ShaderScriptLoader.load = function(src) {
     var shaderScripts = [],

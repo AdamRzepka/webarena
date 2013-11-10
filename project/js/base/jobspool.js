@@ -22,26 +22,50 @@ goog.require('base.Broker');
 
 goog.provide('base.JobsPool');
 
-base.JobsPool = function (workersCount, debugDeps, compiledDeps) {
+/**
+ * @constructor
+ * @param {number} workersCount
+ * @param {Array.<string>} debugDeps
+ * @param {Array.<string>} compiledDeps
+ * @param {string} name
+ */
+base.JobsPool = function (workersCount, debugDeps, compiledDeps, name) {
     var i = 0;
+    /**
+     * @private
+     * @type {number}
+     */
     this.workersCount_ = workersCount;
+    /**
+     * @private
+     * @type {Array.<base.Broker>}
+     */
     this.workers_ = [];
+    /**
+     * @private
+     * @type {Array.<base.JobsPool.Job>}
+     */
     this.pendingJobs_ = [];
+    /**
+     * @private
+     * @type {goog.structs.Queue}
+     */
+    this.jobsQueue_ = new goog.structs.Queue();
+
     for (i = 0; i < workersCount; ++i) {
-        this.workers_.push(base.Broker.createWorker(debugDeps, compiledDeps));
+        this.workers_.push(base.Broker.createWorker(debugDeps, compiledDeps, name));
         this.pendingJobs_.push(null);
     }
 
-    this.jobsQueue_ = new goog.structs.Queue();
 };
 
-base.JobsPool.Job = function (fun, args, transferables, callback) {
-    this.fun = fun;
-    this.args = args;
-    this.transferables = transferables;
-    this.callback = callback;
-};
-
+/**
+ * @public
+ * @param {*} fun function to execute
+ * @param {Array.<*>} args arguments to pass to fun
+ * @param {?Array.<*>} [transferables]
+ * @param {function(*)} [callback] callback fired in current worker with results of execution
+ */
 base.JobsPool.prototype.execute = function (fun, args, transferables, callback) {
     var i = 0;
 
@@ -57,6 +81,19 @@ base.JobsPool.prototype.execute = function (fun, args, transferables, callback) 
     this.jobsQueue_.enqueue(job);
 };
 
+/**
+ * @private
+ * @constructor
+ */
+base.JobsPool.Job = function (fun, args, transferables, callback) {
+    this.fun = fun;
+    this.args = args;
+    this.transferables = transferables;
+    this.callback = callback;
+};
+/**
+ * @private
+ */
 base.JobsPool.prototype.runJob_ = function (job, workerId) {
     var that = this;
     this.pendingJobs_[workerId] = job;
@@ -65,7 +102,9 @@ base.JobsPool.prototype.runJob_ = function (job, workerId) {
                                                 that.onCallback_(result, workerId);
                                             });
 };
-
+/**
+ * @private
+ */
 base.JobsPool.prototype.onCallback_ = function (result, workerId) {
     var job = this.pendingJobs_[workerId];
     if (job.callback) {

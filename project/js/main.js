@@ -27,9 +27,9 @@ goog.require('renderer.Scene');
 goog.require('base.Broker');
 goog.require('files.ResourceManager');
 
-if (!flags.GAME_WORKER) {
-    goog.require('game');
-}
+// if (!flags.GAME_WORKER) {
+//     goog.require('game');
+// }
 
 var DEFAULT_MAP = 'oa_rpg3dm2';
 
@@ -232,10 +232,10 @@ function main() {
     if (flags.GAME_WORKER) {
 //        worker = new Worker('js/initworker.js');
 //        broker = new base.Broker('game', worker);
-        broker = base.Broker.createWorker(['game'], ['base.js', 'game.js']);
+        broker = base.Broker.createWorker(['game'], ['base.js', 'game.js'], 'game');
         broker.executeFunction(function () {
-            game.init(base.IBroker.parentInstance);
-        }, null, null, null);
+            game.init();
+        }, []);
     }
     else {
         broker = new base.FakeBroker('game');
@@ -248,7 +248,7 @@ function main() {
     });
     
     if (!flags.GAME_WORKER) {
-        game.init(broker);
+        game.init();
     }
     initInput(broker);
     requestAnimationFrame(update);

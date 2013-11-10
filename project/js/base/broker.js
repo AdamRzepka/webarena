@@ -75,6 +75,11 @@ base.IBroker.EventScope = {
     LOCAL: 1,
     REMOTE: 2
 };
+/**
+ * @public
+ * @type {base.IBroker}
+ */
+base.IBroker.parentInstance = null;
 
 /**
  * @constructor
@@ -218,7 +223,10 @@ base.Broker.prototype.fireEvent = function (eventType, data, scope, transferable
     }
 };
 /**
- *
+ * Instructs subworker to load appropriate scripts needed for further processing
+ * @public
+ * @param {Array.<string>} debugDeps as in goog.provide
+ * @param {Array.<string>} compiledDeps filenames of compiled js modules (they will be loaded with bare importScript)
  */
 base.Broker.prototype.addDependency = function (debugDeps, compiledDeps) {
     this.worker_.postMessage({
@@ -228,7 +236,14 @@ base.Broker.prototype.addDependency = function (debugDeps, compiledDeps) {
     });
 };
 /**
- *
+ * Execute function in subworker. Function is sent as a string
+ * and it can't depend on any closures. All dependencies needed by function
+ * must be loaded with addDependency before you run executeFunction.
+ * @public
+ * @param {function(*): *} fun function to execute
+ * @param {Array.<*>} args arguments to pass to fun
+ * @param {?Array.<*>} [transferables]
+ * @param {function(*)} [callback] callback fired in current worker with results of execution
  */
 base.Broker.prototype.executeFunction = function (fun, args, transferables, callback) {
     var funStr = fun.toString();
@@ -247,6 +262,11 @@ base.Broker.prototype.executeFunction = function (fun, args, transferables, call
     }, transferables);
 };
 /**
+ * @public
+ * @param {Array.<string>} debugDeps
+ * @param {Array.<string>} compiledDeps
+ * @param {string} name human readable worker name
+ * @return {base.Broker}
  */
 base.Broker.createWorker = function (debugDeps, compiledDeps, name) {
     var worker = new Worker('js/initworker.js');
@@ -375,7 +395,7 @@ base.Broker.prototype.onAddDependency_ = function (debugDeps, compiledDeps) {
     var i;
     if (goog.DEBUG) {
         for (i = 0; i < debugDeps.length; ++i) {
-            goog.require(debugDeps[i]);
+            base.Broker.debugAddDep(debugDeps[i]);
         }
     } else {
         for (i = 0; i < compiledDeps.length; ++i) {
@@ -383,6 +403,10 @@ base.Broker.prototype.onAddDependency_ = function (debugDeps, compiledDeps) {
         }
     }
 };
+// workaround for officious compiler
+if (goog.DEBUG) {
+    base.Broker.debugAddDep = Function('dep', 'goog.require(dep);');
+}
 /**
  * @private
  */
@@ -473,6 +497,9 @@ base.FakeBroker.prototype.onEvent_ = function (evenType, data) {
     }
 };
 
-
+if (typeof window === 'undefined') {
+    // we are in worker
+    base.IBroker.parentInstance = new base.Broker('parent', self);
+}
 
 goog.exportSymbol('base.Broker', base.Broker);

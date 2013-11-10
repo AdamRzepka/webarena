@@ -13,7 +13,3 @@ if (typeof COMPILED == 'undefined') {
     // release mode
     importScripts('base.js');
 }
-
-(function () {
-    base.IBroker.parentInstance = new base.Broker('parent', self);    
-})();
