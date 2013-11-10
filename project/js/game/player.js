@@ -21,7 +21,7 @@ goog.require('base');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('game.ModelManager');
-goog.require('files.ResourceManager');
+//goog.require('files.ResourceManager');
 
 goog.provide('game.Player');
 

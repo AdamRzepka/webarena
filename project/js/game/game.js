@@ -23,6 +23,7 @@ goog.require('base');
 goog.require('base.IRendererScene');
 goog.require('base.Broker');
 goog.require('base.Mat3');
+goog.require('base.Map');
 //goog.require('files.ResourceManager');
 //goog.require('files.bsp');
 //goog.require('files.md3');

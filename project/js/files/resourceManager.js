@@ -26,6 +26,7 @@ goog.require('files.zipjs');
 goog.require('files.md3');
 goog.require('files.bsp');
 goog.require('files.ShaderScriptLoader');
+goog.require('base.JobsPool');
 
 goog.provide('files.ResourceManager');
 
@@ -41,7 +42,8 @@ files.ResourceManager = function() {
      * @type {string}
      */
     this.basedir = '/resources/';
-    this.bspWorker = base.Broker.createWorker(['files.bsp'], ['base.js', 'files.js']);
+
+    this.jobsPool = new base.JobsPool(4, ['files.bsp', 'files.md3'], ['base.js', 'files.js']);
     // /**
     //  * @private
     //  * @type {Object.<string, string>}
@@ -308,6 +310,7 @@ files.ResourceManager.prototype.loadEntries = function (archive, entries) {
  * @return {goog.async.Deferred}
  */
 files.ResourceManager.prototype.loadMd3WithSkins_ = function (archive, modelEntry, allEntries) {
+    var that = this;
     var modelPath = modelEntry.filename;
     var modelData, path, regexp, skins = {}, skinEntries = {};
     var i = 0;
@@ -341,9 +344,17 @@ files.ResourceManager.prototype.loadMd3WithSkins_ = function (archive, modelEntr
 
     // wait for all skins and ArrayBuffer with md3 file to be available
     deferred.addCallback(function () {
-        var model = files.md3.load(modelData, skins);
-        model.id = files.ResourceManager.getNextModelId_();
-        archive.models[modelPath] = model;
+        var localDeffered = new goog.async.Deferred();
+        function loadModel(modelData, skins) {
+            var model = files.md3.load(modelData, skins);
+            return model;
+        }
+        that.jobsPool.execute(loadModel, [modelData, skins], [modelData], function (model) {
+            model.id = files.ResourceManager.getNextModelId_();
+            archive.models[modelPath] = model;
+            localDeffered.callback();
+        });
+        return localDeffered;
     });
     return deferred;
 };
@@ -406,8 +417,9 @@ files.ResourceManager.prototype.loadBsp_ = function (archive, entry) {
     
     entry.getData(new files.zipjs.ArrayBufferWriter(), function(arrayBuffer) {
         var time = window.performance.now();
-        var worker = that.bspWorker;
-        worker.executeFunction(function (buffer) {
+//        var worker = that.bspWorker;
+        var pool = that.jobsPool;
+        pool.execute(function (buffer) {
             var map = files.bsp.load(buffer);
             return map;
         }, [arrayBuffer], [arrayBuffer], function (map) {
