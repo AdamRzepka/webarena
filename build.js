@@ -10,10 +10,6 @@
                         "project/js/base/iinputhandler.js"],
 	    "deps": []
 	},
-	"main": {
-	    "inputs": "project/js/main.js",
-	    "deps": "base"
-	},
 	"game": {
 	    "inputs": "project/js/game/game.js",
 	    "deps": "base"
@@ -21,7 +17,11 @@
         "files": {
             "inputs": ["project/js/files/md3.js", "project/js/files/bsp.js"],
             "deps": "base"
-        }
+        },
+	"main": {
+	    "inputs": "project/js/main.js",
+	    "deps": ["base"]
+	}
     },
     "module-output-path": "release/js/%s.js",
     "externs": ["tools/externs.js"],

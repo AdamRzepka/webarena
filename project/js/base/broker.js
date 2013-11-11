@@ -503,3 +503,4 @@ if (typeof window === 'undefined') {
 }
 
 goog.exportSymbol('base.Broker', base.Broker);
+goog.exportSymbol('base.IBroker.parentInstance', base.IBroker.parentInstance);

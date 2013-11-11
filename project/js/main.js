@@ -239,6 +239,7 @@ function main() {
     }
     else {
         broker = new base.FakeBroker('game');
+        game.init();
     }
 
     broker.registerReceiver('base.IRendererScene', scene);
