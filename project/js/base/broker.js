@@ -62,7 +62,7 @@ base.IBroker.prototype.registerEventListener = function (eventType, callback) {
  * @public
  * @param {string} eventType
  * @param {*} data
- * @param {base.IBroker.EventScope} [scope] default id LOCAL_AND_REMOTE
+ * @param {base.IBroker.EventScope} [scope] default is LOCAL_AND_REMOTE
  * @param {Array.<*>} [transferables] objects which should be transferred to other worker
  */
 base.IBroker.prototype.fireEvent = function (eventType, data, scope, transferables) {  
@@ -269,11 +269,13 @@ base.Broker.prototype.executeFunction = function (fun, args, transferables, call
  * @return {base.Broker}
  */
 base.Broker.createWorker = function (debugDeps, compiledDeps, name) {
-    var worker = new Worker('js/initworker.js');
+    var worker = new Worker(base.Broker.INIT_WORKER_PATH);
     var broker = new base.Broker(name, worker);
     broker.addDependency(debugDeps, compiledDeps);
     return broker;
 };
+
+base.Broker.INIT_WORKER_PATH = 'js/initworker.js';
 
 /**
  * @private

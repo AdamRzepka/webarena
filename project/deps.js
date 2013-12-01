@@ -16,7 +16,7 @@ goog.addDependency('../../../js/base/vec3.js', ['base.Vec3', 'base.Vec4'], ['bas
 goog.addDependency('../../../js/files/binaryfile.js', ['files.BinaryFile'], []);
 goog.addDependency('../../../js/files/bsp.js', ['files.bsp'], ['base', 'base.Bsp', 'base.Map', 'base.Mat4', 'base.Vec3', 'files.BinaryFile']);
 goog.addDependency('../../../js/files/md3.js', ['files.md3'], ['base', 'files.BinaryFile', 'goog.asserts']);
-goog.addDependency('../../../js/files/resourceManager.js', ['files.ResourceManager'], ['base', 'base.JobsPool', 'files.ShaderScriptLoader', 'files.bsp', 'files.md3', 'files.zipjs', 'goog.array', 'goog.async.Deferred', 'goog.async.DeferredList', 'goog.debug.Logger']);
+goog.addDependency('../../../js/files/resourceManager.js', ['files.ResourceManager'], ['base', 'base.JobsPool', 'files.ShaderScriptLoader', 'files.zipjs', 'goog.array', 'goog.async.Deferred', 'goog.async.DeferredList', 'goog.debug.Logger']);
 goog.addDependency('../../../js/files/shaderscriptloader.js', ['files.ShaderScriptLoader'], ['base.ShaderScript']);
 goog.addDependency('../../../js/files/zipjs/zip.js', ['files.zipjs'], []);
 goog.addDependency('../../../js/flags.js', ['flags'], []);
@@ -38,3 +38,7 @@ goog.addDependency('../../../js/renderer/materialmanager.js', ['renderer.Materia
 goog.addDependency('../../../js/renderer/renderer.js', ['renderer.Renderer'], ['base', 'base.Mat4', 'base.Vec3', 'goog.debug.Logger', 'goog.debug.Logger.Level', 'renderer.Material', 'renderer.MaterialManager', 'renderer.Shader', 'renderer.ShaderProgram', 'renderer.Stage', 'renderer.State']);
 goog.addDependency('../../../js/renderer/scene.js', ['renderer.Scene'], ['base', 'base.IRendererScene', 'base.Mat4', 'base.Vec3', 'goog.debug.Logger', 'renderer.Renderer', 'renderer.Sky', 'renderer.billboard', 'renderer.line']);
 goog.addDependency('../../../js/renderer/sky.js', ['renderer.Sky'], ['base.Mat4', 'goog.asserts', 'renderer', 'renderer.State']);
+goog.addDependency('../../../js/system/client.js', ['system.Client'], ['files.ResourceManager', 'renderer.Scene', 'system.ISocket', 'system.RTCSocket']);
+goog.addDependency('../../../js/system/isocket.js', ['system.ISocket'], []);
+goog.addDependency('../../../js/system/rtcsocket.js', ['system.RTCSocket'], ['system.ISocket']);
+goog.addDependency('../../../js/system/system.js', ['system'], []);

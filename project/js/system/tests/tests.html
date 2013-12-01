@@ -7,8 +7,17 @@
     <script>
       goog.require('goog.testing.jsunit');
       goog.require('goog.testing.AsyncTestCase');
+      goog.require('goog.debug.FancyWindow');      
+    </script>
+    <script>
+      var debugWindow = new goog.debug.FancyWindow('main');
+      debugWindow.setEnabled(true);
+      debugWindow.init();
     </script>
     <script src="deps.js"></script>
     <script src="rtcsocket.js"></script>
+    <script src="server.js"></script>
+    <script src="client.js"></script>
+    <canvas id="gl"></canvas>
   </body>
 </html>

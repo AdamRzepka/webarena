@@ -26,6 +26,7 @@ goog.require('base.IInputHandler');
 goog.require('renderer.Scene');
 goog.require('base.Broker');
 goog.require('files.ResourceManager');
+goog.require('system.Client');
 
 // if (!flags.GAME_WORKER) {
 //     goog.require('game');

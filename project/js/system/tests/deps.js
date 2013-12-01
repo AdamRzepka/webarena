@@ -3,6 +3,7 @@
 goog.addDependency('../../../js/base/base.js', ['base', 'base.GeometryData', 'base.LightningType', 'base.Mesh', 'base.Model', 'base.ModelInstance'], ['base.Mat4', 'base.Vec3', 'goog.asserts']);
 goog.addDependency('../../../js/base/broker.js', ['base.Broker', 'base.FakeBroker', 'base.IBroker'], ['goog.array', 'goog.asserts']);
 goog.addDependency('../../../js/base/bsp.js', ['base.Bsp'], ['base', 'goog.asserts']);
+goog.addDependency('../../../js/base/events.js', ['base.events'], []);
 goog.addDependency('../../../js/base/iinputhandler.js', ['base.IInputHandler'], []);
 goog.addDependency('../../../js/base/irendererscene.js', ['base.IRendererScene'], []);
 goog.addDependency('../../../js/base/jobspool.js', ['base.JobsPool'], ['base.Broker', 'goog.structs.Queue']);
@@ -13,6 +14,7 @@ goog.addDependency('../../../js/base/material.js', ['base.Material', 'base.Shade
 goog.addDependency('../../../js/base/pool.js', ['base.Pool'], ['goog.asserts']);
 goog.addDependency('../../../js/base/quat4.js', ['base.Quat4'], ['base.Mat3', 'base.Mat4', 'base.Vec3']);
 goog.addDependency('../../../js/base/vec3.js', ['base.Vec3', 'base.Vec4'], ['base.Pool']);
+goog.addDependency('../../../js/commondefs.js', ['commondefs'], []);
 goog.addDependency('../../../js/files/binaryfile.js', ['files.BinaryFile'], []);
 goog.addDependency('../../../js/files/bsp.js', ['files.bsp'], ['base', 'base.Bsp', 'base.Map', 'base.Mat4', 'base.Vec3', 'files.BinaryFile']);
 goog.addDependency('../../../js/files/md3.js', ['files.md3'], ['base', 'files.BinaryFile', 'goog.asserts']);
@@ -38,7 +40,10 @@ goog.addDependency('../../../js/renderer/materialmanager.js', ['renderer.Materia
 goog.addDependency('../../../js/renderer/renderer.js', ['renderer.Renderer'], ['base', 'base.Mat4', 'base.Vec3', 'goog.debug.Logger', 'goog.debug.Logger.Level', 'renderer.Material', 'renderer.MaterialManager', 'renderer.Shader', 'renderer.ShaderProgram', 'renderer.Stage', 'renderer.State']);
 goog.addDependency('../../../js/renderer/scene.js', ['renderer.Scene'], ['base', 'base.IRendererScene', 'base.Mat4', 'base.Vec3', 'goog.debug.Logger', 'renderer.Renderer', 'renderer.Sky', 'renderer.billboard', 'renderer.line']);
 goog.addDependency('../../../js/renderer/sky.js', ['renderer.Sky'], ['base.Mat4', 'goog.asserts', 'renderer', 'renderer.State']);
-goog.addDependency('../../../js/system/client.js', ['system.Client'], ['files.ResourceManager', 'renderer.Scene', 'system.ISocket', 'system.RTCSocket']);
+goog.addDependency('../../../js/system/client.js', ['system.Client'], ['base.Broker', 'base.events', 'files.ResourceManager', 'goog.asserts.assert', 'goog.async.Deferred', 'goog.async.DeferredList', 'goog.debug.Logger', 'renderer.Scene', 'system.ControlMessage', 'system.ISocket', 'system.RTCSocket']);
+goog.addDependency('../../../js/system/common.js', ['system.common'], []);
+goog.addDependency('../../../js/system/controlmessage.js', ['system.ControlMessage'], []);
 goog.addDependency('../../../js/system/isocket.js', ['system.ISocket'], []);
 goog.addDependency('../../../js/system/rtcsocket.js', ['system.RTCSocket'], ['goog.debug.Logger', 'system.ISocket']);
+goog.addDependency('../../../js/system/server.js', ['system.Server'], ['base.Broker', 'base.events', 'files.ResourceManager', 'goog.asserts', 'goog.async.Deferred', 'goog.async.DeferredList', 'goog.debug.Logger', 'system.ControlMessage', 'system.ISocket', 'system.RTCSocket', 'system.common']);
 goog.addDependency('../../../js/system/system.js', ['system'], []);

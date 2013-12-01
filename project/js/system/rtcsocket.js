@@ -25,20 +25,19 @@ goog.provide('system.RTCSocket');
 /**
  * @constructor
  * @implements {system.ISocket}
- * @param {boolean} isInitiator
  * @param {function(Object)} signallingCallback Function
  *        used to send control messages through signalling channel (e.g. WebSocket),
  *        in order to estabilish RT connection.
  */
-system.RTCSocket = function (isInitiator, signallingCallback) {
+system.RTCSocket = function (signallingCallback) {
     var RTC_CONFIGURATION = {
         'iceServers': [{
             'url': 'stun:stun.l.google.com:19302'            
         }]
     };
     var that = this;
-    var RTCPeerConnection = window.RTCPeerConnection || webkitRTCPeerConnection
-            || mozRTCPeerConnection;
+    var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection
+            || window.mozRTCPeerConnection;
     if (!RTCPeerConnection) {
         throw new Error('No RTCPeerConnection defined');
     }
@@ -56,8 +55,7 @@ system.RTCSocket = function (isInitiator, signallingCallback) {
     this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION,{optional: [{RtpDataChannels: true}]});
     this.dataChannel = null;
 
-    this.estabilishConnection_(isInitiator);
-
+    this.estabilishConnection_();
 };
 
 /**
@@ -95,7 +93,10 @@ system.RTCSocket.prototype.readSignallingMessage = function (msg) {
     
     switch (msg.type) {
     case system.RTCSocket.SignallingMessage.Type.DESCRIPTION:
+        
         this.peerConnection.setRemoteDescription(new RTCSessionDescription(msg.data), function () {
+            that.logger_.log(goog.debug.Logger.Level.INFO,
+                             'Got remote description');
             if (msg.data.type === 'offer') {
                 that.peerConnection.createAnswer(onLocalDescription, onError);
             }
@@ -112,6 +113,11 @@ system.RTCSocket.prototype.onmessage = function () {};
 system.RTCSocket.prototype.onclose = function () {};
 system.RTCSocket.prototype.onerror = function () {};
 
+system.RTCSocket.prototype.open = function () {
+    this.dataChannel = this.peerConnection.createDataChannel('data', {'reliable': false,
+                                                                      'ordered': false});
+    this.setupChannel_();
+};
 system.RTCSocket.prototype.send = function (data) {
     this.dataChannel.send(data);
 };
@@ -125,7 +131,7 @@ system.RTCSocket.prototype.close = function () {
  */
 system.RTCSocket.prototype.logger_ = goog.debug.Logger.getLogger('system.RTCSocket');
 
-system.RTCSocket.prototype.estabilishConnection_ = function (isInitiator) {
+system.RTCSocket.prototype.estabilishConnection_ = function () {
     var that = this;
     var onError = goog.bind(this.onError_, this);
     var onLocalDescription = goog.bind(this.onLocalDescription_, this);
@@ -144,20 +150,10 @@ system.RTCSocket.prototype.estabilishConnection_ = function (isInitiator) {
         }
     };
 
-    if (isInitiator) {
-        this.dataChannel = this.peerConnection.createDataChannel('data', {'reliable': false,
-                                                                          'ordered': false});/* {ordered: false,
-                                                                          protocols: '',
-                                                                          negotiated: false,
-                                                                          maxRetransmits: 0});*/
-        this.setupChannel_();
-    } else {
-        this.peerConnection.ondatachannel = function (evt) {
-            that.dataChannel = evt.channel;
-            that.setupChannel_();
-        };
-    }
-
+    this.peerConnection.ondatachannel = function (evt) {
+        that.dataChannel = evt.channel;
+        that.setupChannel_();
+    };
 };
 
 system.RTCSocket.prototype.setupChannel_ = function () {
@@ -168,7 +164,7 @@ system.RTCSocket.prototype.setupChannel_ = function () {
         that.onopen();
     };
     this.dataChannel.onmessage = function (evt) {
-        that.onmessage(evt.data);
+        that.onmessage(evt);
     };
     this.dataChannel.onclose = function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,

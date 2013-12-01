@@ -18,54 +18,28 @@
 'use strict';
 
 goog.require('goog.testing.jsunit');
+goog.require('system.Server');
 goog.require('goog.testing.AsyncTestCase');
-goog.require('system.RTCSocket');
+goog.require('files.ResourceManager');
 
 var gAsyncTestCase;
 var gWasCalled = true;
 
+function setUp() {
+}
 
-function testSocketsLocally() {
-    var socketA;
-    var socketB;
-
-    gAsyncTestCase.waitForAsync();
+function testServer() {
     gWasCalled = false;
-
-    socketA = new system.RTCSocket(function (msg) {
-        socketB.readSignallingMessage(msg);
-    });
-
-    socketA.onmessage = function (evt) {
-        var msg= evt.data;
-        gAsyncTestCase.continueTesting();
+    gAsyncTestCase.stepTimeout = 5000;
+    gAsyncTestCase.waitForAsync();
+    base.Broker.INIT_WORKER_PATH = '../../initworker.js';
+    var rm = new files.ResourceManager();
+    var server = new system.Server({level: 'aggressor'}, 'ws://localhost:8003', rm);
+    server.onGameStarted = function () {
+        console.log('game created');
         gWasCalled = true;
-        assertEquals('pong', msg);
-        console.log('socketA.onmessage: ' + msg);
+        gAsyncTestCase.continueTesting();        
     };
-
-    socketA.onopen = function() {
-        console.log('socketA.onopen');
-        socketA.send('ping');
-    };
-
-
-    socketB = new system.RTCSocket(function (msg) {
-        socketA.readSignallingMessage(msg);
-    });
-
-    socketB.onmessage = function (evt) {
-        var msg = evt.data;
-        console.log('socketB.onmessage: ' + msg);
-        assertEquals('ping', msg);
-        socketB.send('pong');
-    };
-
-    socketB.onopen = function () {
-        console.log('socketB.onopen');
-    };
-
-    socketB.open();
 }
 
 function tearDown() {
