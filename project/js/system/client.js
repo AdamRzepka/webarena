@@ -17,15 +17,16 @@
 
 'use strict';
 
-goog.require('goog.asserts.assert');
+goog.require('goog.asserts');
 goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.DeferredList');
 goog.require('base.events');
 goog.require('base.Broker');
+goog.require('system.common');
 goog.require('system.ISocket');
 goog.require('system.RTCSocket');
-goog.require('system.ControlMessage');
+goog.require('system.InputHandler');
 goog.require('renderer.Scene');
 goog.require('files.ResourceManager');
 
@@ -37,9 +38,10 @@ goog.provide('system.Client');
  * @param {Object} playerInfo
  * @param {string} lobbyUrl
  * @param {WebGLRenderingContext} gl
+ * @param {HTMLElement} inputElement
  * @param {files.ResourceManager} rm
  */
-system.Client = function (matchId, playerData, lobbyUrl, gl, rm) {
+system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
     var that = this;
     /**
      * @const
@@ -56,6 +58,12 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, rm) {
     /**
      * @const
      * @private
+     * @type {system.InputHandler}
+     */
+    this.input_ = new system.InputHandler(inputElement);
+    /**
+     * @const
+     * @private
      * @type {system.WebSocket}
      */
     this.lobbySocket_ = new system.WebSocket(lobbyUrl);
@@ -65,10 +73,11 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, rm) {
      * @type {system.RTCSocket}
      */
     this.serverSocket_ = null;
+    this.lastSnapshot_ = -1;
     this.broker_ = base.Broker.createWorker(['game'], ['base.js', 'game.js'], 'game');
     this.playerData_ = null;
     this.matchData_ = null;
-    
+
     this.joinMatch_(matchId, playerData);
 };
 
@@ -171,12 +180,17 @@ system.Client.prototype.initGame_ = function (level, archives) {
     var that = this;
     var deferred = this.initRTC_();
 
+    this.broker_.executeFunction(function () {
+        game.init();
+    }, []);
+
     deferred.awaitDeferred(this.loadResources_(archives, this.rendererScene_));
 
     deferred.addCallback(function() {
         that.logger_.log(goog.debug.Logger.Level.INFO,
                          'game initialized');        
         that.broker_.fireEvent(base.EventType.GAME_START);
+        that.initUpdates_();
         that.onGameStarted();
     });
 };
@@ -201,7 +215,12 @@ system.Client.prototype.initRTC_ = function () {
         deferred.callback();
     };
     this.serverSocket_.onmessage = function (evt) {
-        that.broker_.fireEvent(base.EventType.STATE_UPDATE, evt.data);
+        var dv = new DataView(evt.data);
+        // assume that snapshot id is first uint in message
+        // TODO fix this
+        that.lastSnapshot_ = dv.getInt32(0, true);
+        that.broker_.fireEvent(base.EventType.STATE_UPDATE, evt.data,
+                               base.IBroker.EventScope.REMOTE, [evt.data]);
     };
     this.serverSocket_.onclose = function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,
@@ -223,7 +242,7 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
         scene.buildShaders(archive.scripts, archive.textures);
         for ( key in archive.models ) {
             if (archive.models.hasOwnProperty(key)) {
-                broker.fireEvent('model_loaded', {
+                broker.fireEvent(base.EventType.MODEL_LOADED, {
                     url: key,
                     model: archive.models[key]
                 });
@@ -232,14 +251,14 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
         }
         for( key in archive.configs ) {
             if (archive.configs.hasOwnProperty(key)) {
-                broker.fireEvent('config_loaded', {
+                broker.fireEvent(base.EventType.CONFIG_LOADED, {
                     url: key,
                     config: archive.configs[key]
                 });
             }
         }
         if (archive.map) {
-            broker.fireEvent('map_loaded', {
+            broker.fireEvent(base.EventType.MAP_LOADED, {
                 models: archive.map.models,
                 lightmapData: null,  // game worker doesn't need lightmap
                 bsp: archive.map.bsp,
@@ -255,5 +274,69 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
         deferreds.push(deferred);
     }
     return goog.async.DeferredList.gatherResults(deferreds);
+};
+
+system.Client.INPUT_MESSAGE_SIZE = 16;
+/*
+ * Input message format
+ * lastSnapshot - 4 bytes
+ * cursorX - 4 bytes
+ * cursorY - 4 bytes
+ * actions - 2 bytes
+ * *unused* - 2 bytes
+ */
+
+system.Client.prototype.sendInputMessage_ = function (dataView) {
+    dataView.setUint32(0, this.lastSnapshot_, true);
+    base.InputState.serialize(this.input_.getState(), dataView, 4);
+    this.serverSocket_.send(dataView.buffer);
+};
+
+system.Client.prototype.initUpdates_ = function () {
+    var that = this;
+    var inputMessage_ = new DataView(new ArrayBuffer(system.Client.INPUT_MESSAGE_SIZE));
+    
+    var raf = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+            window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
+            window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
+
+    var lastTime = Date.now();
+    var fpsCounter = 0;
+    var fpsTime = 0;
+    var fpsElem = document.getElementById('fps');
+    var inputUpdateData = {
+            playerId: that.playerData_.gameId,
+            inputState: null
+    };
+    this.broker_.registerReceiver('base.IRendererScene', this.rendererScene_);
+
+    function update() {
+        // Note: we accept one frame lag between input and renderer on the client.
+        
+        // fps counter
+        if (fpsElem) {
+            fpsTime += Date.now() - lastTime;
+	    lastTime = Date.now();
+
+	    ++fpsCounter;
+	    if (fpsTime > 1000) {
+	        fpsTime -= 1000;
+	        fpsElem.textContent = fpsCounter;
+	        fpsCounter = 0;
+	    }
+        }
+
+        // input
+        that.sendInputMessage_(inputMessage_);
+        inputUpdateData.inputState = that.input_.getState();
+        that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
+
+        // render
+	that.rendererScene_.render();
+        
+	raf(update);
+    };
+
+    raf(update);
 };
 

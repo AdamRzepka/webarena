@@ -235,16 +235,16 @@ game.CharacterController.prototype.update = function () {
     
     base.Vec3.setZero(dir);
 
-    if (this.input.getAction(game.InputState.Action.UP)) {
+    if (this.input.getAction(base.InputState.Action.UP)) {
 	dir[1] += 1;
     }
-    if (this.input.getAction(game.InputState.Action.DOWN)) {
+    if (this.input.getAction(base.InputState.Action.DOWN)) {
 	dir[1] -= 1;
     }
-    if (this.input.getAction(game.InputState.Action.LEFT)) {
+    if (this.input.getAction(base.InputState.Action.LEFT)) {
 	dir[0] -= 1;
     }
-    if (this.input.getAction(game.InputState.Action.RIGHT)) {
+    if (this.input.getAction(base.InputState.Action.RIGHT)) {
 	dir[0] += 1;
     }
 
@@ -277,14 +277,14 @@ game.CharacterController.prototype.update = function () {
 
     if (base.Vec3.length2(this.velocity) > 0.01) {
         legsState = game.Player.LegsStates.RUN;
-        if (this.input.getAction(game.InputState.Action.WALK)) {
+        if (this.input.getAction(base.InputState.Action.WALK)) {
             legsState = game.Player.LegsStates.WALK;            
         }
         
-        if (this.input.getAction(game.InputState.Action.CROUCH)) {
+        if (this.input.getAction(base.InputState.Action.CROUCH)) {
             legsState = game.Player.LegsStates.CROUCH;
         }        
-    } else if (this.input.getAction(game.InputState.Action.CROUCH)) {
+    } else if (this.input.getAction(base.InputState.Action.CROUCH)) {
         legsState = game.Player.LegsStates.IDLE_CROUCH;
     }
     
@@ -293,20 +293,20 @@ game.CharacterController.prototype.update = function () {
     }
 
     if (!this.player_.isDead() && this.onGround
-        && this.input.hasActionStarted(game.InputState.Action.JUMP)) {
+        && this.input.hasActionStarted(base.InputState.Action.JUMP)) {
         this.jump();
         legsState = game.Player.LegsStates.JUMP;
     }
 
-    if (this.input.hasActionStarted(game.InputState.Action.FIRE)) {
+    if (this.input.hasActionStarted(base.InputState.Action.FIRE)) {
         torsoState = game.Player.TorsoStates.ATTACKING;
     }
 
-    if (this.input.hasActionStarted(game.InputState.Action.CHANGING)) {
+    if (this.input.hasActionStarted(base.InputState.Action.CHANGING)) {
         torsoState = game.Player.TorsoStates.CHANGING;
     }
 
-    if (this.input.hasActionStarted(game.InputState.Action.KILL)) {
+    if (this.input.hasActionStarted(base.InputState.Action.KILL)) {
         this.player_.kill();
     }
 
@@ -536,8 +536,8 @@ game.CharacterController.prototype.walkMove = function(dir) {
     
     var speed = base.Vec3.length(dir) * game.CharacterController.SCALE;
 
-    if (this.input.getAction(game.InputState.Action.CROUCH) ||
-        this.input.getAction(game.InputState.Action.WALK)) {
+    if (this.input.getAction(base.InputState.Action.CROUCH) ||
+        this.input.getAction(base.InputState.Action.WALK)) {
         speed *= 0.3;
     }
     

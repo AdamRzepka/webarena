@@ -51,30 +51,30 @@ game.FreeCamera.prototype.update = function()
     var dirty = false;
     var dir = base.Vec3.create([0.0, 0.0, 0.0]);
 
-    if (this.input.getAction(game.InputState.Action.UP))
+    if (this.input.getAction(base.InputState.Action.UP))
     {
 	dir[2] -= this.speed;
 	dirty = true;
     }
 
-    if (this.input.getAction(game.InputState.Action.DOWN))
+    if (this.input.getAction(base.InputState.Action.DOWN))
     {
 	dir[2] += this.speed;
 	dirty = true;
     }
 
-    if (this.input.getAction(game.InputState.Action.LEFT))
+    if (this.input.getAction(base.InputState.Action.LEFT))
     {
 	dir[0] -= this.speed;
 	dirty = true;
     }
 
-    if (this.input.getAction(game.InputState.Action.RIGHT))
+    if (this.input.getAction(base.InputState.Action.RIGHT))
     {
 	dir[0] += this.speed;
 	dirty = true;
     }
-    if (this.input.getAction(game.InputState.Action.FIRE))
+    if (this.input.getAction(base.InputState.Action.FIRE))
     {
 	var globalRot = base.Mat4.identity();
 	base.Mat4.rotateZ(globalRot, -this.input.getDeltaX() / 50.0);

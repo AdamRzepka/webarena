@@ -17,33 +17,7 @@
 
 'use strict';
 
-goog.require('goog.array');
+goog.provide('system');
 
-goog.provide('game.InputState');
 
-/**
- * @constructor
- */
-game.InputState = function () {
-    this.actions = goog.array.repeat(false, game.InputState.Action.SIZE);
-    this.cursorX = 0;
-    this.cursorY = 0;
-};
 
-/**
- * @enum {number}
- */
-game.InputState.Action = {
-    FIRE: 0,
-    WALK: 1,
-    JUMP: 2,
-    CROUCH: 3,
-    UP: 4,
-    DOWN: 5,
-    LEFT: 6,
-    RIGHT: 7,
-    CHANGING: 8,
-    KILL: 9,
-    RESPAWN: 10,
-    SIZE: 11
-};

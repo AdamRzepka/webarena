@@ -36,8 +36,8 @@ system.RTCSocket = function (signallingCallback) {
         }]
     };
     var that = this;
-    var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection
-            || window.mozRTCPeerConnection;
+    var RTCPeerConnection = window.mozRTCPeerConnection || window.RTCPeerConnection
+            || window.webkitRTCPeerConnection;
     if (!RTCPeerConnection) {
         throw new Error('No RTCPeerConnection defined');
     }
@@ -119,7 +119,14 @@ system.RTCSocket.prototype.open = function () {
     this.setupChannel_();
 };
 system.RTCSocket.prototype.send = function (data) {
-    this.dataChannel.send(data);
+    try {
+        this.dataChannel.send(data);
+    } catch (ex) {
+        // arraybuffer still not supported :(
+        var u8 = new Uint8Array(data);
+        var b64encoded = btoa(String.fromCharCode.apply(null, u8));
+        this.dataChannel.send(b64encoded);
+    }
 };
 system.RTCSocket.prototype.close = function () {
     this.dataChannel.close();
@@ -158,12 +165,18 @@ system.RTCSocket.prototype.estabilishConnection_ = function () {
 
 system.RTCSocket.prototype.setupChannel_ = function () {
     var that = this;
+    this.dataChannel.binaryType = "arraybuffer";
     this.dataChannel.onopen = function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,
                          'Data Channel opened');
         that.onopen();
     };
     this.dataChannel.onmessage = function (evt) {
+        if (goog.isString(evt.data)) { // sender browser doesn't support ArrayBuffers in WebRTC
+            var u8_2 = new Uint8Array(atob(evt.data).split("").map(function(c) {
+                return c.charCodeAt(0); }));
+            evt = {'data': u8_2.buffer};
+        }
         that.onmessage(evt);
     };
     this.dataChannel.onclose = function () {

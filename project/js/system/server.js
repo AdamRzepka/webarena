@@ -28,7 +28,6 @@ goog.require('base.events');
 goog.require('system.common');
 goog.require('system.ISocket');
 goog.require('system.RTCSocket');
-goog.require('system.ControlMessage');
 
 goog.require('files.ResourceManager');
 
@@ -199,7 +198,7 @@ system.Server.prototype.createClientSocket_ = function (playerData) {
     socket.onmessage = function (evt) {
         that.broker_.fireEvent(base.EventType.INPUT_UPDATE, {
             playerId: clientId,
-            data: evt.data
+            inputState: evt.data
         });
     };
     socket.onclose = function () {

@@ -18,7 +18,7 @@
 'use strict';
 
 goog.require('goog.array');
-goog.require('game.InputState');
+goog.require('base.InputState');
 
 goog.provide('game.InputBuffer');
 
@@ -28,14 +28,14 @@ goog.provide('game.InputBuffer');
 game.InputBuffer = function () {
     /**
      * @private
-     * @type {game.InputState}
+     * @type {base.InputState}
      */
-    this.prevState_ = new game.InputState();
+    this.prevState_ = new base.InputState();
     /**
      * @private
-     * @type {game.InputState}
+     * @type {base.InputState}
      */
-    this.state_ = new game.InputState();
+    this.state_ = new base.InputState();
 };
 
 /**
@@ -55,7 +55,7 @@ game.InputBuffer.prototype.step = function (newState) {
 
 /**
  * @public
- * @param {game.InputState.Action} action
+ * @param {base.InputState.Action} action
  * @return {boolean}
  */
 game.InputBuffer.prototype.getAction = function (action) {
@@ -64,7 +64,7 @@ game.InputBuffer.prototype.getAction = function (action) {
 
 /**
  * @public
- * @param {game.InputState.Action} action
+ * @param {base.InputState.Action} action
  * @return {boolean}
  */
 game.InputBuffer.prototype.hasActionStarted = function (action) {

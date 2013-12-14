@@ -39,11 +39,12 @@ function testServerAndClient() {
     var server = new system.Server({level: 'aggressor'}, lobbyURL, rm);
     server.onGameStarted = function (matchId) {
         console.log('server created');
+        var canvas = document.getElementById('gl');
         var client = new system.Client(matchId, {
             name: 'player',
             model: 'assassin',
             gameId: system.INVALID_ID
-            }, lobbyURL, document.getElementById('gl').getContext('webgl'), rm);
+            }, lobbyURL, canvas.getContext('webgl'), canvas, rm);
         client.onGameStarted = function () {
             console.log('client connected');
             gWasCalled = true;

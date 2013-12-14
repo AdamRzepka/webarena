@@ -20,6 +20,7 @@
 
 goog.require('flags');
 goog.require('base');
+goog.require('base.events');
 goog.require('base.IRendererScene');
 goog.require('base.Broker');
 goog.require('base.Mat3');
@@ -29,7 +30,6 @@ goog.require('base.Map');
 //goog.require('files.md3');
 //goog.require('files.ShaderScriptLoader');
 goog.require('game.InputBuffer');
-goog.require('game.InputHandler');
 goog.require('game.FreeCamera');
 goog.require('game.CharacterController');
 goog.require('game.globals');
@@ -44,24 +44,21 @@ game.init = function () {
     var map;
     var configs = {};
     var inputBuffer = new game.InputBuffer();
-    var inputHandler = new game.InputHandler();
 
     //var rm = new files.ResourceManager();
     //var mapName = 'aggressor';
 
     var broker = base.IBroker.parentInstance;
     
-    broker.registerReceiver('base.IInputHandler', inputHandler);
-    
     scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                               base.IRendererScene);
     modelManager = new game.ModelManager(scene);
     
-    broker.registerEventListener('model_loaded', function (evt, data) {
+    broker.registerEventListener(base.EventType.MODEL_LOADED, function (evt, data) {
         modelManager.registerModel(data.url, data.model);
     });
 
-    broker.registerEventListener('map_loaded', function (evt, data) {
+    broker.registerEventListener(base.EventType.MAP_LOADED, function (evt, data) {
         var i = 0;
         map = data;
         for (i = 0; i < map.models.length; ++i) {
@@ -70,11 +67,16 @@ game.init = function () {
         }
     });
 
-    broker.registerEventListener('config_loaded', function (evt, data) {
+    broker.registerEventListener(base.EventType.CONFIG_LOADED, function (evt, data) {
         configs[data.url] = data.config;
     });
 
-    broker.registerEventListener('game_start', function (evt, data) {
+    var inputState = new base.InputState();
+    broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
+        inputState = data.inputState;
+    });
+
+    broker.registerEventListener(base.EventType.GAME_START, function (evt, data) {
 	
         var camera = new game.FreeCamera(inputBuffer, base.Vec3.create([0,0,0]));
         
@@ -90,10 +92,9 @@ game.init = function () {
         function update () {
             var spawnPoint;
 
-            inputHandler.step();
-            inputBuffer.step(inputHandler.getState());
+            inputBuffer.step(inputState);
 
-            if (inputBuffer.hasActionStarted(game.InputState.Action.RESPAWN)) {
+            if (inputBuffer.hasActionStarted(base.InputState.Action.RESPAWN)) {
                 spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
         
                 characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],

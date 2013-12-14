@@ -20,13 +20,9 @@
 
 goog.require('goog.debug.FancyWindow');
 goog.require('flags');
-goog.require('base');
-goog.require('base.Mat4');
-goog.require('base.IInputHandler');
-goog.require('renderer.Scene');
-goog.require('base.Broker');
-goog.require('files.ResourceManager');
-goog.require('system.Client');
+// goog.require('base');
+// goog.require('base.Mat4');
+goog.require('system.Game');
 
 // if (!flags.GAME_WORKER) {
 //     goog.require('game');
@@ -62,133 +58,133 @@ function initWebGL(canvas) {
     return gl;
 }
 
-function initInput(broker) {
-    var inputBuffer = broker.createProxy('base.IInputHandler', base.IInputHandler);
-    var capturing = false;
-    var locked = false;
-    var tryLock = true;
-    var focused = true;
-    var lastX = 0, lastY = 0;
-    var elem = document.getElementById('glcanvas');
-    elem.requestMouseLock = elem.requestMouseLock ||
-        elem.mozRequestPointerLock ||
-        elem.webkitRequestPointerLock;
+// function initInput(broker) {
+//     var inputBuffer = broker.createProxy('base.IInputHandler', base.IInputHandler);
+//     var capturing = false;
+//     var locked = false;
+//     var tryLock = true;
+//     var focused = true;
+//     var lastX = 0, lastY = 0;
+//     var elem = document.getElementById('glcanvas');
+//     elem.requestMouseLock = elem.requestMouseLock ||
+//         elem.mozRequestPointerLock ||
+//         elem.webkitRequestPointerLock;
     
-    document.addEventListener('keydown', function (ev) {
-        inputBuffer.onKeyDown(ev.keyCode);
-    }, false);
+//     document.addEventListener('keydown', function (ev) {
+//         inputBuffer.onKeyDown(ev.keyCode);
+//     }, false);
 
-    document.addEventListener('keyup', function (ev) {
-        inputBuffer.onKeyUp(ev.keyCode);
-    }, false);
+//     document.addEventListener('keyup', function (ev) {
+//         inputBuffer.onKeyUp(ev.keyCode);
+//     }, false);
 
-    elem.addEventListener('mousedown', function (ev) {
-        if (!locked) {
-            if (tryLock) {
-                elem.requestMouseLock();
-                tryLock = false;
-            } else {
-                capturing = true;
-            }
-        }
-        inputBuffer.onKeyDown(ev.button);
-    }, false);
+//     elem.addEventListener('mousedown', function (ev) {
+//         if (!locked) {
+//             if (tryLock) {
+//                 elem.requestMouseLock();
+//                 tryLock = false;
+//             } else {
+//                 capturing = true;
+//             }
+//         }
+//         inputBuffer.onKeyDown(ev.button);
+//     }, false);
 
-    document.addEventListener('mouseup', function (ev) {
-        capturing = false;
-        inputBuffer.onKeyUp(ev.button);
-    }, false);
+//     document.addEventListener('mouseup', function (ev) {
+//         capturing = false;
+//         inputBuffer.onKeyUp(ev.button);
+//     }, false);
 
-    document.addEventListener('mousemove', function (ev) {
-        var dx = ev.movementX || ev.webkitMovementX || ev.mozMovementX ||
-                ev.clientX - lastX;
-        var dy = ev.movementY || ev.webkitMovementY || ev.mozMovementY ||
-                ev.clientY - lastY;
+//     document.addEventListener('mousemove', function (ev) {
+//         var dx = ev.movementX || ev.webkitMovementX || ev.mozMovementX ||
+//                 ev.clientX - lastX;
+//         var dy = ev.movementY || ev.webkitMovementY || ev.mozMovementY ||
+//                 ev.clientY - lastY;
 
-        lastX = ev.clientX;
-        lastY = ev.clientY;
+//         lastX = ev.clientX;
+//         lastY = ev.clientY;
 
-        if (capturing || locked) {
-            inputBuffer.onMouseMove(dx, dy);
-        }
-    }, false);
+//         if (capturing || locked) {
+//             inputBuffer.onMouseMove(dx, dy);
+//         }
+//     }, false);
 
-    function pointerLockChange() {
-        if (document.mozPointerLockElement === elem ||
-            document.webkitPointerLockElement === elem) {
-            locked = true;
-        } else {
-            locked = false;
-            tryLock = true;
-        }
-    }
-    document.addEventListener('pointerlockchange', pointerLockChange, false);
-    document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
-    document.addEventListener('mozpointerlockchange', pointerLockChange, false);
+//     function pointerLockChange() {
+//         if (document.mozPointerLockElement === elem ||
+//             document.webkitPointerLockElement === elem) {
+//             locked = true;
+//         } else {
+//             locked = false;
+//             tryLock = true;
+//         }
+//     }
+//     document.addEventListener('pointerlockchange', pointerLockChange, false);
+//     document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
+//     document.addEventListener('mozpointerlockchange', pointerLockChange, false);
 
-    function pointerLockError() {
-        // Failed to lock pointer. Run in capture mode
-        locked = false;
-        tryLock = false;
-    }
-    document.addEventListener('pointerlockerror', pointerLockError, false);
-    document.addEventListener('webkitpointerlockerror', pointerLockError, false);
-    document.addEventListener('mozpointerlockerror', pointerLockError, false);
-}
+//     function pointerLockError() {
+//         // Failed to lock pointer. Run in capture mode
+//         locked = false;
+//         tryLock = false;
+//     }
+//     document.addEventListener('pointerlockerror', pointerLockError, false);
+//     document.addEventListener('webkitpointerlockerror', pointerLockError, false);
+//     document.addEventListener('mozpointerlockerror', pointerLockError, false);
+// }
 
-function initResources(broker, scene, mapArchive, archives, callback) {
-    var i;
-    var rm = new files.ResourceManager();
-    var deferred;
-    var deferreds = [];
-    function onload (archive) {
-        var key;
-        scene.buildShaders(archive.scripts, archive.textures);
-        for ( key in archive.models )
-        {
-            if (archive.models.hasOwnProperty(key)) {
-                broker.fireEvent('model_loaded', {
-                    url: key,
-                    model: archive.models[key]
-                });
-                scene.registerMd3(archive.models[key]);
-            }
-        }
-        for( key in archive.configs )
-        {
-            if (archive.configs.hasOwnProperty(key)) {
-                broker.fireEvent('config_loaded', {
-                    url: key,
-                    config: archive.configs[key]
-                });
-            }
-        }
-        if (archive.map) {
-            broker.fireEvent('map_loaded', {
-                models: archive.map.models,
-                lightmapData: null,  // game worker doesn't need lightmap
-                bsp: archive.map.bsp,
-                entities: archive.map.entities
-            });
-            scene.registerMap(archive.map.models, archive.map.lightmapData);
+// function initResources(broker, scene, mapArchive, archives, callback) {
+//     var i;
+//     var rm = new files.ResourceManager();
+//     var deferred;
+//     var deferreds = [];
+//     function onload (archive) {
+//         var key;
+//         scene.buildShaders(archive.scripts, archive.textures);
+//         for ( key in archive.models )
+//         {
+//             if (archive.models.hasOwnProperty(key)) {
+//                 broker.fireEvent('model_loaded', {
+//                     url: key,
+//                     model: archive.models[key]
+//                 });
+//                 scene.registerMd3(archive.models[key]);
+//             }
+//         }
+//         for( key in archive.configs )
+//         {
+//             if (archive.configs.hasOwnProperty(key)) {
+//                 broker.fireEvent('config_loaded', {
+//                     url: key,
+//                     config: archive.configs[key]
+//                 });
+//             }
+//         }
+//         if (archive.map) {
+//             broker.fireEvent('map_loaded', {
+//                 models: archive.map.models,
+//                 lightmapData: null,  // game worker doesn't need lightmap
+//                 bsp: archive.map.bsp,
+//                 entities: archive.map.entities
+//             });
+//             scene.registerMap(archive.map.models, archive.map.lightmapData);
 
-        }
-    };
+//         }
+//     };
 
-    deferreds[0] = rm.load(mapArchive).addCallback(onload);
+//     deferreds[0] = rm.load(mapArchive).addCallback(onload);
 
-    for (i = 0; i < archives.length; ++i) {
-        deferred = rm.load(archives[i]);
-//        deferred.awaitDeferred(deferreds[0]);
-        deferred.addCallback(onload);
-        deferreds.push(deferred);
-    }
-    goog.async.DeferredList.gatherResults(deferreds).addCallback(callback);
-};
+//     for (i = 0; i < archives.length; ++i) {
+//         deferred = rm.load(archives[i]);
+// //        deferred.awaitDeferred(deferreds[0]);
+//         deferred.addCallback(onload);
+//         deferreds.push(deferred);
+//     }
+//     goog.async.DeferredList.gatherResults(deferreds).addCallback(callback);
+// };
 
-window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-    window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
-    window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
+// window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+//     window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
+//     window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
 
 function main() {
     var scene;
@@ -197,11 +193,11 @@ function main() {
     var gl = initWebGL(canvas);
     var map = getQueryVariable('map') || DEFAULT_MAP;
 
-    var lastTime = Date.now();
-    var fpsCounter = 0;
-    var fpsTime = 0;
-    var worker;
-    var broker;
+    // var lastTime = Date.now();
+    // var fpsCounter = 0;
+    // var fpsTime = 0;
+    // var worker;
+    // var broker;
 
     if (flags.DEBUG_WINDOW) {
 	var debugWindow = new goog.debug.FancyWindow('main');
@@ -209,51 +205,67 @@ function main() {
 	debugWindow.init();
     }
 
-    function update() {
-        fpsTime += Date.now() - lastTime;
-	lastTime = Date.now();
+    var config = {
+        gl: gl,
+        inputElement: canvas,
+        lobbyUrl: 'ws://localhost:8003',
+        playerData: {
+            name: 'player',
+            model: 'assassin',
+            gameId: system.INVALID_ID
+        },
+        createMatch: true,
+        matchData: {
+            level: 'aggressor'
+        }
+    };
+    var game = new system.Game(config);
 
-	++fpsCounter;
-	if (fpsTime > 1000) {
-	    fpsTime -= 1000;
-	    document.getElementById('fps').textContent = fpsCounter;
-            // document.getElementById('time').textContent =
-            //     base.Broker.sumTime / base.Broker.countTime;
-            // base.Broker.sumTime = base.Broker.countTime = 0;
-	    fpsCounter = 0;
-	}
+//     function update() {
+//         fpsTime += Date.now() - lastTime;
+// 	lastTime = Date.now();
 
-	scene.render();
-//        setTimeout(update, 200);
-	requestAnimationFrame(update);
-    }
+// 	++fpsCounter;
+// 	if (fpsTime > 1000) {
+// 	    fpsTime -= 1000;
+// 	    document.getElementById('fps').textContent = fpsCounter;
+//             // document.getElementById('time').textContent =
+//             //     base.Broker.sumTime / base.Broker.countTime;
+//             // base.Broker.sumTime = base.Broker.countTime = 0;
+// 	    fpsCounter = 0;
+// 	}
 
-    scene = new renderer.Scene(gl);
+// 	scene.render();
+// //        setTimeout(update, 200);
+// 	requestAnimationFrame(update);
+//     }
 
-    if (flags.GAME_WORKER) {
-//        worker = new Worker('js/initworker.js');
-//        broker = new base.Broker('game', worker);
-        broker = base.Broker.createWorker(['game'], ['base.js', 'game.js'], 'game');
-        broker.executeFunction(function () {
-            game.init();
-        }, []);
-    }
-    else {
-        broker = new base.FakeBroker('game');
-        game.init();
-    }
+    // scene = new renderer.Scene(gl);
 
-    broker.registerReceiver('base.IRendererScene', scene);
+//     if (flags.GAME_WORKER) {
+// //        worker = new Worker('js/initworker.js');
+// //        broker = new base.Broker('game', worker);
+//         broker = base.Broker.createWorker(['game'], ['base.js', 'game.js'], 'game');
+//         broker.executeFunction(function () {
+//             game.init();
+//         }, []);
+//     }
+//     else {
+//         broker = new base.FakeBroker('game');
+//         game.init();
+//     }
 
-    initResources(broker, scene, map, ['assassin', 'weapons'], function () {
-        broker.fireEvent('game_start');
-    });
+//     broker.registerReceiver('base.IRendererScene', scene);
+
+//     initResources(broker, scene, map, ['assassin', 'weapons'], function () {
+//         broker.fireEvent('game_start');
+//     });
     
-    if (!flags.GAME_WORKER) {
-        game.init();
-    }
-    initInput(broker);
-    requestAnimationFrame(update);
+//     if (!flags.GAME_WORKER) {
+//         game.init();
+//     }
+//     initInput(broker);
+//     requestAnimationFrame(update);
 }
 
 goog.exportSymbol('main', main);

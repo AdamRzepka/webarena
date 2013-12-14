@@ -24,6 +24,18 @@ goog.require('system.RTCSocket');
 var gAsyncTestCase;
 var gWasCalled = true;
 
+function ab2str(buf) {
+  return String.fromCharCode.apply(null, new Uint16Array(buf));
+}
+
+function str2ab(str) {
+  var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+  var bufView = new Uint16Array(buf);
+  for (var i=0, strLen=str.length; i<strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+  }
+  return buf;
+}
 
 function testSocketsLocally() {
     var socketA;
@@ -37,7 +49,7 @@ function testSocketsLocally() {
     });
 
     socketA.onmessage = function (evt) {
-        var msg= evt.data;
+        var msg= ab2str(evt.data);
         gAsyncTestCase.continueTesting();
         gWasCalled = true;
         assertEquals('pong', msg);
@@ -46,7 +58,7 @@ function testSocketsLocally() {
 
     socketA.onopen = function() {
         console.log('socketA.onopen');
-        socketA.send('ping');
+        socketA.send(str2ab('ping'));
     };
 
 
@@ -55,10 +67,10 @@ function testSocketsLocally() {
     });
 
     socketB.onmessage = function (evt) {
-        var msg = evt.data;
+        var msg = ab2str(evt.data);
         console.log('socketB.onmessage: ' + msg);
         assertEquals('ping', msg);
-        socketB.send('pong');
+        socketB.send(str2ab('pong'));
     };
 
     socketB.onopen = function () {

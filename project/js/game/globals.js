@@ -48,7 +48,7 @@ game.globals.freeCameraView = false;
 /**
  * @type {boolean}
  */
-game.globals.tppMode = true;
+game.globals.tppMode = false;
 /**
  * @type {function(boolean)|null}
  */
