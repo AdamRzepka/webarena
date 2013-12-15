@@ -24,6 +24,9 @@
 
 goog.require('goog.asserts');
 goog.require('goog.array');
+goog.require('goog.async.Deferred');
+goog.require('goog.async.DeferredList');
+goog.require('goog.net.jsloader');
 
 goog.provide('base.IBroker');
 goog.provide('base.Broker');
@@ -33,6 +36,14 @@ goog.provide('base.FakeBroker');
  * @interface
  */
 base.IBroker = function () {
+};
+/**
+ * Instructs subworker to load appropriate scripts needed for further processing
+ * @public
+ * @param {Array.<string>} debugDeps as in goog.provide
+ * @param {Array.<string>} compiledDeps filenames of compiled js modules (they will be loaded with bare importScript)
+ */
+base.IBroker.prototype.addDependency = function (debugDeps, compiledDeps) {
 };
 /**
  * @public
@@ -68,6 +79,37 @@ base.IBroker.prototype.registerEventListener = function (eventType, callback) {
 base.IBroker.prototype.fireEvent = function (eventType, data, scope, transferables) {  
 };
 /**
+ * Execute function in subworker. Function is sent as a string
+ * and it can't depend on any closures. All dependencies needed by function
+ * must be loaded with addDependency before you run executeFunction.
+ * @public
+ * @param {function(*): *} fun function to execute
+ * @param {Array.<*>} args arguments to pass to fun
+ * @param {?Array.<*>} [transferables]
+ * @param {function(*)} [callback] callback fired in current worker with results of execution
+ */
+base.IBroker.prototype.executeFunction = function (fun, args, transferables, callback) {
+};
+/**
+ * @public
+ * @param {Array.<string>} debugDeps
+ * @param {Array.<string>} compiledDeps
+ * @param {string} name human readable worker name
+ * @return {base.Broker}
+ */
+base.IBroker.createWorker = function (debugDeps, compiledDeps, name) {
+    if (base.IBroker.DISABLE_WORKERS) {
+        return base.FakeBroker.createWorker(debugDeps, compiledDeps, name);
+    } else {
+        return base.Broker.createWorker(debugDeps, compiledDeps, name);
+    }
+};
+/**
+ * @public
+ * @type {boolean}
+ */
+base.IBroker.DISABLE_WORKERS = false;
+/**
  * @enum {number}
  */
 base.IBroker.EventScope = {
@@ -75,11 +117,12 @@ base.IBroker.EventScope = {
     LOCAL: 1,
     REMOTE: 2
 };
-/**
- * @public
- * @type {base.IBroker}
- */
-base.IBroker.parentInstance = null;
+// /**
+//  * @public
+//  * @type {base.IBroker}
+//  */
+// base.IBroker.parentInstance = null;
+
 
 /**
  * @constructor
@@ -262,7 +305,7 @@ base.Broker.prototype.executeFunction = function (fun, args, transferables, call
     }, transferables);
 };
 /**
- * @public
+ * @publicv
  * @param {Array.<string>} debugDeps
  * @param {Array.<string>} compiledDeps
  * @param {string} name human readable worker name
@@ -401,7 +444,7 @@ base.Broker.prototype.onAddDependency_ = function (debugDeps, compiledDeps) {
         }
     } else {
         for (i = 0; i < compiledDeps.length; ++i) {
-            importScripts(compiledDeps[i]);
+            self.importScripts(compiledDeps[i]);
         }
     }
 };
@@ -415,6 +458,7 @@ if (goog.DEBUG) {
 base.Broker.prototype.onExecuteFunction_ = function (body, params, args, callbackId) {
     params.push(body);
     var fn = Function.apply(self, params);
+    args.push(this); // add this worker
     var ret = fn.apply(self, args);
     if (callbackId !== -1) {
         this.worker_.postMessage({
@@ -440,7 +484,7 @@ base.FakeBroker = function (name) {
      * @type {Object.<string, Array.<function(string,*)>>}
      */
     this.eventListeners_ = [];
-
+    this.loadingDeferred_ = null;
 };
 /**
  * @public
@@ -449,8 +493,37 @@ base.FakeBroker = function (name) {
  * @return {Object}
  */
 base.FakeBroker.prototype.createProxy = function (name, intface) {
-    goog.asserts.assert(this.callReceivers_[name]);
-    return this.callReceivers_[name];
+    // TODO addDependency + createProxy not supported now
+//    goog.asserts.assert(this.loadingDeferred_ === null);
+//    goog.asserts.assert(this.callReceivers_[name]);
+
+    var prop;
+    var that = this;
+    var proxy = {};
+    var proto = intface.prototype;
+
+//    goog.asserts.assert(proto._CROSS_WORKER_);
+    
+    for( prop in proto ) {
+        if (proto.hasOwnProperty(prop) && goog.isFunction(proto[prop])
+            && proto[prop]._CROSS_WORKER_) {
+            (function() { // local scope for funName needed
+                var funName = prop;
+
+                proxy[prop] = function() {
+                    var cb = null;
+                    var transferables = null;
+
+                    var receiver = that.callReceivers_[name];
+                    goog.asserts.assert(receiver && receiver[funName]
+                                        && goog.isFunction(receiver[funName]));
+                    receiver[funName].apply(receiver, arguments);
+                };
+            })();
+        }
+    }
+    return proxy;
+
 };
 /**
  * @public
@@ -484,7 +557,14 @@ base.FakeBroker.prototype.registerEventListener = function (eventType, callback)
  * @param {Array.<*>} [transferables] objects which should be transferred to other worker
  */
 base.FakeBroker.prototype.fireEvent = function (eventType, data, scope, transferables) {
-    this.onEvent_(eventType, data);
+    var that = this;
+    if (goog.isDefAndNotNull(this.loadingDeferred_)) {
+        this.loadingDeferred_.addCallback(function () {
+            that.onEvent_(eventType, data);
+        });
+    } else {
+        this.onEvent_(eventType, data);
+    }
 };
 /**
  * @private
@@ -499,10 +579,111 @@ base.FakeBroker.prototype.onEvent_ = function (evenType, data) {
     }
 };
 
-if (typeof window === 'undefined') {
-    // we are in worker
-    base.IBroker.parentInstance = new base.Broker('parent', self);
-}
+base.FakeBroker.prototype.addDependency = function (debugDeps, compiledDeps) {
+    goog.asserts.assert(this.loadingDeferred_ === null);
+    if (goog.DEBUG) {
+        this.loadingDeferred_ = this.debugLoadScripts_(debugDeps);
+    } else {
+        this.loadingDeferred_ = this.compiledLoadScripts_(debugDeps);
+    }
+};
+/**
+ * Execute function in subworker. Function is sent as a string
+ * and it can't depend on any closures. All dependencies needed by function
+ * must be loaded with addDependency before you run executeFunction.
+ * @public
+ * @param {function(*): *} fun function to execute
+ * @param {Array.<*>} args arguments to pass to fun
+ * @param {?Array.<*>} [transferables]
+ * @param {function(*)} [callback] callback fired in current worker with results of execution
+ */
+base.FakeBroker.prototype.executeFunction = function (fun, args, transferables, callback) {
+    args.push(this); // add this broker as the last argument
+    if (goog.isDefAndNotNull(this.loadingDeferred_)) {
+        this.loadingDeferred_.addCallback(function () {
+            var result = fun.apply(goog.global, args);
+            if (callback) {
+                callback(result);
+            }
+        });
+    } else {
+        var result = fun.apply(goog.global, args);
+        callback(result);
+    }
+};
+
+// Overrides default goog script writer in order to be able
+// to trace the moment when all scripts are loaded.
+base.FakeBroker.prototype.debugLoadScripts_ = function (scripts) {
+    var deferredAll;
+    var i = 0;
+    var deferreds = [];
+    if (typeof window === 'undefined') {
+        // in worker, goog will be using importScripts (synchronous)
+        for (i = 0; i < scripts.length; ++i) {
+            base.Broker.debugAddDep(scripts);
+        }
+        deferredAll = goog.async.Deferred.succeed();
+    } else {
+        goog.global.CLOSURE_IMPORT_SCRIPT = function (url) {
+            // var script = document.createElement('script');
+            // var deferred = new goog.async.Deferred();
+            // script.type = 'text/javascript';
+            // script.onload = function (){
+            //     deferred.callback();
+            // }; 
+            // script.src = url;
+            // document.appendChild(script);
+            var deferred = goog.net.jsloader.load(url);
+            deferreds.push(deferred);
+            return true;
+        };
+        for (i = 0; i < scripts.length; ++i) {
+            base.Broker.debugAddDep(scripts[i]);
+        }
+        goog.global.CLOSURE_IMPORT_SCRIPT = undefined;
+        deferredAll = goog.async.DeferredList.gatherResults(deferreds);
+    }
+
+    return deferredAll;
+};
+
+base.FakeBroker.prototype.compiledLoadScripts_ = function (scripts) {
+    var i = 0;
+    var deferreds = [];
+    var deferredAll;
+
+    if (typeof window === 'undefined') {
+        self.importScripts(scripts);
+        deferredAll = goog.async.Deferred.succeed();
+    } else {
+        for (i = 0; i < scripts.length; ++i) {
+            deferreds.push(goog.net.jsloader.load(scripts[i]));
+        }
+        deferredAll = goog.async.DeferredList.gatherResults(deferreds);
+    }
+    
+    return deferredAll;
+};
+
+/**
+ * @public
+ * @param {Array.<string>} debugDeps
+ * @param {Array.<string>} compiledDeps
+ * @param {string} name human readable worker name
+ * @return {base.Broker}
+ */
+base.FakeBroker.createWorker = function (debugDeps, compiledDeps, name) {
+    var broker = new base.FakeBroker(name);
+    broker.addDependency(debugDeps, compiledDeps);
+    return broker;
+};
+
+// if (typeof window === 'undefined') {
+//     // we are in worker
+//     base.IBroker.parentInstance = new base.Broker('parent', self);
+// }
 
 goog.exportSymbol('base.Broker', base.Broker);
-goog.exportSymbol('base.IBroker.parentInstance', base.IBroker.parentInstance);
+// goog.exportSymbol('base.IBroker.parentInstance', base.IBroker.parentInstance);
+

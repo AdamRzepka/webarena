@@ -21,6 +21,7 @@ goog.require('goog.asserts');
 goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.DeferredList');
+goog.require('goog.object');
 goog.require('base.events');
 goog.require('base.Broker');
 goog.require('system.common');
@@ -29,6 +30,7 @@ goog.require('system.RTCSocket');
 goog.require('system.InputHandler');
 goog.require('renderer.Scene');
 goog.require('files.ResourceManager');
+goog.require('flags');
 
 goog.provide('system.Client');
 
@@ -74,7 +76,7 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
      */
     this.serverSocket_ = null;
     this.lastSnapshot_ = -1;
-    this.broker_ = base.Broker.createWorker(['game'], ['base.js', 'game.js'], 'game');
+    this.broker_ = base.IBroker.createWorker(['game'], ['base.js', 'game.js'], 'game');
     this.playerData_ = null;
     this.matchData_ = null;
 
@@ -180,8 +182,10 @@ system.Client.prototype.initGame_ = function (level, archives) {
     var that = this;
     var deferred = this.initRTC_();
 
-    this.broker_.executeFunction(function () {
-        game.init();
+    this.broker_.registerReceiver('base.IRendererScene', this.rendererScene_);
+
+    this.broker_.executeFunction(function (broker) {
+        game.init(broker);
     }, []);
 
     deferred.awaitDeferred(this.loadResources_(archives, this.rendererScene_));
@@ -308,7 +312,6 @@ system.Client.prototype.initUpdates_ = function () {
             playerId: that.playerData_.gameId,
             inputState: null
     };
-    this.broker_.registerReceiver('base.IRendererScene', this.rendererScene_);
 
     function update() {
         // Note: we accept one frame lag between input and renderer on the client.
@@ -328,7 +331,12 @@ system.Client.prototype.initUpdates_ = function () {
 
         // input
         that.sendInputMessage_(inputMessage_);
-        inputUpdateData.inputState = that.input_.getState();
+        if (!flags.GAME_WORKER || base.IBroker.DISABLE_WORKERS) {
+            // inputState can't be passed by reference
+            inputUpdateData.inputState = goog.object.unsafeClone(that.input_.getState());
+        } else {
+            inputUpdateData.inputState = that.input_.getState();
+        }
         that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
 
         // render

@@ -53,7 +53,7 @@ base.JobsPool = function (workersCount, debugDeps, compiledDeps, name) {
     this.jobsQueue_ = new goog.structs.Queue();
 
     for (i = 0; i < workersCount; ++i) {
-        this.workers_.push(base.Broker.createWorker(debugDeps, compiledDeps, name));
+        this.workers_.push(base.IBroker.createWorker(debugDeps, compiledDeps, name));
         this.pendingJobs_.push(null);
     }
 

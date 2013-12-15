@@ -38,7 +38,7 @@ goog.require('game.Player');
 
 goog.provide('game');
 
-game.init = function () {
+game.init = function (broker) {
     var scene;
     var modelManager;
     var map;
@@ -48,7 +48,7 @@ game.init = function () {
     //var rm = new files.ResourceManager();
     //var mapName = 'aggressor';
 
-    var broker = base.IBroker.parentInstance;
+    // var broker = base.IBroker.parentInstance;
     
     scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                               base.IRendererScene);

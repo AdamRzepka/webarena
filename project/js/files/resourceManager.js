@@ -43,7 +43,7 @@ files.ResourceManager = function() {
      */
     this.basedir = '/resources/';
 
-    this.jobsPool = new base.JobsPool(1, ['files.bsp', 'files.md3'], ['base.js', 'files.js'],
+    this.jobsPool = new base.JobsPool(2, ['files.bsp', 'files.md3'], ['base.js', 'files.js'],
                                       'files');
     // /**
     //  * @private

@@ -13,3 +13,5 @@ if (typeof COMPILED == 'undefined') {
     // release mode
     importScripts('base.js');
 }
+
+var gParentBroker = new base.Broker('parent', self);
