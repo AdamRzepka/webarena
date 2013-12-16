@@ -110,11 +110,6 @@ base.IBroker.createWorker = function (debugDeps, compiledDeps, name) {
  */
 base.IBroker.DISABLE_WORKERS = false;
 /**
- * @public
- * @type {string}
- */
-base.IBroker.COMPILED_SCRIPTS_PREFIX = 'js/';
-/**
  * @enum {number}
  */
 base.IBroker.EventScope = {
@@ -448,10 +443,6 @@ base.Broker.prototype.onAddDependency_ = function (debugDeps, compiledDeps) {
             base.Broker.debugAddDep(debugDeps[i]);
         }
     } else {
-        compiledDeps = compiledDeps.map(function (script) {
-            return base.IBroker.COMPILED_SCRIPTS_PREFIX + script;
-        });
-
         for (i = 0; i < compiledDeps.length; ++i) {
             self.importScripts(compiledDeps[i]);
         }
@@ -663,7 +654,7 @@ base.FakeBroker.prototype.compiledLoadScripts_ = function (scripts) {
     var deferredAll;
 
     scripts = scripts.map(function (script) {
-        return base.IBroker.COMPILED_SCRIPTS_PREFIX + script;
+        return base.FakeBroker.COMPILED_SCRIPTS_PREFIX + script;
     });
     
     if (typeof window === 'undefined') {
@@ -691,6 +682,12 @@ base.FakeBroker.createWorker = function (debugDeps, compiledDeps, name) {
     broker.addDependency(debugDeps, compiledDeps);
     return broker;
 };
+/**
+ * @public
+ * @type {string}
+ */
+base.FakeBroker.COMPILED_SCRIPTS_PREFIX = 'js/';
+
 
 // if (typeof window === 'undefined') {
 //     // we are in worker
