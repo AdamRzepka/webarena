@@ -95,7 +95,7 @@ base.IBroker.prototype.executeFunction = function (fun, args, transferables, cal
  * @param {Array.<string>} debugDeps
  * @param {Array.<string>} compiledDeps
  * @param {string} name human readable worker name
- * @return {base.Broker}
+ * @return {base.IBroker}
  */
 base.IBroker.createWorker = function (debugDeps, compiledDeps, name) {
     if (base.IBroker.DISABLE_WORKERS) {
@@ -109,6 +109,11 @@ base.IBroker.createWorker = function (debugDeps, compiledDeps, name) {
  * @type {boolean}
  */
 base.IBroker.DISABLE_WORKERS = false;
+/**
+ * @public
+ * @type {string}
+ */
+base.IBroker.COMPILED_SCRIPTS_PREFIX = 'js/';
 /**
  * @enum {number}
  */
@@ -305,7 +310,7 @@ base.Broker.prototype.executeFunction = function (fun, args, transferables, call
     }, transferables);
 };
 /**
- * @publicv
+ * @public
  * @param {Array.<string>} debugDeps
  * @param {Array.<string>} compiledDeps
  * @param {string} name human readable worker name
@@ -443,6 +448,10 @@ base.Broker.prototype.onAddDependency_ = function (debugDeps, compiledDeps) {
             base.Broker.debugAddDep(debugDeps[i]);
         }
     } else {
+        compiledDeps = compiledDeps.map(function (script) {
+            return base.IBroker.COMPILED_SCRIPTS_PREFIX + script;
+        });
+
         for (i = 0; i < compiledDeps.length; ++i) {
             self.importScripts(compiledDeps[i]);
         }
@@ -584,7 +593,7 @@ base.FakeBroker.prototype.addDependency = function (debugDeps, compiledDeps) {
     if (goog.DEBUG) {
         this.loadingDeferred_ = this.debugLoadScripts_(debugDeps);
     } else {
-        this.loadingDeferred_ = this.compiledLoadScripts_(debugDeps);
+        this.loadingDeferred_ = this.compiledLoadScripts_(compiledDeps);
     }
 };
 /**
@@ -623,7 +632,7 @@ base.FakeBroker.prototype.debugLoadScripts_ = function (scripts) {
         for (i = 0; i < scripts.length; ++i) {
             base.Broker.debugAddDep(scripts);
         }
-        deferredAll = goog.async.Deferred.succeed();
+        deferredAll = goog.async.Deferred.succeed(null);
     } else {
         goog.global.CLOSURE_IMPORT_SCRIPT = function (url) {
             // var script = document.createElement('script');
@@ -653,9 +662,13 @@ base.FakeBroker.prototype.compiledLoadScripts_ = function (scripts) {
     var deferreds = [];
     var deferredAll;
 
+    scripts = scripts.map(function (script) {
+        return base.IBroker.COMPILED_SCRIPTS_PREFIX + script;
+    });
+    
     if (typeof window === 'undefined') {
         self.importScripts(scripts);
-        deferredAll = goog.async.Deferred.succeed();
+        deferredAll = goog.async.Deferred.succeed(null);
     } else {
         for (i = 0; i < scripts.length; ++i) {
             deferreds.push(goog.net.jsloader.load(scripts[i]));
@@ -671,7 +684,7 @@ base.FakeBroker.prototype.compiledLoadScripts_ = function (scripts) {
  * @param {Array.<string>} debugDeps
  * @param {Array.<string>} compiledDeps
  * @param {string} name human readable worker name
- * @return {base.Broker}
+ * @return {base.FakeBroker}
  */
 base.FakeBroker.createWorker = function (debugDeps, compiledDeps, name) {
     var broker = new base.FakeBroker(name);

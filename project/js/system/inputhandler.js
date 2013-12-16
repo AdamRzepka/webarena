@@ -24,7 +24,7 @@ goog.provide('system.InputHandler');
 
 /**
  * @constructor
- * @param {HTMLElement} element
+ * @param {HTMLElement} inputElement
  */
 system.InputHandler = function (inputElement) {
     /**

@@ -1,4 +1,4 @@
 #!/bin/bash
 
 #python -m SimpleHTTPServer 8001
-nodejs ../server/server.js
+nodejs ../server/server.js 8001

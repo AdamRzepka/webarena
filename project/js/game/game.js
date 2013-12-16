@@ -38,6 +38,9 @@ goog.require('game.Player');
 
 goog.provide('game');
 
+/**
+ * @param {base.IBroker} broker
+ */
 game.init = function (broker) {
     var scene;
     var modelManager;

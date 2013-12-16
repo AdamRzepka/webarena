@@ -65,9 +65,12 @@ system.Server = function (matchData, lobbyUrl, rm) {
     this.createMatch_(matchData);
 };
 
-system.Server.prototype.onGameStarted = function () {};
+system.Server.prototype.onGameStarted = function (matchId) {};
 system.Server.prototype.onError = function () {};
 
+/**
+ * @constructor
+ */
 system.Server.ClientData = function () {
     this.socket = null;
     this.playerData = null;
@@ -82,11 +85,11 @@ system.Server.prototype.createMatch_ = function (matchData) {
     var that = this;
     this.lobbySocket_.onopen = function () {
         var msg = {
-            type: system.ControlMessage.Type.CREATE_MATCH_REQUEST,
-            matchId: -1,
-            from: system.SERVER_ID,
-            to: system.LOBBY_ID,
-            data: matchData
+            'type': system.ControlMessage.Type.CREATE_MATCH_REQUEST,
+            'matchId': -1,
+            'from': system.SERVER_ID,
+            'to': system.LOBBY_ID,
+            'data': matchData
         };
         that.logger_.log(goog.debug.Logger.Level.INFO,
                          'Lobby socket opened');
@@ -103,14 +106,14 @@ system.Server.prototype.createMatch_ = function (matchData) {
 };
 
 system.Server.prototype.onMessage_ = function (msg) {
-    if (msg.type === system.ControlMessage.Type.CREATE_MATCH_RESPONSE &&
+    if (msg['type'] === system.ControlMessage.Type.CREATE_MATCH_RESPONSE &&
         this.matchData_ !== null) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
                          'Got second CREATE_MATCH_RESPONSE. Ignoring.');
         return;
     }
-    if (msg.type !== system.ControlMessage.Type.CREATE_MATCH_RESPONSE &&
-        msg.matchId !== this.matchData_.id) {
+    if (msg['type'] !== system.ControlMessage.Type.CREATE_MATCH_RESPONSE &&
+        msg['matchId'] !== this.matchData_.id) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
                          'Wrong match id: ' + msg.matchId);
         return;
@@ -118,31 +121,31 @@ system.Server.prototype.onMessage_ = function (msg) {
     
     switch (msg.type) {
     case system.ControlMessage.Type.CREATE_MATCH_RESPONSE:
-        this.onCreateMatchResponse_(msg.data);
+        this.onCreateMatchResponse_(msg['data']);
         break;
     case system.ControlMessage.Type.JOIN_MATCH_REQUEST:
-        this.onJoinMatchRequest_(msg.data);
+        this.onJoinMatchRequest_(msg['data']);
         break;
     case system.ControlMessage.Type.DISCONNECTED:
-        this.onDisconnected_(msg.from);
+        this.onDisconnected_(msg['from']);
         break;
     case system.ControlMessage.Type.RTC_SIGNAL:
-        this.onRTCSignal_(msg.from, msg.data);
+        this.onRTCSignal_(msg['from'], msg['data']);
         break;
     default:
         this.logger_.log(goog.debug.Logger.Level.WARNING,
-                         'Unsupported message type: ' + msg.type);
+                         'Unsupported message type: ' + msg['type']);
         break;
     }
 };
 
 system.Server.prototype.onCreateMatchResponse_ = function (matchData) {
     this.matchData_ = matchData;
-    this.initGame_(matchData.level, matchData.toLoad);
+    this.initGame_(matchData['level'], matchData['toLoad']);
 };
 
 system.Server.prototype.onJoinMatchRequest_ = function (playerData) {
-    var id = playerData.gameId;
+    var id = playerData['gameId'];
     var that = this;
     goog.asserts.assert(id >= 0 && !goog.isDefAndNotNull(this.clients_[id]));
     this.logger_.log(goog.debug.Logger.Level.INFO,
@@ -151,9 +154,9 @@ system.Server.prototype.onJoinMatchRequest_ = function (playerData) {
         socket: this.createClientSocket_(playerData),
         playerData: playerData
     };
-    this.loadResources_([playerData.model]).addCallback(function () {
+    this.loadResources_([playerData['model']]).addCallback(function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,
-                         'Loaded model for player ' + playerData.gameId);
+                         'Loaded model for player ' + playerData['gameId']);
     });;
 };
 
@@ -174,16 +177,16 @@ system.Server.prototype.onRTCSignal_ = function (clientId, msg) {
 
 system.Server.prototype.createClientSocket_ = function (playerData) {
     var that = this;
-    var clientId = playerData.gameId;
+    var clientId = playerData['gameId'];
     var socket;
     
     function  signallingCallback(msg) {
         var cmsg = {
-            type: system.ControlMessage.Type.RTC_SIGNAL,
-            matchId: that.matchData_.id,
-            from: system.SERVER_ID,
-            to: clientId,
-            data: msg
+            'type': system.ControlMessage.Type.RTC_SIGNAL,
+            'matchId': that.matchData_['id'],
+            'from': system.SERVER_ID,
+            'to': clientId,
+            'data': msg
         };
         that.lobbySocket_.send(JSON.stringify(cmsg));
     }
@@ -220,7 +223,7 @@ system.Server.prototype.initGame_ = function (level, archives) {
     });
 
     this.loadResources_(archives).addCallback(function() {
-        that.broker_.fireEvent(base.EventType.GAME_START);
+        that.broker_.fireEvent(base.EventType.GAME_START, null);
         that.onGameStarted(that.matchData_.id);
     });
 };

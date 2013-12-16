@@ -210,13 +210,13 @@ function main() {
         inputElement: canvas,
         lobbyUrl: 'ws://localhost:8003',
         playerData: {
-            name: 'player',
-            model: 'assassin',
-            gameId: system.INVALID_ID
+            'name': 'player',
+            'model': 'assassin',
+            'gameId': system.INVALID_ID
         },
         createMatch: true,
         matchData: {
-            level: 'aggressor'
+            'level': 'aggressor'
         }
     };
     var game = new system.Game(config);

@@ -23,6 +23,9 @@ goog.require('files.ResourceManager');
 
 goog.provide('system.Game');
 
+/**
+ * @constructor
+ */
 system.Game = function (config) {
     this.server_ = null;
     this.client_ = null;
@@ -33,6 +36,9 @@ system.Game = function (config) {
     this.init_();
 };
 
+/**
+ * @constructor
+ */
 system.Game.Config = function () {
     this.gl = null;
     this.inpuElement = null;

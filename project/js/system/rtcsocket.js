@@ -36,8 +36,8 @@ system.RTCSocket = function (signallingCallback) {
         }]
     };
     var that = this;
-    var RTCPeerConnection = window.mozRTCPeerConnection || window.RTCPeerConnection
-            || window.webkitRTCPeerConnection;
+    var RTCPeerConnection = window['mozRTCPeerConnection'] || window['RTCPeerConnection']
+            || window['webkitRTCPeerConnection'];
     if (!RTCPeerConnection) {
         throw new Error('No RTCPeerConnection defined');
     }
@@ -50,9 +50,11 @@ system.RTCSocket = function (signallingCallback) {
     /**
      * @const
      * @private
-     * @type {system.ISocket}
+     * @type {RTCPeerConnection}
      */
-    this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION,{optional: [{RtpDataChannels: true}]});
+    this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION, {
+        'optional': [{'RtpDataChannels': true}]
+    });
     this.dataChannel = null;
 
     this.estabilishConnection_();
@@ -109,7 +111,7 @@ system.RTCSocket.prototype.readSignallingMessage = function (msg) {
 };
 
 system.RTCSocket.prototype.onopen = function () {};
-system.RTCSocket.prototype.onmessage = function () {};
+system.RTCSocket.prototype.onmessage = function (event) {};
 system.RTCSocket.prototype.onclose = function () {};
 system.RTCSocket.prototype.onerror = function () {};
 
@@ -118,7 +120,12 @@ system.RTCSocket.prototype.open = function () {
                                                                       'ordered': false});
     this.setupChannel_();
 };
+/**
+ * @public
+ * @param {ArrayBuffer|string} data
+ */
 system.RTCSocket.prototype.send = function (data) {
+    data = /**@type{ArrayBuffer}*/data;
     try {
         this.dataChannel.send(data);
     } catch (ex) {
@@ -149,16 +156,16 @@ system.RTCSocket.prototype.estabilishConnection_ = function () {
 
     this.peerConnection.onicecandidate = function (evt) {
         var msg;
-        if (evt.candidate) {
+        if (evt['candidate']) {
             msg = new system.RTCSocket.SignallingMessage(
                 system.RTCSocket.SignallingMessage.Type.CANDIDATE,
-                evt.candidate);
+                evt['candidate']);
             that.signallingCallback(msg);
         }
     };
 
     this.peerConnection.ondatachannel = function (evt) {
-        that.dataChannel = evt.channel;
+        that.dataChannel = evt['channel'];
         that.setupChannel_();
     };
 };

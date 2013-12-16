@@ -29,7 +29,7 @@ system.ISocket = function () {};
 system.ISocket.prototype.send = function (data) {};
 system.ISocket.prototype.close = function () {};
 system.ISocket.prototype.onopen = function () {};
-system.ISocket.prototype.onmessage = function () {};
+system.ISocket.prototype.onmessage = function (event) {};
 system.ISocket.prototype.onclose = function () {};
 
 /**

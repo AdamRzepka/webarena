@@ -19,6 +19,7 @@
 
 /**
  * @fileoverview
+ * @suppress {duplicate}
  * Definitions of data needed both by lobby server and browser.
  */
 
@@ -33,13 +34,16 @@ if (typeof goog !== 'undefined') {
  * Message sent between browser and lobby server.
  */
 system.ControlMessage = function () {
-    this.type = 0;
-    this.matchId = 0;
-    this.from = 0; // my id
-    this.to = 0;   // currently only for RTC_SIGNAL
-    this.data = null;
+    this['type'] = 0;
+    this['matchId'] = 0;
+    this['from'] = 0; // my id
+    this['to'] = 0;   // currently only for RTC_SIGNAL
+    this['data'] = null;
 };
 
+/**
+ * @enum {string}
+ */
 system.ControlMessage.Type = {
     CREATE_MATCH_REQUEST: 'CREATE_MATCH_REQUEST',
     CREATE_MATCH_RESPONSE: 'CREATE_MATCH_RESPONSE',
@@ -53,17 +57,20 @@ system.ControlMessage.Type = {
  * @constructor
  */
 system.PlayerData = function () {
-    this.name = '';
-    this.model = '';
-    this.globalId = ''; // Id of player as known by website. Currently not used
-    this.gameId = -1;   // Id in this particular match. Filled by lobby during JOIN_MATCH request
+    this['name'] = '';
+    this['model'] = '';
+    this['globalId'] = ''; // Id of player as known by website. Currently not used
+    this['gameId'] = -1;   // Id in this particular match. Filled by lobby during JOIN_MATCH request
 };
 
 
+/**
+ * @constructor
+ */
 system.MatchData = function () {
-    this.id = '';       // Filled by lobby
-    this.level = '';    // Filled by game server
-    this.toLoad = [];   // Filled by lobby
+    this['id'] = '';       // Filled by lobby
+    this['level'] = '';    // Filled by game server
+    this['toLoad'] = [];   // Filled by lobby
 };
 
 system.SERVER_ID = -1;

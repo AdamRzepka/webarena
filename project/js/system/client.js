@@ -37,7 +37,7 @@ goog.provide('system.Client');
 /**
  * @constructor
  * @param {string} matchId
- * @param {Object} playerInfo
+ * @param {system.PlayerData} playerData
  * @param {string} lobbyUrl
  * @param {WebGLRenderingContext} gl
  * @param {HTMLElement} inputElement
@@ -70,14 +70,21 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
      */
     this.lobbySocket_ = new system.WebSocket(lobbyUrl);
     /**
-     * @const
      * @private
      * @type {system.RTCSocket}
      */
     this.serverSocket_ = null;
     this.lastSnapshot_ = -1;
     this.broker_ = base.IBroker.createWorker(['game'], ['base.js', 'game.js'], 'game');
+    /**
+     * @private
+     * @type {system.PlayerData}
+     */
     this.playerData_ = null;
+    /**
+     * @private
+     * @type {system.MatchData}
+     */
     this.matchData_ = null;
 
     this.joinMatch_(matchId, playerData);
@@ -92,11 +99,11 @@ system.Client.prototype.joinMatch_ = function (matchId, playerData) {
     var that = this;
     this.lobbySocket_.onopen = function () {
         var msg = {
-            type: system.ControlMessage.Type.JOIN_MATCH_REQUEST,
-            matchId: matchId,
-            from: system.SERVER_ID,
-            to: system.LOBBY_ID,
-            data: playerData
+            'type': system.ControlMessage.Type.JOIN_MATCH_REQUEST,
+            'matchId': matchId,
+            'from': system.SERVER_ID,
+            'to': system.LOBBY_ID,
+            'data': playerData
         };
         that.logger_.log(goog.debug.Logger.Level.INFO,
                          'Lobby socket opened');
@@ -113,50 +120,50 @@ system.Client.prototype.joinMatch_ = function (matchId, playerData) {
 };
 
 system.Client.prototype.onMessage_ = function (msg) {
-    if (msg.type === system.ControlMessage.Type.JOIN_MATCH_RESPONSE &&
+    if (msg['type'] === system.ControlMessage.Type.JOIN_MATCH_RESPONSE &&
         this.matchData_ !== null) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
                          'Got second JOIN_MATCH_RESPONSE. Ignoring.');
         return;
     }
-    if (msg.type !== system.ControlMessage.Type.JOIN_MATCH_RESPONSE &&
-        msg.matchId !== this.matchData_.id) {
+    if (msg['type'] !== system.ControlMessage.Type.JOIN_MATCH_RESPONSE &&
+        msg['matchId'] !== this.matchData_['id']) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
-                         'Wrong match id: ' + msg.matchId);
+                         'Wrong match id: ' + msg['matchId']);
         return;
     }
-    if (msg.type !== system.ControlMessage.Type.JOIN_MATCH_RESPONSE &&
-        msg.to !== this.playerData_.gameId && msg.to !== system.ANY_ID) {
+    if (msg['type'] !== system.ControlMessage.Type.JOIN_MATCH_RESPONSE &&
+        msg['to'] !== this.playerData_['gameId'] && msg['to'] !== system.ANY_ID) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
-                         'Wrong player id: ' + msg.matchId);
+                         'Wrong player id: ' + msg['to']);
         return;
     }
     
-    switch (msg.type) {
+    switch (msg['type']) {
     case system.ControlMessage.Type.JOIN_MATCH_RESPONSE:
-        this.onJoinMatchResponse_(msg.data);
+        this.onJoinMatchResponse_(msg['data']);
         break;
     case system.ControlMessage.Type.JOIN_MATCH_REQUEST:
-        this.onJoinMatchRequest_(msg.data);
+        this.onJoinMatchRequest_(msg['data']);
         break;
     case system.ControlMessage.Type.DISCONNECTED:
-        this.onDisconnected_(msg.from);
+        this.onDisconnected_(msg['from']);
         break;
     case system.ControlMessage.Type.RTC_SIGNAL:
-        this.onRTCSignal_(msg.data);
+        this.onRTCSignal_(msg['data']);
         break;
     default:
         this.logger_.log(goog.debug.Logger.Level.WARNING,
-                         'Unsupported message type: ' + msg.type);
+                         'Unsupported message type: ' + msg['type']);
         break;
     }
 };
 
 system.Client.prototype.onJoinMatchResponse_ = function (data) {
-    this.playerData_ = data.playerData;
-    this.matchData_ = data.matchData;
+    this.playerData_ = data['playerData'];
+    this.matchData_ = data['matchData'];
 
-    this.initGame_(this.matchData_.level, this.matchData_.toLoad);
+    this.initGame_(this.matchData_['level'], this.matchData_['toLoad']);
 };
 
 system.Client.prototype.onJoinMatchRequest_ = function (playerData) {
@@ -185,7 +192,7 @@ system.Client.prototype.initGame_ = function (level, archives) {
     this.broker_.registerReceiver('base.IRendererScene', this.rendererScene_);
 
     this.broker_.executeFunction(function (broker) {
-        game.init(broker);
+        game.init((/**@type{base.IBroker}*/broker));
     }, []);
 
     deferred.awaitDeferred(this.loadResources_(archives, this.rendererScene_));
@@ -193,7 +200,7 @@ system.Client.prototype.initGame_ = function (level, archives) {
     deferred.addCallback(function() {
         that.logger_.log(goog.debug.Logger.Level.INFO,
                          'game initialized');        
-        that.broker_.fireEvent(base.EventType.GAME_START);
+        that.broker_.fireEvent(base.EventType.GAME_START, null);
         that.initUpdates_();
         that.onGameStarted();
     });
@@ -204,11 +211,11 @@ system.Client.prototype.initRTC_ = function () {
     var deferred = new goog.async.Deferred();
     function signallingCallback(msg) {
         var cmsg = {
-            type: system.ControlMessage.Type.RTC_SIGNAL,
-            matchId: that.matchData_.id,
-            from: that.playerData_.gameId,
-            to: system.SERVER_ID,
-            data: msg
+            'type': system.ControlMessage.Type.RTC_SIGNAL,
+            'matchId': that.matchData_['id'],
+            'from': that.playerData_['gameId'],
+            'to': system.SERVER_ID,
+            'data': msg
         };
         that.lobbySocket_.send(JSON.stringify(cmsg));
     }
@@ -309,7 +316,7 @@ system.Client.prototype.initUpdates_ = function () {
     var fpsTime = 0;
     var fpsElem = document.getElementById('fps');
     var inputUpdateData = {
-            playerId: that.playerData_.gameId,
+            playerId: that.playerData_['gameId'],
             inputState: null
     };
 

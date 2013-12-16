@@ -6,8 +6,7 @@
 	"base": {
 	    "inputs" : ["project/js/base/base.js", "project/js/base/irendererscene.js",
                         "project/js/base/map.js", "project/js/base/material.js",
-                        "project/js/base/broker.js", "project/js/base/jobspool.js",
-                        "project/js/base/iinputhandler.js"],
+                        "project/js/base/broker.js", "project/js/base/jobspool.js"],
 	    "deps": []
 	},
 	"game": {

@@ -1,15 +1,24 @@
+if (process.argv.length != 3) {
+    console.log('port number, please');
+}
+
+var port = parseInt(process.argv[2]);
+if (port <= 0 || port > 0xFFFF) {
+    console.log('invalid port number');
+}
+
 var FileServer = require('node-static').Server;
-var fileServer = new FileServer('../project/');
+var fileServer = new FileServer('.');
 
 var httpServer = require('http').createServer(function (req, res) {
     console.log('Got http request');
     fileServer.serve(req, res);
-}).listen(8001);
-console.log('http is listening on 8001');
+}).listen(port);
+console.log('http is listening on ' + port);
 
 var WebSocketServer = require('ws').Server;
 var wss = new WebSocketServer({port:8003});
-console.log('websocket is listening on 8003');
+console.log('websocket is listening on ' + 8003);
 
 var generateId = require('hat').rack();
 
