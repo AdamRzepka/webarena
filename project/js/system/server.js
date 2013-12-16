@@ -35,6 +35,7 @@ goog.provide('system.Server');
 
 /**
  * @constructor
+ * @param {system.MatchData} matchData
  * @param {string} lobbyUrl
  * @param {files.ResourceManager} rm
  */
@@ -55,32 +56,58 @@ system.Server = function (matchData, lobbyUrl, rm) {
     /**
      * @const
      * @private
-     * @type {Array.<Object>}
+     * @type {Array.<system.Server.ClientData>}
      */
     this.clients_ = [];
+    /**
+     * @private
+     * @type {system.MatchData}
+     */
     this.matchData_ = null;
-    
-    this.broker_ = base.Broker.createWorker(['game'], ['base.js', 'game.js'], 'game');
+    /**
+     * @const
+     * @private
+     * @type {base.IBroker}
+     */
+    this.broker_ = base.IBroker.createWorker(['game'], ['base.js', 'game.js'], 'game');
     
     this.createMatch_(matchData);
 };
 
+/**
+ * @public
+ * @type {function(string)}
+ */
 system.Server.prototype.onGameStarted = function (matchId) {};
+/**
+ * @public
+ * @type {function()}
+ */
 system.Server.prototype.onError = function () {};
 
 /**
  * @constructor
  */
 system.Server.ClientData = function () {
+    /**
+     * @type {system.RTCSocket}
+     */
     this.socket = null;
+    /**
+     * @type {system.PlayerData}
+     */
     this.playerData = null;
 };
 
 /**
+ * @const
  * @private
+ * @type {goog.debug.Logger}
  */
 system.Server.prototype.logger_ = goog.debug.Logger.getLogger('system.Server');
-
+/**
+ * @private
+ */
 system.Server.prototype.createMatch_ = function (matchData) {
     var that = this;
     this.lobbySocket_.onopen = function () {
@@ -104,7 +131,9 @@ system.Server.prototype.createMatch_ = function (matchData) {
         throw new Error('Lobby socket closed');
     };
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.onMessage_ = function (msg) {
     if (msg['type'] === system.ControlMessage.Type.CREATE_MATCH_RESPONSE &&
         this.matchData_ !== null) {
@@ -138,19 +167,23 @@ system.Server.prototype.onMessage_ = function (msg) {
         break;
     }
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.onCreateMatchResponse_ = function (matchData) {
     this.matchData_ = matchData;
     this.initGame_(matchData['level'], matchData['toLoad']);
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.onJoinMatchRequest_ = function (playerData) {
     var id = playerData['gameId'];
     var that = this;
     goog.asserts.assert(id >= 0 && !goog.isDefAndNotNull(this.clients_[id]));
     this.logger_.log(goog.debug.Logger.Level.INFO,
                      'New join request: ' + JSON.stringify(playerData));    
-    this.clients_[id] = {
+    this.clients_[id] = /**@type{system.Server.ClientData}*/{
         socket: this.createClientSocket_(playerData),
         playerData: playerData
     };
@@ -159,13 +192,17 @@ system.Server.prototype.onJoinMatchRequest_ = function (playerData) {
                          'Loaded model for player ' + playerData['gameId']);
     });;
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.onDisconnected_ = function (clientId) {
     this.logger_.log(goog.debug.Logger.Level.INFO,
                      'Client disconnected from lobby: ' + clientId);    
     
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.onRTCSignal_ = function (clientId, msg) {
     if (goog.isDefAndNotNull(this.clients_[clientId])) {
         this.clients_[clientId].socket.readSignallingMessage(msg);
@@ -174,7 +211,9 @@ system.Server.prototype.onRTCSignal_ = function (clientId, msg) {
                          'Wrong clientId in onRTCSignal_: ' + clientId);
     }
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.createClientSocket_ = function (playerData) {
     var that = this;
     var clientId = playerData['gameId'];
@@ -212,7 +251,9 @@ system.Server.prototype.createClientSocket_ = function (playerData) {
 
     return socket;
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.initGame_ = function (level, archives) {
     var that = this;
     
@@ -227,7 +268,9 @@ system.Server.prototype.initGame_ = function (level, archives) {
         that.onGameStarted(that.matchData_.id);
     });
 };
-
+/**
+ * @private
+ */
 system.Server.prototype.loadResources_ = function (archives) {
     var i = 0;
     var rm = this.rm_;

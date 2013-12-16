@@ -19,7 +19,7 @@
 
 /**
  * @fileoverview High level communication between workers. Cross-worker function calls
- * with callbacks through local proxies.
+ * with callbacks through local proxies, events, executing functions in subworkers.
  */
 
 goog.require('goog.asserts');
@@ -117,11 +117,6 @@ base.IBroker.EventScope = {
     LOCAL: 1,
     REMOTE: 2
 };
-// /**
-//  * @public
-//  * @type {base.IBroker}
-//  */
-// base.IBroker.parentInstance = null;
 
 
 /**
@@ -131,7 +126,7 @@ base.IBroker.EventScope = {
  * @param {Worker|DedicatedWorkerGlobalScope|Window} worker if we are in worker, this argument should be self.
  */
 base.Broker = function (name, worker) {
-    goog.asserts.assert(worker); // if we are inside worker, self shall be defined
+    goog.asserts.assert(worker);
     /**
      * @private
      * @const
@@ -202,8 +197,6 @@ base.Broker.prototype.createProxy = function (name, intface) {
     var proxy = {};
     var proto = intface.prototype;
 
-//    goog.asserts.assert(proto._CROSS_WORKER_);
-    
     for( prop in proto ) {
         if (proto.hasOwnProperty(prop) && goog.isFunction(proto[prop])
             && proto[prop]._CROSS_WORKER_) {
@@ -473,17 +466,23 @@ base.Broker.prototype.onExecuteFunction_ = function (body, params, args, callbac
  * @constructor
  * @implements {base.IBroker}
  * @param {string} name
- * Fake broker provides unified interface for single threaded version. Currently it has
- * a bit different semantic than Broker. Receiver must be registered before createProxy
- * call (not before any proxy function calls as in Broker). The reason is performance.
+ * Fake broker provides unified interface for single threaded version.
  */
 base.FakeBroker = function (name) {
+    /**
+     * @private
+     * @type {Array.<Object>}
+     */
     this.callReceivers_ = [];
     /**
      * @private
      * @type {Object.<string, Array.<function(string,*)>>}
      */
     this.eventListeners_ = [];
+    /**
+     * @private
+     * @type {goog.async.Deferred}
+     */
     this.loadingDeferred_ = null;
 };
 /**
@@ -493,16 +492,10 @@ base.FakeBroker = function (name) {
  * @return {Object}
  */
 base.FakeBroker.prototype.createProxy = function (name, intface) {
-    // TODO addDependency + createProxy not supported now
-//    goog.asserts.assert(this.loadingDeferred_ === null);
-//    goog.asserts.assert(this.callReceivers_[name]);
-
     var prop;
     var that = this;
     var proxy = {};
     var proto = intface.prototype;
-
-//    goog.asserts.assert(proto._CROSS_WORKER_);
     
     for( prop in proto ) {
         if (proto.hasOwnProperty(prop) && goog.isFunction(proto[prop])
@@ -567,18 +560,10 @@ base.FakeBroker.prototype.fireEvent = function (eventType, data, scope, transfer
     }
 };
 /**
- * @private
+ * @public
+ * @param {Array.<string>} debugDeps
+ * @param {Array.<string>} compiledDeps
  */
-base.FakeBroker.prototype.onEvent_ = function (evenType, data) {
-    var i = 0;
-    var listeners = this.eventListeners_[evenType];
-    if (goog.isDefAndNotNull(listeners)) {
-        for (i = 0; i < listeners.length; ++i) {
-            listeners[i](evenType, data);
-        }
-    }
-};
-
 base.FakeBroker.prototype.addDependency = function (debugDeps, compiledDeps) {
     goog.asserts.assert(this.loadingDeferred_ === null);
     if (goog.DEBUG) {
@@ -612,8 +597,42 @@ base.FakeBroker.prototype.executeFunction = function (fun, args, transferables, 
     }
 };
 
-// Overrides default goog script writer in order to be able
-// to trace the moment when all scripts are loaded.
+/**
+ * @public
+ * @param {Array.<string>} debugDeps
+ * @param {Array.<string>} compiledDeps
+ * @param {string} name human readable worker name
+ * @return {base.FakeBroker}
+ */
+base.FakeBroker.createWorker = function (debugDeps, compiledDeps, name) {
+    var broker = new base.FakeBroker(name);
+    broker.addDependency(debugDeps, compiledDeps);
+    return broker;
+};
+
+/**
+ * @const
+ * @private
+ * @type {string}
+ */
+base.FakeBroker.COMPILED_SCRIPTS_PREFIX = 'js/';
+/**
+ * @private
+ */
+base.FakeBroker.prototype.onEvent_ = function (evenType, data) {
+    var i = 0;
+    var listeners = this.eventListeners_[evenType];
+    if (goog.isDefAndNotNull(listeners)) {
+        for (i = 0; i < listeners.length; ++i) {
+            listeners[i](evenType, data);
+        }
+    }
+};
+/**
+ * @private
+ * Overrides default goog script writer in order to be able
+ * to trace the moment when all scripts are loaded.
+ */
 base.FakeBroker.prototype.debugLoadScripts_ = function (scripts) {
     var deferredAll;
     var i = 0;
@@ -647,7 +666,9 @@ base.FakeBroker.prototype.debugLoadScripts_ = function (scripts) {
 
     return deferredAll;
 };
-
+/**
+ * @private
+ */
 base.FakeBroker.prototype.compiledLoadScripts_ = function (scripts) {
     var i = 0;
     var deferreds = [];
@@ -670,30 +691,5 @@ base.FakeBroker.prototype.compiledLoadScripts_ = function (scripts) {
     return deferredAll;
 };
 
-/**
- * @public
- * @param {Array.<string>} debugDeps
- * @param {Array.<string>} compiledDeps
- * @param {string} name human readable worker name
- * @return {base.FakeBroker}
- */
-base.FakeBroker.createWorker = function (debugDeps, compiledDeps, name) {
-    var broker = new base.FakeBroker(name);
-    broker.addDependency(debugDeps, compiledDeps);
-    return broker;
-};
-/**
- * @public
- * @type {string}
- */
-base.FakeBroker.COMPILED_SCRIPTS_PREFIX = 'js/';
-
-
-// if (typeof window === 'undefined') {
-//     // we are in worker
-//     base.IBroker.parentInstance = new base.Broker('parent', self);
-// }
-
 goog.exportSymbol('base.Broker', base.Broker);
-// goog.exportSymbol('base.IBroker.parentInstance', base.IBroker.parentInstance);
 

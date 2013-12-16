@@ -22,6 +22,8 @@ goog.require('goog.debug.Logger');
 goog.require('goog.async.Deferred');
 goog.require('goog.async.DeferredList');
 goog.require('goog.object');
+
+goog.require('flags');
 goog.require('base.events');
 goog.require('base.Broker');
 goog.require('system.common');
@@ -30,7 +32,6 @@ goog.require('system.RTCSocket');
 goog.require('system.InputHandler');
 goog.require('renderer.Scene');
 goog.require('files.ResourceManager');
-goog.require('flags');
 
 goog.provide('system.Client');
 
@@ -74,7 +75,16 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
      * @type {system.RTCSocket}
      */
     this.serverSocket_ = null;
+    /**
+     * @private
+     * @type {number}
+     */
     this.lastSnapshot_ = -1;
+    /**
+     * @const
+     * @private
+     * @type {base.IBroker}
+     */
     this.broker_ = base.IBroker.createWorker(['game'], ['base.js', 'game.js'], 'game');
     /**
      * @private
@@ -91,10 +101,14 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
 };
 
 /**
+ * @const
  * @private
+ * @type {goog.debug.Logger}
  */
 system.Client.prototype.logger_ = goog.debug.Logger.getLogger('system.Client');
-
+/**
+ * @private
+ */
 system.Client.prototype.joinMatch_ = function (matchId, playerData) {
     var that = this;
     this.lobbySocket_.onopen = function () {
@@ -118,7 +132,9 @@ system.Client.prototype.joinMatch_ = function (matchId, playerData) {
         throw new Error('Lobby socket closed');
     };
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.onMessage_ = function (msg) {
     if (msg['type'] === system.ControlMessage.Type.JOIN_MATCH_RESPONSE &&
         this.matchData_ !== null) {
@@ -158,22 +174,30 @@ system.Client.prototype.onMessage_ = function (msg) {
         break;
     }
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.onJoinMatchResponse_ = function (data) {
     this.playerData_ = data['playerData'];
     this.matchData_ = data['matchData'];
 
     this.initGame_(this.matchData_['level'], this.matchData_['toLoad']);
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.onJoinMatchRequest_ = function (playerData) {
     // TODO
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.onDisconnected_ = function (playerId) {
     // TODO
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.onRTCSignal_ = function (msg) {
     if (this.serverSocket_) {
         this.serverSocket_.readSignallingMessage(msg);
@@ -182,7 +206,9 @@ system.Client.prototype.onRTCSignal_ = function (msg) {
                          'serverSocket not created yet');
     }
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.initGame_ = function (level, archives) {
     this.logger_.log(goog.debug.Logger.Level.INFO,
                          'initializing game');
@@ -205,7 +231,9 @@ system.Client.prototype.initGame_ = function (level, archives) {
         that.onGameStarted();
     });
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.initRTC_ = function () {
     var that = this;
     var deferred = new goog.async.Deferred();
@@ -241,7 +269,9 @@ system.Client.prototype.initRTC_ = function () {
     this.serverSocket_.open();
     return deferred;
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.loadResources_ = function (archives, scene) {
     var i = 0;;
     var rm = this.rm_;
@@ -286,7 +316,11 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
     }
     return goog.async.DeferredList.gatherResults(deferreds);
 };
-
+/**
+ * @const
+ * @private
+ * @type {number}
+ */
 system.Client.INPUT_MESSAGE_SIZE = 16;
 /*
  * Input message format
@@ -297,12 +331,17 @@ system.Client.INPUT_MESSAGE_SIZE = 16;
  * *unused* - 2 bytes
  */
 
+/**
+ * @private
+ */
 system.Client.prototype.sendInputMessage_ = function (dataView) {
     dataView.setUint32(0, this.lastSnapshot_, true);
     base.InputState.serialize(this.input_.getState(), dataView, 4);
     this.serverSocket_.send(dataView.buffer);
 };
-
+/**
+ * @private
+ */
 system.Client.prototype.initUpdates_ = function () {
     var that = this;
     var inputMessage_ = new DataView(new ArrayBuffer(system.Client.INPUT_MESSAGE_SIZE));

@@ -55,6 +55,10 @@ system.RTCSocket = function (signallingCallback) {
     this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION, {
         'optional': [{'RtpDataChannels': true}]
     });
+    /**
+     * @private
+     * @type {RTCDataChannel}
+     */
     this.dataChannel = null;
 
     this.estabilishConnection_();
@@ -110,11 +114,25 @@ system.RTCSocket.prototype.readSignallingMessage = function (msg) {
     }
 };
 
+/**
+ * @type {function()}
+ */
 system.RTCSocket.prototype.onopen = function () {};
+/**
+ * @type {function(Event)}
+ */
 system.RTCSocket.prototype.onmessage = function (event) {};
+/**
+ * @type {function()}
+ */
 system.RTCSocket.prototype.onclose = function () {};
+/**
+ * @type {function()}
+ */
 system.RTCSocket.prototype.onerror = function () {};
-
+/**
+ * @public
+ */
 system.RTCSocket.prototype.open = function () {
     this.dataChannel = this.peerConnection.createDataChannel('data', {'reliable': false,
                                                                       'ordered': false});
@@ -135,16 +153,20 @@ system.RTCSocket.prototype.send = function (data) {
         this.dataChannel.send(b64encoded);
     }
 };
+/**
+ * @public
+ */
 system.RTCSocket.prototype.close = function () {
     this.dataChannel.close();
 };
-
 
 /**
  * @private
  */
 system.RTCSocket.prototype.logger_ = goog.debug.Logger.getLogger('system.RTCSocket');
-
+/**
+ * @private
+ */
 system.RTCSocket.prototype.estabilishConnection_ = function () {
     var that = this;
     var onError = goog.bind(this.onError_, this);
@@ -169,7 +191,9 @@ system.RTCSocket.prototype.estabilishConnection_ = function () {
         that.setupChannel_();
     };
 };
-
+/**
+ * @private
+ */
 system.RTCSocket.prototype.setupChannel_ = function () {
     var that = this;
     this.dataChannel.binaryType = "arraybuffer";
@@ -192,13 +216,17 @@ system.RTCSocket.prototype.setupChannel_ = function () {
         that.onclose();
     };
 };
-
+/**
+ * @private
+ */
 system.RTCSocket.prototype.onError_ = function (error) {
     this.logger_.log(goog.debug.Logger.Level.SEVERE,
                      error.name + ': ' + error.message);
     this.onerror();
 };
-
+/**
+ * @private
+ */
 system.RTCSocket.prototype.onLocalDescription_ = function (desc) {
     var that = this;
     var msg;
