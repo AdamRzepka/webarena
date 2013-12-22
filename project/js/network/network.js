@@ -78,7 +78,9 @@ network.Type = {
     CHAR16: 12,
     STRING16: 13,
 
-    OBJECT: 14
+    BOOL: 14,
+
+    OBJECT: 15
 };
 
 /**
@@ -100,6 +102,8 @@ network.TypeSize = [
     -1, // STRING8
     2, // CHAR16
     -1, // STRING16
+
+    1, // BOOL
 
     2 // OBJECT
 ];
@@ -123,6 +127,8 @@ network.JsType = [
     'string', // STRING8
     'string', // CHAR16
     'string', // STRING16
+
+    'boolean', // BOOL
 
     'object' // OBJECT
 ];

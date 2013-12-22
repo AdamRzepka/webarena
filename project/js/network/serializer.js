@@ -326,6 +326,9 @@ network.Serializer.prototype.writeData_ = function (data, type, flags) {
             this.offset_ += 2;
         }
         break;
+    case network.Type.BOOL:
+        dataView.setUint8(this.offset_++, data); // TODO we need just one byte
+        break;
     default: // not supported
         goog.asserts.fail();
         break;
@@ -488,6 +491,9 @@ network.Serializer.prototype.readData_ = function (type, flags) {
             data += String.fromCharCode(dataView.getUint16(this.offset_, true));
             this.offset_ += 2;
         }
+        break;
+    case network.Type.BOOL:
+        data = dataView.getUint8(this.offset_++); // TODO: one bit
         break;
     default: // not supported
         goog.asserts.fail();
