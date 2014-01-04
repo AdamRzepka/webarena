@@ -35,6 +35,7 @@ goog.require('game.CharacterController');
 goog.require('game.globals');
 goog.require('game.ModelManager');
 goog.require('game.Player');
+goog.require('game.DummyRendererScene');
 goog.require('network');
 goog.require('network.Client');
 
@@ -42,8 +43,9 @@ goog.provide('game');
 
 /**
  * @param {base.IBroker} broker
+ * @param {boolean} isServer
  */
-game.init = function (broker) {
+game.init = function (broker, isServer) {
     var scene;
     var modelManager;
     var map;
@@ -54,9 +56,13 @@ game.init = function (broker) {
     //var mapName = 'aggressor';
 
     // var broker = base.IBroker.parentInstance;
-    
-    scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
-                                                              base.IRendererScene);
+
+    if (isServer) {
+        scene = new game.DummyRendererScene();
+    } else {
+        scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
+                                                                  base.IRendererScene);
+    }
     modelManager = new game.ModelManager(scene);
     
     broker.registerEventListener(base.EventType.MODEL_LOADED, function (evt, data) {
