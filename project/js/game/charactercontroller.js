@@ -55,11 +55,13 @@ goog.require('base.Vec3');
 goog.require('base.Bsp');
 goog.require('game.globals');
 goog.require('game.InputBuffer');
+goog.require('network');
 
 goog.provide('game.CharacterController');
 
 /**
  * @constructor
+ * @implements {network.ISynchronizable}
  * @param {base.Bsp} bsp
  * @param {game.InputBuffer} input
  * @param {game.Player} player
@@ -138,6 +140,21 @@ game.CharacterController = function(bsp, input, player) {
     this.player_ = player;
     
     this.buildCameraMatrix_();
+};
+
+/**
+ * @public
+ * @param {network.ISynchronizer} sync
+ * @suppress {checkTypes}
+ */
+game.CharacterController.prototype.synchronize = function (sync) {
+    this.velocity = sync.synchronize(this.velocity, network.Type.VEC3, 0);
+    this.position = sync.synchronize(this.position, network.Type.VEC3, 0);
+    this.direction = sync.synchronize(this.direction, network.Type.VEC3,
+                                     network.Flags.NORMAL_VECTOR);
+    this.xAngle = sync.synchronize(this.xAngle, network.Type.FLOAT32, 0);
+    this.zAngle = sync.synchronize(this.zAngle, network.Type.FLOAT32, 0);
+    this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
 };
 
 // Some movement constants ripped from the Q3 Source code

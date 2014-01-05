@@ -216,9 +216,13 @@ system.Client.prototype.initGame_ = function (level, archives) {
     var deferred = this.initRTC_();
 
     this.broker_.registerReceiver('base.IRendererScene', this.rendererScene_);
+    this.broker_.registerEventListener(base.EventType.SERVER_TIME_UPDATE,
+                                       function (type, timestamp) {
+                                           that.lastSnapshot_ = timestamp;
+                                       });
 
     this.broker_.executeFunction(function (broker) {
-        game.init((/**@type{base.IBroker}*/broker));
+        game.init((/**@type{base.IBroker}*/broker), false);
     }, []);
 
     deferred.awaitDeferred(this.loadResources_(archives, this.rendererScene_));
@@ -254,10 +258,10 @@ system.Client.prototype.initRTC_ = function () {
         deferred.callback();
     };
     this.serverSocket_.onmessage = function (evt) {
-        var dv = new DataView(evt.data);
+        // var dv = new DataView(evt.data);
         // assume that snapshot id is first uint in message
         // TODO fix this
-        that.lastSnapshot_ = dv.getInt32(0, true);
+        // that.lastSnapshot_ = dv.getInt32(0, true);
         that.broker_.fireEvent(base.EventType.STATE_UPDATE, evt.data,
                                base.IBroker.EventScope.REMOTE, [evt.data]);
     };

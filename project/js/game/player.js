@@ -21,12 +21,14 @@ goog.require('base');
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('game.ModelManager');
+goog.require('network');
 //goog.require('files.ResourceManager');
 
 goog.provide('game.Player');
 
 /**
  * @constructor
+ * @implements {network.ISynchronizable}
  * @param {game.ModelManager} mm
  * @param {string} name
  * @param {string} [skin]
@@ -39,25 +41,21 @@ game.Player = function (mm, configs, name, skin) {
     skin = skin || 'default';
     /**
      * @private
-     * @const
      * @type {game.Player.Entity}
      */
     this.head = new game.Player.Entity(mm.makeInstance(path + 'head.md3', null, skin));
     /**
      * @private
-     * @const
      * @type {game.Player.Entity}
      */
     this.torso = new game.Player.Entity(mm.makeInstance(path + 'upper.md3', null, skin));
     /**
      * @private
-     * @const
      * @type {game.Player.Entity}
      */
     this.legs = new game.Player.Entity(mm.makeInstance(path + 'lower.md3', null, skin));
     /**
      * @private
-     * @const
      * @type {base.ModelInstance}
      */
     this.weapon = mm.makeInstance('models/weapons2/machinegun/machinegun.md3');
@@ -124,6 +122,24 @@ game.Player = function (mm, configs, name, skin) {
         that.torso.model.setVisibility(tppOn);
         that.legs.model.setVisibility(tppOn);
     };
+};
+
+/**
+ * @public
+ * @param {network.ISynchronizer} sync
+ * @suppress {checkTypes}
+ */
+game.Player.prototype.synchronize = function (sync) {
+    this.head = sync.synchronize(this.head, network.Type.OBJECT, 0);
+    this.torso = sync.synchronize(this.torso, network.Type.OBJECT, 0);
+    this.legs = sync.synchronize(this.legs, network.Type.OBJECT, 0);
+
+    this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
+    this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
+
+    this.lastYaw = sync.synchronize(this.lastYaw, network.Type.FLOAT32, 0);
+    this.targetLegsAngle = sync.synchronize(this.targetLegsAngle, network.Type.FLOAT32, 0);
+    this.legsAngle = sync.synchronize(this.legsAngle, network.Type.FLOAT32, 0);
 };
 
 /**

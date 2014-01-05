@@ -38,6 +38,7 @@ goog.require('game.Player');
 goog.require('game.DummyRendererScene');
 goog.require('network');
 goog.require('network.Client');
+goog.require('network.Server');
 
 goog.provide('game');
 

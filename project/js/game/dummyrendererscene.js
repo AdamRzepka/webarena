@@ -22,10 +22,11 @@
 
 'use strict';
 
-goog.provide('base.IRendererScene');
+goog.require('base.IRendererScene');
 goog.provide('game.DummyRendererScene');
 
 /**
+ * @constructor
  * @implements {base.IRendererScene}
  */
 game.DummyRendererScene = function () {
