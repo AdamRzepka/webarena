@@ -83,10 +83,6 @@ game.init = function (broker, isServer) {
         configs[data.url] = data.config;
     });
 
-    var inputState = new base.InputState();
-    broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
-        inputState = data.inputState;
-    });
 
     broker.registerEventListener(base.EventType.GAME_START, function (evt, data) {
 	
@@ -96,6 +92,22 @@ game.init = function (broker, isServer) {
         var characterController = new game.CharacterController(map.bsp, inputBuffer, player);
         var spawnPoints = base.Map.getSpawnPoints(map);
         var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+
+        var inputState = new base.InputState();
+        var client, server;
+        if (isServer) {
+            client = new network.Client(broker, characterController);
+            registerClasses(client.getClassInfoManager());
+        } else {
+            server = new network.Server(broker, characterController);
+            registerClasses(server.getClassInfoManager());
+            
+            broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
+                var tmp = readClientUpdate(data.inputState);
+                server.onClientInput(data.playerId, tmp.timestamp);
+                inputState = tmp.inputState;
+            });
+        }
         
         characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
             spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
@@ -122,7 +134,11 @@ game.init = function (broker, isServer) {
                 scene.updateCamera(camera.getCameraMatrix());
             } else {
                 scene.updateCamera(characterController.getCameraMatrix());
-            }                
+            }
+
+            if (isServer) {
+                server.update(1/60);
+            };
 
             modelManager.syncWithRenderer();
         };
@@ -131,3 +147,28 @@ game.init = function (broker, isServer) {
 };
 
 goog.exportSymbol('game.init', game.init);
+
+function readClientUpdate(buffer) {
+    var dv = new DataView(buffer);
+    var state = new base.InputState();
+    var timestamp = dv.getUint32(0, true);
+    base.InputState.deserialize(state, dv, 4);
+    return {
+        timestamp: timestamp,
+        state: state
+    };
+}
+
+/**
+ * @suppress {checkTypes}
+ */
+function registerClasses(classInfoManager) {
+    var cim = classInfoManager;
+    cim.registerClass(game.CharacterController, function () {
+        return new game.CharacterController();
+    });
+    cim.registerClass(game.Player, function () {
+        return new game.Player();
+    });
+};
+

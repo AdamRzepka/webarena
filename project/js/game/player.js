@@ -130,9 +130,9 @@ game.Player = function (mm, configs, name, skin) {
  * @suppress {checkTypes}
  */
 game.Player.prototype.synchronize = function (sync) {
-    this.head = sync.synchronize(this.head, network.Type.OBJECT, 0);
-    this.torso = sync.synchronize(this.torso, network.Type.OBJECT, 0);
-    this.legs = sync.synchronize(this.legs, network.Type.OBJECT, 0);
+    // this.head = sync.synchronize(this.head, network.Type.OBJECT, 0);
+    // this.torso = sync.synchronize(this.torso, network.Type.OBJECT, 0);
+    // this.legs = sync.synchronize(this.legs, network.Type.OBJECT, 0);
 
     this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
     this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
@@ -570,6 +570,14 @@ game.Player.Entity = function (model) {
         this.tags.push(base.Mat4.identity());
     }
 };
+
+// /**
+//  * @public
+//  * @param {network.ISynchronizer} sync
+//  * @suppress {checkTypes}
+//  */
+// game.Player.Entity.prototype.synchronize = function (sync) {
+// };
 
 /**
  * @public

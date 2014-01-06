@@ -218,7 +218,7 @@ system.Client.prototype.initGame_ = function (level, archives) {
     this.broker_.registerReceiver('base.IRendererScene', this.rendererScene_);
     this.broker_.registerEventListener(base.EventType.SERVER_TIME_UPDATE,
                                        function (type, timestamp) {
-                                           that.lastSnapshot_ = timestamp;
+                                           that.lastSnapshot_ = /**@type{number}*/timestamp;
                                        });
 
     this.broker_.executeFunction(function (broker) {
@@ -387,7 +387,7 @@ system.Client.prototype.initUpdates_ = function () {
         } else {
             inputUpdateData.inputState = that.input_.getState();
         }
-        that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
+        // that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
 
         // render
 	that.rendererScene_.render();

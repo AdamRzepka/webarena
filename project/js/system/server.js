@@ -263,6 +263,10 @@ system.Server.prototype.initGame_ = function (level, archives) {
         that.clients_[clientId].socket.send(data.data);
     });
 
+    this.broker_.executeFunction(function (broker) {
+        game.init((/**@type{base.IBroker}*/broker), true);
+    }, []);
+
     this.loadResources_(archives).addCallback(function() {
         that.broker_.fireEvent(base.EventType.GAME_START, null);
         that.onGameStarted(that.matchData_.id);

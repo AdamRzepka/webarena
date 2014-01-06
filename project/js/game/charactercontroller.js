@@ -155,6 +155,7 @@ game.CharacterController.prototype.synchronize = function (sync) {
     this.xAngle = sync.synchronize(this.xAngle, network.Type.FLOAT32, 0);
     this.zAngle = sync.synchronize(this.zAngle, network.Type.FLOAT32, 0);
     this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
+    this.player_ = sync.synchronize(this.player_, network.Type.OBJECT, 0);
 };
 
 // Some movement constants ripped from the Q3 Source code
