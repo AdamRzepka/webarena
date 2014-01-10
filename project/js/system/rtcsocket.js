@@ -18,6 +18,7 @@
 'use strict';
 
 goog.require('goog.debug.Logger');
+goog.require('goog.asserts');
 goog.require('system.ISocket');
 
 goog.provide('system.RTCSocket');
@@ -60,6 +61,11 @@ system.RTCSocket = function (signallingCallback) {
      * @type {RTCDataChannel}
      */
     this.dataChannel = null;
+    /**
+     * @private
+     * @type {boolean}
+     */
+    this.supportsBinary = true;
 
     this.estabilishConnection_();
 };
@@ -144,14 +150,19 @@ system.RTCSocket.prototype.open = function () {
  */
 system.RTCSocket.prototype.send = function (data) {
     data = /**@type{ArrayBuffer}*/data;
-    try {
-        this.dataChannel.send(data);
-    } catch (ex) {
-        // arraybuffer still not supported :(
-        var u8 = new Uint8Array(data);
-        var b64encoded = btoa(String.fromCharCode.apply(null, u8));
-        this.dataChannel.send(b64encoded);
+    if (this.supportsBinary) {
+        try {
+            this.dataChannel.send(data);
+            return;
+        } catch (ex) {
+            // arraybuffer still not supported :(
+            this.supportsBinary = false;
+        }
     }
+    var u8 = new Uint8Array(data);
+    var b64encoded = btoa(String.fromCharCode.apply(null, u8));
+    goog.asserts.assert(b64encoded.length < 256);
+    this.dataChannel.send(b64encoded);
 };
 /**
  * @public

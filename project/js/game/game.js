@@ -95,7 +95,21 @@ game.init = function (broker, isServer) {
 
         var inputState = new base.InputState();
         var client, server;
-        if (isServer) {
+        /**
+         * @suppress {checkTypes}
+         */
+        function registerClasses(classInfoManager) {
+            var cim = classInfoManager;
+            cim.registerClass(game.CharacterController, function () {
+                return new game.CharacterController(map.bsp, inputBuffer, player);
+            });
+            cim.registerClass(game.Player, function () {
+                return new game.Player(modelManager, configs, 'assassin', 'default');
+            });
+        };
+
+
+        if (!isServer) {
             client = new network.Client(broker, characterController);
             registerClasses(client.getClassInfoManager());
         } else {
@@ -105,7 +119,10 @@ game.init = function (broker, isServer) {
             broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
                 var tmp = readClientUpdate(data.inputState);
                 server.onClientInput(data.playerId, tmp.timestamp);
-                inputState = tmp.inputState;
+                inputState = tmp.state;
+            });
+            broker.registerEventListener(base.EventType.PLAYER_CONNECTED, function (evt, data) {
+                server.addClient(data['gameId']);
             });
         }
         
@@ -118,12 +135,12 @@ game.init = function (broker, isServer) {
 
             inputBuffer.step(inputState);
 
-            if (inputBuffer.hasActionStarted(base.InputState.Action.RESPAWN)) {
-                spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+            // if (inputBuffer.hasActionStarted(base.InputState.Action.RESPAWN)) {
+            //     spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
         
-                characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
-                    spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
-            }
+            //     characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
+            //         spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
+            // }
 
             if (game.globals.freeCameraControl || game.globals.freeCamera) {
                 camera.update();
@@ -158,17 +175,4 @@ function readClientUpdate(buffer) {
         state: state
     };
 }
-
-/**
- * @suppress {checkTypes}
- */
-function registerClasses(classInfoManager) {
-    var cim = classInfoManager;
-    cim.registerClass(game.CharacterController, function () {
-        return new game.CharacterController();
-    });
-    cim.registerClass(game.Player, function () {
-        return new game.Player();
-    });
-};
 

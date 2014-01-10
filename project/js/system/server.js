@@ -256,6 +256,8 @@ system.Server.prototype.createClientSocket_ = function (playerData) {
  */
 system.Server.prototype.initGame_ = function (level, archives) {
     var that = this;
+
+    archives.push('assassin');
     
     this.broker_.registerEventListener(base.EventType.STATE_UPDATE, function (type, data) {
         var clientId = data.playerId;

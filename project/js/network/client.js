@@ -108,9 +108,9 @@ network.Client.prototype.update_ = function (buffer) {
         lastSnapshot = new network.Snapshot();
     } else {
         for (i = 0; i < this.snapshots_.length; ++i) {
-            if (this.snapshots_[i].timestamp < lastTimestamp) {
+            if (this.snapshots_[i] && this.snapshots_[i].timestamp < lastTimestamp) {
                 this.snapshots_[i] = null; // clear old snapshots
-            } else if (this.snapshots_[i].timestamp === lastTimestamp) {
+            } else if (this.snapshots_[i] && this.snapshots_[i].timestamp === lastTimestamp) {
                 lastSnapshot = this.snapshots_[i];
             }
         }
@@ -127,6 +127,7 @@ network.Client.prototype.update_ = function (buffer) {
     for (i = 0; i <= this.snapshots_.length; ++i) {
         if (!goog.isDefAndNotNull(this.snapshots_[i])) {
             this.snapshots_[i] = newSnapshot;
+            break;
         }
     }
     this.broker_.fireEvent(base.EventType.SERVER_TIME_UPDATE, newSnapshot.timestamp);

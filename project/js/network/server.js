@@ -55,6 +55,11 @@ network.Server = function (broker, scene) {
      * @private
      * @type {number}
      */
+    this.timestamp_ = 0;
+    /**
+     * @private
+     * @type {number}
+     */
     this.accTime_ = 0;
     /**
      * @const
@@ -95,6 +100,20 @@ network.Server.prototype.logger_ = goog.debug.Logger.getLogger('network.Server')
 /**
  * @public
  * @param {number} clientId
+ */
+network.Server.prototype.addClient = function (clientId) {
+    if (clientId !== this.clientsData_.length) {
+        this.logger_.log(goog.debug.Logger.Level.WARNING,
+                        "Invalid client id in addClient: " + clientId +
+                        ". Expected " + this.clientsData_.length);
+        return;
+    }
+    this.clientsData_.push(new network.Server.ClientData);
+};
+
+/**
+ * @public
+ * @param {number} clientId
  * @param {number} timestamp
  */
 network.Server.prototype.onClientInput = function (clientId, timestamp) {
@@ -107,7 +126,7 @@ network.Server.prototype.onClientInput = function (clientId, timestamp) {
     var client = this.clientsData_[clientId];
 
     for (i = 0; i < client.snapshots.length; ++i) {
-        if (client.snapshots[i].timestamp < timestamp) {
+        if (client.snapshots[i] && client.snapshots[i].timestamp < timestamp) {
             client.snapshots[i] = null;
             client.lastSnapshot = timestamp;
             break;
@@ -147,6 +166,7 @@ network.Server.prototype.getClassInfoManager = function () {
 network.Server.prototype.internalUpdate_ = function () {
     var i = 0;
     var snapshot = this.objectReader_.readScene(this.scene_);
+    snapshot.timestamp = this.timestamp_++;
     for (i = 0; i < this.clientsData_.length; ++i) {
         this.clientUpdate_(i, this.clientsData_[i], snapshot);
     }
@@ -165,7 +185,7 @@ network.Server.prototype.clientUpdate_ = function (id, client, snapshot) {
         lastSnapshot = new network.Snapshot();
     } else {
         for (i = 0; i < client.snapshots.length; ++i) {
-            if (client.snapshots[i].timestamp === client.lastSnapshot) {
+            if (client.snapshots[i] && client.snapshots[i].timestamp === client.lastSnapshot) {
                 lastSnapshot = client.snapshots[i];
                 break;
             }
@@ -175,15 +195,17 @@ network.Server.prototype.clientUpdate_ = function (id, client, snapshot) {
     network.Snapshot.diff(lastSnapshot, snapshot, delta);
 
     var size = this.serializer_.write(delta, buffer, 0);
+    var buff = buffer.buffer.slice(0, size);
     this.broker_.fireEvent(base.EventType.STATE_UPDATE, {
-        client: id,
-        state: buffer.buffer
+        playerId: id,
+        data: buff
     }, base.IBroker.EventScope.REMOTE, [buffer.buffer]);
 
     // store this snapshot in the first free slot
     for (i = 0; i <= client.snapshots.length; ++i) {
         if (!goog.isDefAndNotNull(client.snapshots[i])) {
             client.snapshots[i] = snapshot;
+            break;
         }
     }
 };

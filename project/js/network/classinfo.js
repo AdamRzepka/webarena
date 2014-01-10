@@ -126,13 +126,12 @@ network.ClassInfoManager = function () {
      * @type {Array.<network.ClassInfo>}
      */
     this.classInfo_ = [];
+    /**
+     * @private
+     * @type {number}
+     */
+    this.nextId_ = 0;
 };
-
-/**
- * @private
- * @type {number}
- */
-network.ClassInfoManager.nextId_ = 0;
 
 /**
  * @private
@@ -150,10 +149,10 @@ network.ClassInfoManager.prototype.registerClass = function (constructor,
                                                              factoryFunction,
                                                              destroyCallback) {
     goog.asserts.assert(factoryFunction);
-    goog.asserts.assert(this.classInfo_.length === network.ClassInfoManager.nextId_);
+    goog.asserts.assert(this.classInfo_.length === this.nextId_);
     
     var classInfo;
-    var classId = network.ClassInfoManager.nextId_++;
+    var classId = this.nextId_++;
     var sampleObj = factoryFunction();
     
     // building class info

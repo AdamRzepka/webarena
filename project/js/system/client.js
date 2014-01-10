@@ -79,7 +79,7 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
      * @private
      * @type {number}
      */
-    this.lastSnapshot_ = -1;
+    this.lastSnapshot_ = 0;
     /**
      * @const
      * @private
@@ -287,11 +287,11 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
         scene.buildShaders(archive.scripts, archive.textures);
         for ( key in archive.models ) {
             if (archive.models.hasOwnProperty(key)) {
+                scene.registerMd3(archive.models[key]);
                 broker.fireEvent(base.EventType.MODEL_LOADED, {
                     url: key,
                     model: archive.models[key]
                 });
-                scene.registerMd3(archive.models[key]);
             }
         }
         for( key in archive.configs ) {
@@ -303,13 +303,13 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
             }
         }
         if (archive.map) {
+            scene.registerMap(archive.map.models, archive.map.lightmapData);
             broker.fireEvent(base.EventType.MAP_LOADED, {
                 models: archive.map.models,
                 lightmapData: null,  // game worker doesn't need lightmap
                 bsp: archive.map.bsp,
                 entities: archive.map.entities
             });
-            scene.registerMap(archive.map.models, archive.map.lightmapData);
         }
     };
 
