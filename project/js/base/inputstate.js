@@ -56,7 +56,7 @@ base.InputState.serialize = function (state, dataView, offset) {
     for (i = 0; i < base.InputState.Action.SIZE; ++i) {
         actions |= (state.actions[i] << i); // branchless :P
     }
-    
+
     dataView.setInt32(offset, state.cursorX, true);
     dataView.setInt32(offset + 4, state.cursorY, true);
     dataView.setUint16(offset + 8, actions, true);
@@ -72,7 +72,7 @@ base.InputState.deserialize = function (state, dataView, offset) {
     actions = dataView.getUint16(offset + 8, true);
 
     for (i = 0; i < base.InputState.Action.SIZE; ++i) {
-        state.actions[i] = (actions & (1 << i));
+        state.actions[i] = !!(actions & (1 << i));
     }
 
     return offset + 10;
