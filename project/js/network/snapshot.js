@@ -164,7 +164,7 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
                 da = a.data[j];
                 db = b.data[j];
                 goog.asserts.assert(goog.isDefAndNotNull(da));
-                if (db !== da) {
+                if (!network.Snapshot.equals_(db, da)) {
                     objBuf.data[k++] = db;
                     objBuf.changed[j] = true;
                 } else {
@@ -195,7 +195,7 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
             for (j = 0; j < b.data.length; ++j) {
                 da = a.data[j];
                 db = b.data[j];
-                if (db !== da) {
+                if (!network.Snapshot.equals_(db, da)) {
                     objBuf.data[k++] = db;
                     objBuf.changed[j] = true;
                 } else {
@@ -292,6 +292,31 @@ network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
             }            
         }
     }
+};
+
+/**
+ * @private
+ * Primitives comparison
+ */
+network.Snapshot.equals_ = function(a, b) {
+    var i = 0;
+    var len;
+
+    if (a !== b) {
+        return false;
+    }
+    
+    if (a.constructor === Float32Array) {
+        if (a.length !== b.length) {
+            return false;
+        }
+        for (i = 0; i < a.length; ++i) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+    }
+    return true;
 };
 
 /**

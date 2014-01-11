@@ -18,6 +18,7 @@
 'use strict';
 
 goog.require('goog.asserts');
+goog.require('goog.array');
 goog.require('network');
 goog.require('network.Snapshot');
 goog.require('network.ClassInfo');
@@ -246,6 +247,10 @@ network.ObjectReader.prototype.readObject_ = function (obj) {
 network.ObjectReader.prototype.readPrimitive_ = function (data) {
     var state = this.stack_[this.top_];
     var buffer = state.objectBuffer;
-    buffer.data[state.index++] = data;
+    if (data.constructor == Float32Array) {
+        buffer.data[state.index++] = new Float32Array(goog.array.clone(data));
+    } else {
+        buffer.data[state.index++] = data;
+    }
     return data;
 };
