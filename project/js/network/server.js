@@ -124,15 +124,19 @@ network.Server.prototype.onClientInput = function (clientId, timestamp) {
         return;
     }
     var client = this.clientsData_[clientId];
+    var found = false;
 
     for (i = 0; i < client.snapshots.length; ++i) {
-        if (client.snapshots[i] && client.snapshots[i].timestamp < timestamp) {
-            client.snapshots[i] = null;
-            client.lastSnapshot = timestamp;
-            break;
+        if (client.snapshots[i]) {
+            if (client.snapshots[i].timestamp < timestamp) {
+                client.snapshots[i] = null;
+            } else if (client.snapshots[i].timestamp === timestamp) {
+                client.lastSnapshot = timestamp;
+                found = true;
+            }
         }
     }
-    if (i === client.snapshots.length) {
+    if (!found) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
                          "Don't have snapshot with timestamp " + timestamp);
     }
