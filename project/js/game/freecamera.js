@@ -20,6 +20,7 @@
 goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('game.InputBuffer');
+goog.require('network');
 
 goog.provide('game.FreeCamera');
 
@@ -37,10 +38,19 @@ game.FreeCamera = function(input, startPosition)
     self.rotation = base.Mat4.identity();
     base.Mat4.rotateX(self.rotation, (Math.PI / 2));
     self.speed = 4.0;
-
+    self.dirty = false;
+    
     self.camMtx = base.Mat4.identity();
     base.Mat4.rotateX(self.camMtx, Math.PI / 2.0);
     base.Mat4.translate(self.camMtx, self.position);
+};
+
+game.FreeCamera.prototype.synchronize = function (sync) {
+    this.position = sync.synchronize(this.position, network.Type.VEC3, 0);
+    this.rotation = sync.synchronize(this.rotation, network.Type.MTX4, 0);
+    if (sync.getMode() === network.ISynchronizer.Mode.WRITE) {
+        self.dirty = true;
+    };
 };
 
 /**
@@ -48,7 +58,7 @@ game.FreeCamera = function(input, startPosition)
  */
 game.FreeCamera.prototype.update = function()
 {
-    var dirty = false;
+    var dirty = self.dirty;
     var dir = base.Vec3.create([0.0, 0.0, 0.0]);
 
     if (this.input.getAction(base.InputState.Action.UP))
@@ -101,6 +111,7 @@ game.FreeCamera.prototype.update = function()
 	//      mat4.inverse(this.viewMtx);
 	//     mat4.multiply(this.perspectiveMtx, this.viewMtx, this.pVtx);
     }
+    self.dirty = false;
 };
 
 /**

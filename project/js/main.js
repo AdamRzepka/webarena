@@ -192,7 +192,7 @@ function main() {
 
     var gl = initWebGL(canvas);
     var map = getQueryVariable('map') || DEFAULT_MAP;
-
+    var matchId = getQueryVariable('id');
     // var lastTime = Date.now();
     // var fpsCounter = 0;
     // var fpsTime = 0;
@@ -204,20 +204,28 @@ function main() {
 	debugWindow.setEnabled(true);
 	debugWindow.init();
     }
-
+    
+    var mylocation = window.location.origin.replace(/^http:\/\//, '').replace(/:800[0-9]$/, '');
     var config = {
         gl: gl,
         inputElement: canvas,
-        lobbyUrl: 'ws://localhost:8003',
+        lobbyUrl: 'ws://' + mylocation + ':8003',
         playerData: {
             'name': 'player',
             'model': 'assassin',
             'gameId': system.INVALID_ID
         },
-        createMatch: true,
+        createMatch: matchId === null,
         matchData: {
             'level': 'aggressor'
-        }
+        },
+        onMatchCreated: function (matchId) {
+            var port = goog.COMPILED ? 8002 : 8001;
+            var link = 'http://' + mylocation + ':' + port + '?id=' + matchId;
+            document.getElementById('link').innerHTML =
+                'Link to this match: <a href="' + link + '">' + link + '</a>';
+        },
+        matchId: matchId
     };
     var game = new system.Game(config);
 

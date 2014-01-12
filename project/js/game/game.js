@@ -51,7 +51,7 @@ game.init = function (broker, isServer) {
     var modelManager;
     var map;
     var configs = {};
-    var inputBuffer = new game.InputBuffer();
+    var inputBuffer = [new game.InputBuffer(), new game.InputBuffer()];
 
     //var rm = new files.ResourceManager();
     //var mapName = 'aggressor';
@@ -86,14 +86,14 @@ game.init = function (broker, isServer) {
 
     broker.registerEventListener(base.EventType.GAME_START, function (evt, data) {
 	
-        var camera = new game.FreeCamera(inputBuffer, base.Vec3.create([0,0,0]));
+        var camera = new game.FreeCamera(inputBuffer[1], base.Vec3.create([0,0,0]));
         
         var player = new game.Player(modelManager, configs, 'assassin', 'default');
-        var characterController = new game.CharacterController(map.bsp, inputBuffer, player);
+        var characterController = new game.CharacterController(map.bsp, inputBuffer[0], player);
         var spawnPoints = base.Map.getSpawnPoints(map);
         var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
 
-        var inputState = new base.InputState();
+        var inputState = [new base.InputState(), new base.InputState()];
         var client, server;
         /**
          * @suppress {checkTypes}
@@ -101,13 +101,16 @@ game.init = function (broker, isServer) {
         function registerClasses(classInfoManager) {
             var cim = classInfoManager;
             cim.registerClass(game.CharacterController, function () {
-                return new game.CharacterController(map.bsp, inputBuffer, player);
+                return new game.CharacterController(map.bsp, inputBuffer[0], player);
             });
             cim.registerClass(game.Player, function () {
                 return new game.Player(modelManager, configs, 'assassin', 'default');
             });
-        };
+            cim.registerClass(game.FreeCamera, function () {
+                return new game.FreeCamera(inputBuffer[1], base.Vec3.create([0,0,0]));
+            });
 
+        };
 
         if (!isServer) {
             client = new network.Client(broker, characterController);
@@ -119,7 +122,7 @@ game.init = function (broker, isServer) {
             broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
                 var tmp = readClientUpdate(data.inputState);
                 server.onClientInput(data.playerId, tmp.timestamp);
-                inputState = tmp.state;
+                inputState[data.playerId] = tmp.state;
             });
             broker.registerEventListener(base.EventType.PLAYER_CONNECTED, function (evt, data) {
                 server.addClient(data['gameId']);
@@ -133,7 +136,8 @@ game.init = function (broker, isServer) {
         function update () {
             var spawnPoint;
 
-            inputBuffer.step(inputState);
+            inputBuffer[0].step(inputState[0]);
+            inputBuffer[1].step(inputState[1]);
 
             // if (inputBuffer.hasActionStarted(base.InputState.Action.RESPAWN)) {
             //     spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];

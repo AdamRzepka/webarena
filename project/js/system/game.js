@@ -25,6 +25,7 @@ goog.provide('system.Game');
 
 /**
  * @constructor
+ * @param {system.Game.Config} config
  */
 system.Game = function (config) {
     this.server_ = null;
@@ -32,6 +33,8 @@ system.Game = function (config) {
     
     this.config_ = config;
     this.rm_ = new files.ResourceManager();
+    
+    this.matchId = "";
 
     this.init_();
 };
@@ -48,6 +51,7 @@ system.Game.Config = function () {
     this.createMatch = true;
     // should be not null, when createMatch = true
     this.matchData = new system.MatchData();
+    this.onMatchCreated = function (matchId) {};
 
     // if createMatch = false, matchId must be valid
     this.matchId = -1;
@@ -61,17 +65,29 @@ system.Game.prototype.logger_ = goog.debug.Logger.getLogger('system.Game');
 system.Game.prototype.init_ = function () {
     var that = this;
     var conf = this.config_;
-    this.server_ = new system.Server(conf.matchData, conf.lobbyUrl, this.rm_);
-    this.server_.onGameStarted = function (matchId) {
-        that.logger_.log(goog.debug.Logger.Level.INFO,
-                         'Server created');
-        that.client_ = new system.Client(matchId, conf.playerData,
+    if (conf.createMatch) {
+        this.server_ = new system.Server(conf.matchData, conf.lobbyUrl, this.rm_);
+        this.server_.onGameStarted = function (matchId) {
+            that.logger_.log(goog.debug.Logger.Level.INFO,
+                             'Server created');
+            that.matchId = matchId;
+            conf.onMatchCreated(matchId);
+            that.client_ = new system.Client(matchId, conf.playerData,
+                                             conf.lobbyUrl, conf.gl, conf.inputElement,
+                                             that.rm_);
+            that.client_.onGameStarted = function () {
+                that.logger_.log(goog.debug.Logger.Level.INFO,
+                                 'client connected');        
+            };
+        };
+    } else {
+        this.client_ = new system.Client(conf.matchId, conf.playerData,
                                          conf.lobbyUrl, conf.gl, conf.inputElement,
-                                         that.rm_);
-        that.client_.onGameStarted = function () {
+                                         this.rm_);
+        this.client_.onGameStarted = function () {
             that.logger_.log(goog.debug.Logger.Level.INFO,
                              'client connected');        
-        };
-    };
+        };        
+    }
 };
 

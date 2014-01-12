@@ -16,7 +16,8 @@ var httpServer = require('http').createServer(function (req, res) {
 }).listen(port);
 console.log('http is listening on ' + port);
 
-var WebSocketServer = require('ws').Server;
+var WebSocket = require('ws');
+var WebSocketServer = WebSocket.Server;
 var wss = new WebSocketServer({port:8003});
 console.log('websocket is listening on ' + 8003);
 
@@ -38,7 +39,7 @@ wss.on('connection', function (ws) {
             var id = generateId();
             var matchData = args.data;
             matchData.id = id;
-            matchData.toLoad = [matchData.level, 'weapons'];
+            matchData.toLoad = [matchData.level, 'assassin', 'weapons'];
             matches[id] = {
                 serverSocket: ws,
                 playersSockets: [],
@@ -68,13 +69,15 @@ wss.on('connection', function (ws) {
                 });
                 
                 for (i = 0; i < playerId; ++i) {
-                    match.playerSockets[i].send(msg);
+                    if (match.playersSockets[i].readyState === WebSocket.OPEN) {
+                        match.playersSockets[i].send(msg);
+                    }
                 }                
                 match.serverSocket.send(msg);
                 
                 match.playersSockets.push(ws);
                 match.playersData.push(playerData);
-                match.matchData.toLoad.push(playerData.model);
+                //match.matchData.toLoad.push(playerData.model);
                 
                 ws.send(JSON.stringify({
                     type: common.ControlMessage.Type.JOIN_MATCH_RESPONSE,
