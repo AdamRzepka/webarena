@@ -89,7 +89,7 @@ base.makeUnremovable(renderer.Scene.prototype.registerMd3);
  * @param {base.Map.LightmapData} lightmapData
  */
 renderer.Scene.prototype.registerMap = function (models, lightmapData) {
-    var i, j;
+    var i, j, material;
 
     this.renderer_.buildLightmap(lightmapData);
 
@@ -98,8 +98,9 @@ renderer.Scene.prototype.registerMap = function (models, lightmapData) {
 	this.insertModel_(models[i]);
 	// find mesh with sky material
 	for (j = 0; j < models[i].meshes.length; ++j) {
-	    if (models[i].meshes[j].materials[0].shader.sky) {
-		this.sky_.build(models[i].meshes[j].materials[0], this.renderer_);
+            material = this.renderer_.getMaterial(models[i].meshes[j].materials[0]);
+	    if (material.shader.sky) {
+		this.sky_.build(material, this.renderer_);
                 models[i].meshes[j].indicesCount = 0; // don't render this mesh
 	    }
 	}

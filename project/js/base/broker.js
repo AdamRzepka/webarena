@@ -108,7 +108,7 @@ base.IBroker.createWorker = function (debugDeps, compiledDeps, name) {
  * @public
  * @type {boolean}
  */
-base.IBroker.DISABLE_WORKERS = true;
+base.IBroker.DISABLE_WORKERS = false;
 /**
  * @enum {number}
  */
@@ -252,7 +252,7 @@ base.Broker.prototype.fireEvent = function (eventType, data, scope, transferable
             type: base.Broker.MessageTypes.EVENT,
             eventType: eventType,
             data: data
-        });
+        }, transferables);
     }
     if (scope != base.IBroker.EventScope.REMOTE) {
         this.onEvent_(eventType, data);

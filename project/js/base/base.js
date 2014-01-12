@@ -386,7 +386,8 @@ base.Mesh = function(geometry, indicesOffset, indicesCount, materialNames, light
     this.lightningType = lightningType;
      
     /**
-     * @type {Array.<base.Material>}
+     * @type {Array.<number>}
+     * ids of materials
      */
     this.materials = [];
 };

@@ -28,13 +28,27 @@ goog.provide('system.Game');
  * @param {system.Game.Config} config
  */
 system.Game = function (config) {
+    /**
+     * @private
+     * @type {system.Server}
+     */
     this.server_ = null;
+    /**
+     * @private
+     * @type {system.Client}
+     */
     this.client_ = null;
-    
+
+    /**
+     * @private
+     * @type {system.Game.Config}
+     */
     this.config_ = config;
+    /**
+     * @private
+     * @type {files.ResourceManager}
+     */
     this.rm_ = new files.ResourceManager();
-    
-    this.matchId = "";
 
     this.init_();
 };
@@ -43,18 +57,42 @@ system.Game = function (config) {
  * @constructor
  */
 system.Game.Config = function () {
+    /**
+     * @type {WebGLRenderingContext}
+     */
     this.gl = null;
-    this.inpuElement = null;
+    /**
+     * @type {HTMLElement}
+     */
+    this.inputElement = null;
+    /**
+     * @type {string}
+     */
     this.lobbyUrl = '';
+    /**
+     * @type {system.PlayerData}
+     */
     this.playerData = new system.PlayerData();
 
+    /**
+     * @type {boolean}
+     */
     this.createMatch = true;
-    // should be not null, when createMatch = true
+    /**
+     * @type {system.MatchData}
+     * should be not null, when createMatch = true
+     */
     this.matchData = new system.MatchData();
+    /**
+     * @type {function(string)}
+     */
     this.onMatchCreated = function (matchId) {};
 
-    // if createMatch = false, matchId must be valid
-    this.matchId = -1;
+    /**
+     * @type {string}
+     * if createMatch = false, matchId must be valid
+     */
+    this.matchId = '';
 };
 
 /**
@@ -62,6 +100,9 @@ system.Game.Config = function () {
  */
 system.Game.prototype.logger_ = goog.debug.Logger.getLogger('system.Game');
 
+/**
+ * @private
+ */
 system.Game.prototype.init_ = function () {
     var that = this;
     var conf = this.config_;
@@ -70,7 +111,6 @@ system.Game.prototype.init_ = function () {
         this.server_.onGameStarted = function (matchId) {
             that.logger_.log(goog.debug.Logger.Level.INFO,
                              'Server created');
-            that.matchId = matchId;
             conf.onMatchCreated(matchId);
             that.client_ = new system.Client(matchId, conf.playerData,
                                              conf.lobbyUrl, conf.gl, conf.inputElement,
