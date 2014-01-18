@@ -222,7 +222,7 @@ system.Client.prototype.initGame_ = function (level, archives) {
                                        });
 
     this.broker_.executeFunction(function (broker) {
-        game.init((/**@type{base.IBroker}*/broker), false);
+        game.init((/**@type{base.IBroker}*/broker), false, that.playerData_['gameId']);
     }, []);
 
     deferred.awaitDeferred(this.loadResources_(archives, this.rendererScene_));

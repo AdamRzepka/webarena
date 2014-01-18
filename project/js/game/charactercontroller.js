@@ -63,10 +63,10 @@ goog.provide('game.CharacterController');
  * @constructor
  * @implements {network.ISynchronizable}
  * @param {base.Bsp} bsp
- * @param {game.InputBuffer} input
  * @param {game.Player} player
+ * @param {game.InputBuffer} input
  */
-game.CharacterController = function(bsp, input, player) {
+game.CharacterController = function(bsp, player, input) {
     /**
      * @const
      * @private
@@ -242,6 +242,12 @@ game.CharacterController.prototype.respawn = function (position, zAngle) {
     base.Vec3.setZero(this.velocity);
     this.buildCameraMatrix_();
     this.player_.respawn();
+};
+/**
+ * @return {game.Player}
+ */
+game.CharacterController.prototype.getPlayer = function () {
+    return this.player_;
 };
 /**
  * @public

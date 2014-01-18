@@ -204,7 +204,7 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
             }
             delta.arrays[objBuf.id] = (objBuf.data.length > 0 ? objBuf : null);
         } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
-            delta.objects[b.id] = network.ObjectBufferDelta.fromObjectBuffer_(b);
+            delta.arrays[b.id] = network.ObjectBufferDelta.fromObjectBuffer_(b);
         } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
             delta.removedArrays.push(a.id);
         }

@@ -266,7 +266,7 @@ system.Server.prototype.initGame_ = function (level, archives) {
     });
 
     this.broker_.executeFunction(function (broker) {
-        game.init((/**@type{base.IBroker}*/broker), true);
+        game.init((/**@type{base.IBroker}*/broker), true, -1);
     }, []);
 
     this.loadResources_(archives).addCallback(function() {

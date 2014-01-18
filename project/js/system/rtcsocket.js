@@ -105,7 +105,9 @@ system.RTCSocket.prototype.readSignallingMessage = function (msg) {
     
     switch (msg.type) {
     case system.RTCSocket.SignallingMessage.Type.DESCRIPTION:
-        
+        var RTCSessionDescription = window['mozRTCSessionDescription'] ||
+            window['RTCSessionDescription'] || window['webkitRTCSessionDescription'];
+        goog.asserts.assert(RTCSessionDescription);
         this.peerConnection.setRemoteDescription(new RTCSessionDescription(msg.data), function () {
             that.logger_.log(goog.debug.Logger.Level.INFO,
                              'Got remote description');
@@ -207,6 +209,9 @@ system.RTCSocket.prototype.estabilishConnection_ = function () {
  */
 system.RTCSocket.prototype.setupChannel_ = function () {
     var that = this;
+    var onError = goog.bind(this.onError_, this);
+    var onLocalDescription = goog.bind(this.onLocalDescription_, this);
+
     this.dataChannel.binaryType = "arraybuffer";
     this.dataChannel.onopen = function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,
@@ -226,6 +231,11 @@ system.RTCSocket.prototype.setupChannel_ = function () {
                          'Data Channel closed');        
         that.onclose();
     };
+
+    if (navigator.userAgent.indexOf('Firefox') !== -1) {
+        // firefox won't run onnegotiationneeded
+        that.peerConnection.createOffer(onLocalDescription, onError);
+    }
 };
 /**
  * @private

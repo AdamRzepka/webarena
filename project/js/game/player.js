@@ -36,7 +36,8 @@ goog.provide('game.Player');
 game.Player = function (mm, configs, name, skin) {
     var path = game.Player.PLAYERS_PATH + name + '/';
     var that = this;
-    var visible = game.globals.tppMode;
+//    var visible = game.globals.tppMode;
+    var visible = true;
     
     skin = skin || 'default';
     /**
@@ -109,6 +110,11 @@ game.Player = function (mm, configs, name, skin) {
      * @type {number}
      */
     this.legsAngle = 0;
+    /**
+     * @private
+     * @type {boolean}
+     */
+    this.tppMode = true;
 
     this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0);
     this.torso.startAnimation(this.animations[game.Player.Animations.TORSO_STAND], 0);
@@ -117,11 +123,11 @@ game.Player = function (mm, configs, name, skin) {
     that.torso.model.setVisibility(visible);
     that.legs.model.setVisibility(visible);
 
-    game.globals.onTppModeChange = function (tppOn) {
-        that.head.model.setVisibility(tppOn);
-        that.torso.model.setVisibility(tppOn);
-        that.legs.model.setVisibility(tppOn);
-    };
+    // game.globals.onTppModeChange = function (tppOn) {
+    //     that.head.model.setVisibility(tppOn);
+    //     that.torso.model.setVisibility(tppOn);
+    //     that.legs.model.setVisibility(tppOn);
+    // };
 };
 
 /**
@@ -228,6 +234,16 @@ game.Player.prototype.respawn = function () {
 
     this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0);
     this.torso.startAnimation(this.animations[game.Player.Animations.TORSO_STAND], 0);
+};
+
+/**
+ * @public
+ */
+game.Player.prototype.setFppMode = function () {
+    this.head.model.setVisibility(false);
+    this.torso.model.setVisibility(false);
+    this.legs.model.setVisibility(false);
+    this.tppMode = false;
 };
 
 /**
@@ -373,7 +389,7 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
     this.head.model.setMatrix(headMtx);
 
     weaponMtx = this.weapon.getMatrix();
-    if (game.globals.tppMode) {
+    if (this.tppMode) {
         base.Mat4.multiply(torsoMtx, this.torso.tags[this.weaponTag],
                            weaponMtx);
     } else {
