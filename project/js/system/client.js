@@ -221,9 +221,9 @@ system.Client.prototype.initGame_ = function (level, archives) {
                                            that.lastSnapshot_ = /**@type{number}*/timestamp;
                                        });
 
-    this.broker_.executeFunction(function (broker) {
-        game.init((/**@type{base.IBroker}*/broker), false, that.playerData_['gameId']);
-    }, []);
+    this.broker_.executeFunction(function (clientId, broker) {
+        game.init((/**@type{base.IBroker}*/broker), false, (/**@type{number}*/clientId));
+    }, [that.playerData_['gameId']]);
 
     deferred.awaitDeferred(this.loadResources_(archives, this.rendererScene_));
 

@@ -186,6 +186,7 @@ system.RTCSocket.prototype.estabilishConnection_ = function () {
     var onLocalDescription = goog.bind(this.onLocalDescription_, this);
 
     this.peerConnection.onnegotiationneeded = function () {
+        that.logger_.log(goog.debug.Logger.Level.INFO, "onnegotiationneeded");
         that.peerConnection.createOffer(onLocalDescription, onError);
     };
 
@@ -254,7 +255,7 @@ system.RTCSocket.prototype.onLocalDescription_ = function (desc) {
     var onError = goog.bind(this.onError_, this);
 
     this.logger_.log(goog.debug.Logger.Level.INFO,
-                     'Got local description');        
+                     'Got local description');
     this.peerConnection.setLocalDescription(desc, function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,
                          'Local description set');

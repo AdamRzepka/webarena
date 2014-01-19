@@ -31,6 +31,7 @@ goog.provide('base.JobsPool');
  */
 base.JobsPool = function (workersCount, debugDeps, compiledDeps, name) {
     var i = 0;
+    var worker = null;
     /**
      * @private
      * @type {number}
@@ -53,11 +54,18 @@ base.JobsPool = function (workersCount, debugDeps, compiledDeps, name) {
     this.jobsQueue_ = new goog.structs.Queue();
 
     for (i = 0; i < workersCount; ++i) {
-        this.workers_.push(base.IBroker.createWorker(debugDeps, compiledDeps, name));
+        if (base.JobsPool.DISABLE_WORKERS) {
+            worker = base.FakeBroker.createWorker(debugDeps, compiledDeps, name);
+        } else {
+            worker = base.Broker.createWorker(debugDeps, compiledDeps, name);
+        }
+        this.workers_.push(worker);
         this.pendingJobs_.push(null);
     }
 
 };
+
+base.JobsPool.DISABLE_WORKERS = false;
 
 /**
  * @public
