@@ -387,7 +387,7 @@ system.Client.prototype.initUpdates_ = function () {
         } else {
             inputUpdateData.inputState = that.input_.getState();
         }
-        // that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
+        that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
 
         // render
 	that.rendererScene_.render();

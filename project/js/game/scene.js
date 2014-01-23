@@ -34,15 +34,19 @@ goog.provide('game.Scene');
  * @param {base.IRendererScene} renderer
  * @param {base.Map} map
  * @param {game.ModelManager} modelManager
+ * @param {number} myPlayerId
  * @param {Object.<string,string>} configs TODO: this is ugly
  */
-game.Scene = function (renderer, map, modelManager, configs) {
+game.Scene = function (renderer, map, modelManager, myPlayerId, configs) {
+    this.globalTime_ = 0;
+    this.lastTime_ = 0;
     this.configs_ = configs;
     this.modelManager_ = modelManager;
     this.renderer_ = renderer;
 
     this.map_ = map;
     this.characters_ = [];
+    this.myPlayerId_ = myPlayerId;
 };
 /**
  * @param {number} id
@@ -64,14 +68,28 @@ game.Scene.prototype.addPlayer = function (id, model, input) {
         spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
 };
 
-game.Scene.prototype.update = function () {
+game.Scene.prototype.updateServer = function (dt, inputs) {
     var i = 0;
     for (i = 0; i < this.characters_.length; ++i) {
         if (this.characters_[i]) {
-            this.characters_[i].update();
+            this.characters_[i].updateServer(dt, inputs[i]);
         }
     }
 };
+game.Scene.prototype.updateClient = function (dt, input) {
+    var i = 0;
+    for (i = 0; i < this.characters_.length; ++i) {
+        if (this.characters_[i]) {
+            if (i === this.myPlayerId_ && input && dt > 0) {
+                this.characters_[i].updateServer(dt, input);
+            }
+            else {
+                this.characters_[i].updateClient(dt);
+            }
+        }
+    }
+};
+
 /**
  * @param {network.ISynchronizer} sync
  * @suppress {checkTypes}
@@ -93,9 +111,10 @@ game.Scene.prototype.registerClasses = function (classInfoManager) {
     this.__networkClassId__ = game.Scene.prototype.__networkClassId__; // FIXME
     
     cim.registerClass(game.CharacterController, function () {
-        return new game.CharacterController(that.map_.bsp, null, new game.InputBuffer());
+        var player = new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
+        return new game.CharacterController(that.map_.bsp, player, new game.InputBuffer());
     });
-    cim.registerClass(game.Player, function () {
-        return new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
-    });
+    // cim.registerClass(game.Player, function () {
+    //     return new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
+    // });
 };

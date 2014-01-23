@@ -70,7 +70,7 @@ network.Client = function (broker, scene) {
      */
     this.serializer_ = new network.Serializer(this.classInfoManager_);
     
-    this.init_();
+//    this.init_();
 };
 
 /**
@@ -80,21 +80,21 @@ network.Client = function (broker, scene) {
  */
 network.Client.prototype.logger_ = goog.debug.Logger.getLogger('network.Client');
 
-/**
- * @private
- */
-network.Client.prototype.init_ = function () {
-    var that = this;
-    this.broker_.registerEventListener(base.EventType.STATE_UPDATE, function (type, buffer) {
-        that.update_((/**@type{ArrayBuffer}*/buffer));
-    });    
-};
+// /**
+//  * @private
+//  */
+// network.Client.prototype.init_ = function () {
+//     var that = this;
+//     this.broker_.registerEventListener(base.EventType.STATE_UPDATE, function (type, buffer) {
+//         that.update_((/**@type{ArrayBuffer}*/buffer));
+//     });    
+// };
 
 /**
- * @private
+ * @public
  * @param {ArrayBuffer} buffer
  */
-network.Client.prototype.update_ = function (buffer) {
+network.Client.prototype.update = function (buffer) {
     var i = 0;
     var delta = new network.SnapshotDelta();
     var lastSnapshot = null;

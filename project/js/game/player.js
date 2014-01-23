@@ -136,16 +136,17 @@ game.Player = function (mm, configs, name, skin) {
  * @suppress {checkTypes}
  */
 game.Player.prototype.synchronize = function (sync) {
+    
     // this.head = sync.synchronize(this.head, network.Type.OBJECT, 0);
     // this.torso = sync.synchronize(this.torso, network.Type.OBJECT, 0);
     // this.legs = sync.synchronize(this.legs, network.Type.OBJECT, 0);
 
-    this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
-    this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
+    // this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
+    // this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
 
-    this.lastYaw = sync.synchronize(this.lastYaw, network.Type.FLOAT32, 0);
-    this.targetLegsAngle = sync.synchronize(this.targetLegsAngle, network.Type.FLOAT32, 0);
-    this.legsAngle = sync.synchronize(this.legsAngle, network.Type.FLOAT32, 0);
+    // this.lastYaw = sync.synchronize(this.lastYaw, network.Type.FLOAT32, 0);
+    // this.targetLegsAngle = sync.synchronize(this.targetLegsAngle, network.Type.FLOAT32, 0);
+    // this.legsAngle = sync.synchronize(this.legsAngle, network.Type.FLOAT32, 0);
 };
 
 /**
@@ -251,7 +252,6 @@ game.Player.prototype.setFppMode = function () {
  * @param {game.Player.TorsoStates} torsoState
  * @param {game.Player.LegsStates} legsState
  * @param {base.Vec3} position
- * @param {base.Vec3} velocity
  * @param {base.Vec3} direction
  * @param {number} yaw
  * @param {number} pitch
@@ -260,7 +260,6 @@ game.Player.prototype.setFppMode = function () {
 game.Player.prototype.update = function (torsoState,
                                          legsState,
                                          position,
-                                         velocity,
                                          direction,
                                          yaw,
                                          pitch,

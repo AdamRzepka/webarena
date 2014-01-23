@@ -138,6 +138,27 @@ game.CharacterController = function(bsp, player, input) {
      * @type {game.Player}
      */
     this.player_ = player;
+    /**
+     * @private
+     * @type {game.Player.TorsoStates}
+     */
+    this.torsoState = game.Player.TorsoStates.IDLE;
+    /**
+     * @private
+     * @type {game.Player.LegsStates}
+     */
+    this.legsState = game.Player.LegsStates.IDLE;
+    /**
+     * @private
+     * @type {number}
+     */
+    this.xAngVelocity = 0;
+    /**
+     * @private
+     * @type {number}
+     */
+    this.zAngVelocity = 0;
+
     
     this.buildCameraMatrix_();
 };
@@ -154,8 +175,12 @@ game.CharacterController.prototype.synchronize = function (sync) {
                                      network.Flags.NORMAL_VECTOR);
     this.xAngle = sync.synchronize(this.xAngle, network.Type.FLOAT32, 0);
     this.zAngle = sync.synchronize(this.zAngle, network.Type.FLOAT32, 0);
+    this.xAngVelocity = sync.synchronize(this.xAngVelocity, network.Type.FLOAT32, 0);
+    this.zAngVelocity = sync.synchronize(this.zAngVelocity, network.Type.FLOAT32, 0);
     this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
-    this.player_ = sync.synchronize(this.player_, network.Type.OBJECT, 0);
+//    this.player_ = sync.synchronize(this.player_, network.Type.OBJECT, 0);
+    this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
+    this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
 };
 
 // Some movement constants ripped from the Q3 Source code
@@ -252,29 +277,60 @@ game.CharacterController.prototype.getPlayer = function () {
 /**
  * @public
  */
-game.CharacterController.prototype.update = function () {
+game.CharacterController.prototype.updateClient = function (dt) {
+    this.xAngle += this.xAngVelocity * dt;
+    this.zAngle += this.zAngVelocity * dt;
+    
+    base.Mat4.identity(this.camMtx);
+    base.Mat4.rotateZ(this.camMtx, this.zAngle);
+        
+    base.Mat4.multiplyVec3(this.camMtx, this.direction, this.directionTrans);
+
+    if (dt > 0) {
+        if (!this.player_.isDead() || !this.onGround) {
+            this.move(this.directionTrans);
+        }
+    }
+
+    this.buildCameraMatrix_();
+    this.player_.update(this.torsoState,
+                        this.legsState,
+                        this.position,
+                        this.direction,
+                        this.zAngle,
+                        this.xAngle,
+                        this.camMtx);
+};
+
+/**
+ * @public
+ * @param {game.InputBuffer} input
+ */
+game.CharacterController.prototype.updateServer = function (dt, input) {
     var dir = this.direction;
-    var torsoState = game.Player.TorsoStates.IDLE;
-    var legsState = game.Player.LegsStates.IDLE;
+    this.torsoState = game.Player.TorsoStates.IDLE;
+    this.legsState = game.Player.LegsStates.IDLE;
     
     base.Vec3.setZero(dir);
 
-    if (this.input.getAction(base.InputState.Action.UP)) {
+    if (input.getAction(base.InputState.Action.UP)) {
 	dir[1] += 1;
     }
-    if (this.input.getAction(base.InputState.Action.DOWN)) {
+    if (input.getAction(base.InputState.Action.DOWN)) {
 	dir[1] -= 1;
     }
-    if (this.input.getAction(base.InputState.Action.LEFT)) {
+    if (input.getAction(base.InputState.Action.LEFT)) {
 	dir[0] -= 1;
     }
-    if (this.input.getAction(base.InputState.Action.RIGHT)) {
+    if (input.getAction(base.InputState.Action.RIGHT)) {
 	dir[0] += 1;
     }
+    var lastZAngle = this.zAngle;
+    var lastXAngle = this.xAngle;
 
     if (!this.player_.isDead()) {
-        //this.zAngle = this.input.getCursorX() / 200.0;
-        this.zAngle -= this.input.getDeltaX() / 200.0;
+        //this.zAngle = input.getCursorX() / 200.0;
+        this.zAngle -= input.getDeltaX() / 200.0;
         if (this.zAngle > 2 * Math.PI) {
             this.zAngle -= 2 * Math.PI;
         }
@@ -282,7 +338,7 @@ game.CharacterController.prototype.update = function () {
             this.zAngle += 2 * Math.PI;
         }
 
-        this.xAngle -= this.input.getDeltaY() / 200.0;
+        this.xAngle -= input.getDeltaY() / 200.0;
         if (this.xAngle > Math.PI) {
             this.xAngle = Math.PI;
         }
@@ -290,6 +346,8 @@ game.CharacterController.prototype.update = function () {
             this.xAngle = 0;
         }
     }
+    this.xAngVelocity = (this.xAngle - lastXAngle) / dt;
+    this.zAngVelocity = (this.zAngle - lastZAngle) / dt;
 
     base.Mat4.identity(this.camMtx);
     base.Mat4.rotateZ(this.camMtx, this.zAngle);
@@ -300,47 +358,45 @@ game.CharacterController.prototype.update = function () {
         this.move(this.directionTrans);
 
     if (base.Vec3.length2(this.velocity) > 0.01) {
-        legsState = game.Player.LegsStates.RUN;
+        this.legsState = game.Player.LegsStates.RUN;
         if (this.input.getAction(base.InputState.Action.WALK)) {
-            legsState = game.Player.LegsStates.WALK;            
+            this.legsState = game.Player.LegsStates.WALK;            
         }
         
         if (this.input.getAction(base.InputState.Action.CROUCH)) {
-            legsState = game.Player.LegsStates.CROUCH;
+            this.legsState = game.Player.LegsStates.CROUCH;
         }        
     } else if (this.input.getAction(base.InputState.Action.CROUCH)) {
-        legsState = game.Player.LegsStates.IDLE_CROUCH;
+        this.legsState = game.Player.LegsStates.IDLE_CROUCH;
     }
     
     if (!this.onGround) {
-        legsState = game.Player.LegsStates.IN_AIR;
+        this.legsState = game.Player.LegsStates.IN_AIR;
     }
 
     if (!this.player_.isDead() && this.onGround
-        && this.input.hasActionStarted(base.InputState.Action.JUMP)) {
+        && input.hasActionStarted(base.InputState.Action.JUMP)) {
         this.jump();
-        legsState = game.Player.LegsStates.JUMP;
+        this.legsState = game.Player.LegsStates.JUMP;
     }
 
-    if (this.input.hasActionStarted(base.InputState.Action.FIRE)) {
-        torsoState = game.Player.TorsoStates.ATTACKING;
+    if (input.hasActionStarted(base.InputState.Action.FIRE)) {
+        this.torsoState = game.Player.TorsoStates.ATTACKING;
     }
 
-    if (this.input.hasActionStarted(base.InputState.Action.CHANGING)) {
-        torsoState = game.Player.TorsoStates.CHANGING;
+    if (input.hasActionStarted(base.InputState.Action.CHANGING)) {
+        this.torsoState = game.Player.TorsoStates.CHANGING;
     }
 
-    if (this.input.hasActionStarted(base.InputState.Action.KILL)) {
+    if (input.hasActionStarted(base.InputState.Action.KILL)) {
         this.player_.kill();
     }
-
     
     this.buildCameraMatrix_();
-    this.player_.update(torsoState,
-                        legsState,
+    this.player_.update(this.torsoState,
+                        this.legsState,
                         this.position,
-                        this.velocity,
-                        dir,
+                        this.direction,
                         this.zAngle,
                         this.xAngle,
                         this.camMtx);

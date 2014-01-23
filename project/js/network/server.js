@@ -144,7 +144,7 @@ network.Server.prototype.onClientInput = function (clientId, timestamp) {
 
 /**
  * @public
- * @param {number} dt in seconds
+ * @param {number} dt in milliseconds
  */
 network.Server.prototype.update = function (dt) {
     var time = this.accTime_ + dt;
@@ -218,5 +218,6 @@ network.Server.prototype.clientUpdate_ = function (id, client, snapshot) {
  * @const
  * @private
  * @type {number}
+ * In milliseconds
  */
-network.Server.UPDATE_INTERVAL = 1/20;
+network.Server.UPDATE_INTERVAL = 40;

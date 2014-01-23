@@ -92,7 +92,8 @@ game.init = function (broker, isServer, clientId) {
         
         // var player = new game.Player(modelManager, configs, 'assassin', 'default');
         // var characterController = new game.CharacterController(map.bsp, player, inputBuffer[0]);
-        var gameScene = new game.Scene(scene, (/**@type {base.Map}*/map), modelManager, configs);
+        var gameScene = new game.Scene(scene, (/**@type {base.Map}*/map), modelManager, clientId,
+                                       configs);
 
         var inputState = [];
         var client, server;
@@ -112,10 +113,21 @@ game.init = function (broker, isServer, clientId) {
         //     });
 
         // };
+        var stateBuffer;
 
         if (!isServer) {
             client = new network.Client(broker, gameScene);
             gameScene.registerClasses(client.getClassInfoManager());
+            inputBuffer.push(new game.InputBuffer());
+            inputState.push(new base.InputState());
+            broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
+                goog.asserts.assert(data.playerId === clientId);
+                inputState[0] = data.inputState;
+            });
+            broker.registerEventListener(base.EventType.STATE_UPDATE, function (type, buffer) {
+                stateBuffer = buffer;
+//                client.update((/**@type{ArrayBuffer}*/buffer));
+            });
 //            registerClasses(client.getClassInfoManager());
         } else {
             server = new network.Server(broker, gameScene);
@@ -137,10 +149,13 @@ game.init = function (broker, isServer, clientId) {
         }
         
 //        scene.updateCamera(characterController.getCameraMatrix());
+        var lastTime = Date.now();
 
         function update () {
             var i=0;
             var spawnPoint;
+            var dt = Date.now() - lastTime;
+            lastTime = Date.now();
 
             for (i = 0; i < inputBuffer.length; ++i) {
                 inputBuffer[i].step(inputState[i]);                
@@ -158,7 +173,19 @@ game.init = function (broker, isServer, clientId) {
             // } else {
             //     characterController.update();
             // }
-            gameScene.update();
+            if (isServer) {
+                gameScene.updateServer(dt, inputBuffer);
+            } else {
+                if (stateBuffer) {
+                    // we have update
+                    client.update((/**@type{ArrayBuffer}*/stateBuffer));
+                    stateBuffer = null;
+                    gameScene.updateClient(0, inputBuffer[0]);                    
+                } else {
+                    // no update - just extrapolate
+                    gameScene.updateClient(dt, inputBuffer[0]);
+                }
+            }
             // if (game.globals.freeCameraView || game.globals.freeCamera) {
             //     scene.updateCamera(camera.getCameraMatrix());
             // } else {
@@ -170,7 +197,7 @@ game.init = function (broker, isServer, clientId) {
             }
 
             if (isServer) {
-                server.update(1/60);
+                server.update(dt);
             };
 
             modelManager.syncWithRenderer();
