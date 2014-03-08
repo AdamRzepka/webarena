@@ -57,12 +57,6 @@ game.Player = function (mm, configs, name, skin) {
     this.legs = new game.Player.Entity(mm.makeInstance(path + 'lower.md3', null, skin));
     /**
      * @private
-     * @type {base.ModelInstance}
-     */
-    this.weapon = mm.makeInstance('models/weapons2/machinegun/machinegun.md3');
-    this.flash = mm.makeInstance('models/weapons2/machinegun/machinegun_flash.md3');
-    /**
-     * @private
      * @const
      * @type {number}
      */
@@ -79,6 +73,11 @@ game.Player = function (mm, configs, name, skin) {
      * @type {number}
      */
     this.weaponTag = this.torso.model.baseModel.tags.indexOf(game.Player.Tags.WEAPON);
+    /**
+     * @private
+     * @type {base.Mat4}
+     */
+    this.weaponMtx = base.Mat4.identity();
     /**
      * @private
      * @const
@@ -204,6 +203,14 @@ game.Player.LegsStates = {
     IDLE_CROUCH: 23,
     IN_AIR: -2,
     JUMP: 18
+};
+
+/**
+ * @public
+ * @return {base.Mat4}
+ */
+game.Player.prototype.getWeaponMtx = function () {
+    return this.weaponMtx;
 };
 
 /**
@@ -387,7 +394,7 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
                        headMtx);
     this.head.model.setMatrix(headMtx);
 
-    weaponMtx = this.weapon.getMatrix();
+    weaponMtx = this.weaponMtx;
     if (this.tppMode) {
         base.Mat4.multiply(torsoMtx, this.torso.tags[this.weaponTag],
                            weaponMtx);
@@ -395,11 +402,8 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
         base.Mat4.translate(camMtx, game.Player.WEAPON_OFF, weaponMtx);
         base.Mat4.multiply(weaponMtx, game.Player.WEAPON_ROT, weaponMtx);
     }
-    this.weapon.setMatrix(weaponMtx);
+//    this.weapon.setMatrix(weaponMtx);
 
-    var flashMtx = this.flash.getMatrix();
-    base.Mat4.multiply(weaponMtx, this.weapon.baseModel.framesData[0].tags[0], flashMtx);
-    this.flash.setMatrix(flashMtx);
 
     // correct legs angle movement
     if (this.legsState === game.Player.LegsStates.IDLE) {

@@ -56,6 +56,9 @@ goog.require('base.Bsp');
 goog.require('game.globals');
 goog.require('game.InputBuffer');
 goog.require('network');
+goog.require('game.Weapon');
+goog.require('game.MachineGun');
+goog.require('game.ModelManager');
 
 goog.provide('game.CharacterController');
 
@@ -65,8 +68,9 @@ goog.provide('game.CharacterController');
  * @param {base.Bsp} bsp
  * @param {game.Player} player
  * @param {boolean} owned
+ * @param {game.ModelManager} mm
  */
-game.CharacterController = function(bsp, player, owned) {
+game.CharacterController = function(bsp, player, owned, mm) {
     /**
      * @const
      * @private
@@ -140,6 +144,11 @@ game.CharacterController = function(bsp, player, owned) {
     this.player_ = player;
     /**
      * @private
+     * @type {game.Weapon}
+     */
+    this.weapon_ = new game.MachineGun(mm);
+    /**
+     * @private
      * @type {game.Player.TorsoStates}
      */
     this.torsoState = game.Player.TorsoStates.IDLE;
@@ -176,6 +185,7 @@ game.CharacterController = function(bsp, player, owned) {
 game.CharacterController.prototype.synchronize = function (sync) {
     var i = 0;
 
+    sync.synchronize(this.weapon_, network.Type.OBJECT, 0);
     if (sync.getMode() == network.ISynchronizer.Mode.WRITE && this.owned) {
         var pos = new Float32Array(5);
 
@@ -388,6 +398,7 @@ game.CharacterController.prototype.updateClient = function (dt) {
                         this.zAngle,
                         this.xAngle,
                         this.camMtx);
+    this.weapon_.update(dt, this.player_.getWeaponMtx());
 };
 
 /**
@@ -473,6 +484,10 @@ game.CharacterController.prototype.updateServer = function (dt, input) {
         this.torsoState = game.Player.TorsoStates.ATTACKING;
     }
 
+    if (input.getAction(base.InputState.Action.FIRE)) {
+        this.weapon_.shoot();        
+    }
+
     if (input.hasActionStarted(base.InputState.Action.CHANGING)) {
         this.torsoState = game.Player.TorsoStates.CHANGING;
     }
@@ -489,6 +504,7 @@ game.CharacterController.prototype.updateServer = function (dt, input) {
                         this.zAngle,
                         this.xAngle,
                         this.camMtx);
+    this.weapon_.update(dt, this.player_.getWeaponMtx());
     
     this.stateArchive_.push({
         position: this.position,

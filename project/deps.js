@@ -21,7 +21,7 @@ goog.addDependency('../../../js/files/resourceManager.js', ['files.ResourceManag
 goog.addDependency('../../../js/files/shaderscriptloader.js', ['files.ShaderScriptLoader'], ['base.ShaderScript']);
 goog.addDependency('../../../js/files/zipjs/zip.js', ['files.zipjs'], []);
 goog.addDependency('../../../js/flags.js', ['flags'], []);
-goog.addDependency('../../../js/game/charactercontroller.js', ['game.CharacterController'], ['base.Bsp', 'base.Vec3', 'game.InputBuffer', 'game.Player', 'game.globals', 'network']);
+goog.addDependency('../../../js/game/charactercontroller.js', ['game.CharacterController'], ['base.Bsp', 'base.Vec3', 'game.InputBuffer', 'game.MachineGun', 'game.ModelManager', 'game.Player', 'game.Weapon', 'game.globals', 'network']);
 goog.addDependency('../../../js/game/dummyrendererscene.js', ['game.DummyRendererScene'], ['base.IRendererScene']);
 goog.addDependency('../../../js/game/entity.js', ['game.Entity'], ['base.Vec3']);
 goog.addDependency('../../../js/game/freecamera.js', ['game.FreeCamera'], ['base.Mat4', 'base.Vec3', 'game.InputBuffer', 'network']);
@@ -31,6 +31,7 @@ goog.addDependency('../../../js/game/inputbuffer.js', ['game.InputBuffer'], ['ba
 goog.addDependency('../../../js/game/modelmanager.js', ['game.ModelManager'], ['base.IRendererScene', 'base.ModelInstance', 'goog.debug.Logger']);
 goog.addDependency('../../../js/game/player.js', ['game.Player'], ['base', 'base.Mat4', 'base.Vec3', 'game.ModelManager', 'network']);
 goog.addDependency('../../../js/game/scene.js', ['game.Scene'], ['base.IRendererScene', 'game.CharacterController', 'game.InputBuffer', 'game.Player', 'goog.asserts', 'network', 'network.ClassInfo']);
+goog.addDependency('../../../js/game/weapon.js', ['game.MachineGun', 'game.Weapon'], ['base']);
 goog.addDependency('../../../js/network/classinfo.js', ['network.ClassInfo', 'network.ClassInfoBuilder', 'network.ClassInfoManager'], ['goog.asserts', 'network']);
 goog.addDependency('../../../js/network/client.js', ['network.Client'], ['base.IBroker', 'base.events', 'goog.debug.Logger', 'network', 'network.ObjectWriter', 'network.Serializer', 'network.Snapshot']);
 goog.addDependency('../../../js/network/network.js', ['network', 'network.Flags', 'network.ISynchronizable', 'network.ISynchronizer', 'network.Type'], []);

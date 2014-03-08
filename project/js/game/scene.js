@@ -25,6 +25,7 @@ goog.require('network.ClassInfo');
 goog.require('game.Player');
 goog.require('game.CharacterController');
 goog.require('game.InputBuffer');
+goog.require('game.MachineGun');
 
 goog.provide('game.Scene');
 
@@ -57,7 +58,8 @@ game.Scene.prototype.addPlayer = function (id, model) {
     goog.asserts.assert(!this.characters_[id]);
     
     var player = new game.Player(this.modelManager_, this.configs_, model);
-    var controller = new game.CharacterController(this.map_.bsp, player, id == this.myPlayerId_);
+    var controller = new game.CharacterController(this.map_.bsp, player, id == this.myPlayerId_,
+                                                 this.modelManager_);
 
     this.characters_[id] = controller;
 
@@ -112,7 +114,11 @@ game.Scene.prototype.registerClasses = function (classInfoManager) {
     
     cim.registerClass(game.CharacterController, function () {
         var player = new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
-        return new game.CharacterController(that.map_.bsp, player, new game.InputBuffer());
+        return new game.CharacterController(that.map_.bsp, player, false,
+                                           that.modelManager_);
+    });
+    cim.registerClass(game.MachineGun, function () {
+        return new game.MachineGun(that.modelManager_);
     });
     // cim.registerClass(game.Player, function () {
     //     return new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
