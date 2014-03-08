@@ -58,6 +58,11 @@ network.Snapshot = function () {
     this.timestamp = 0;
     /**
      * @public
+     * @type {number}
+     */
+    this.inputTimestamp = 0;
+    /**
+     * @public
      * @type {Array.<network.ObjectBuffer>}
      */
     this.objects = [];
@@ -112,6 +117,11 @@ network.SnapshotDelta = function () {
      * @type {number}
      */
     this.timestampB = 0;
+    /**
+     * @public
+     * @type {number}
+     */
+    this.inputTimestamp = 0;
     /**
      * @public
      * @type {Array.<network.ObjectBufferDelta>}
@@ -224,6 +234,7 @@ network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
     var count = Math.max(snapshot1.objects.length, delta.objects.length);
     goog.asserts.assert(snapshot1.timestamp === delta.timestampA);
     snapshot2.timestamp = delta.timestampB;
+    snapshot2.inputTimestamp = delta.inputTimestamp;
 
     // objects
     for (i = 0; i < count; ++i) {

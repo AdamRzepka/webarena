@@ -257,11 +257,27 @@ system.Client.prototype.initRTC_ = function () {
                          'RTCSocket opened');
         deferred.callback();
     };
+    var lastTime = Date.now();
+    var sum = 0;
+    var count = 0;
+    var timeElement = document.getElementById('time');
+
     this.serverSocket_.onmessage = function (evt) {
+        // debug
+        sum += (Date.now() - lastTime);
+        lastTime = Date.now();
+        count++;
+        if (sum > 1000) {
+            timeElement.textContent = count;
+            sum -= 1000;
+            count = 0;
+        }
+
         // var dv = new DataView(evt.data);
         // assume that snapshot id is first uint in message
         // TODO fix this
         // that.lastSnapshot_ = dv.getInt32(0, true);
+        
         that.broker_.fireEvent(base.EventType.STATE_UPDATE, evt.data,
                                base.IBroker.EventScope.REMOTE, [evt.data]);
     };
@@ -325,22 +341,22 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
  * @private
  * @type {number}
  */
-system.Client.INPUT_MESSAGE_SIZE = 16;
+system.Client.INPUT_MESSAGE_SIZE = 18;
 /*
  * Input message format
- * lastSnapshot - 4 bytes
+ * lastSnapshotId - 4 bytes
+ * inputId - 4 bytes
  * cursorX - 4 bytes
  * cursorY - 4 bytes
  * actions - 2 bytes
- * *unused* - 2 bytes
  */
 
 /**
  * @private
  */
-system.Client.prototype.sendInputMessage_ = function (dataView) {
+system.Client.prototype.sendInputMessage_ = function (dataView, state) {
     dataView.setUint32(0, this.lastSnapshot_, true);
-    base.InputState.serialize(this.input_.getState(), dataView, 4);
+    base.InputState.serialize(state, dataView, 4);
     this.serverSocket_.send(dataView.buffer);
 };
 /**
@@ -363,9 +379,29 @@ system.Client.prototype.initUpdates_ = function () {
             inputState: null
     };
 
-    function update() {
-        // Note: we accept one frame lag between input and renderer on the client.
+    var lastInputTime = 0;
+
+    function updateInput() {
+//        var INPUT_SEND_INTERVAL = 1000/60;
+        var state = that.input_.getState();
+        // if (Date.now() - lastInputTime > INPUT_SEND_INTERVAL) {
+        //     // input
+        //     lastInputTime = Date.now();
+        // }
+
+        if (!flags.GAME_WORKER || base.IBroker.DISABLE_WORKERS) {
+            // inputState can't be passed by reference
+            inputUpdateData.inputState = goog.object.unsafeClone(state);
+        } else {
+            inputUpdateData.inputState = state;
+        }
+
+        that.sendInputMessage_(inputMessage_, state);
         
+        that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
+    }
+
+    function render() {
         // fps counter
         if (fpsElem) {
             fpsTime += Date.now() - lastTime;
@@ -378,23 +414,14 @@ system.Client.prototype.initUpdates_ = function () {
 	        fpsCounter = 0;
 	    }
         }
-
-        // input
-        that.sendInputMessage_(inputMessage_);
-        if (!flags.GAME_WORKER || base.IBroker.DISABLE_WORKERS) {
-            // inputState can't be passed by reference
-            inputUpdateData.inputState = goog.object.unsafeClone(that.input_.getState());
-        } else {
-            inputUpdateData.inputState = that.input_.getState();
-        }
-        that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
-
-        // render
-	that.rendererScene_.render();
         
-	raf(update);
-    };
+        // render
+	that.rendererScene_.render();        
+	raf(render);
+    }
 
-    raf(update);
+    var INPUT_UPDATE_INTERVAL = 1000/60;
+    setInterval(updateInput, INPUT_UPDATE_INTERVAL);
+    raf(render);
 };
 

@@ -53,9 +53,7 @@ system.RTCSocket = function (signallingCallback) {
      * @private
      * @type {RTCPeerConnection}
      */
-    this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION, {
-        'optional': [{'RtpDataChannels': true}]
-    });
+    this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION, {});
     /**
      * @private
      * @type {RTCDataChannel}
@@ -143,7 +141,8 @@ system.RTCSocket.prototype.onerror = function () {};
  */
 system.RTCSocket.prototype.open = function () {
     this.dataChannel = this.peerConnection.createDataChannel('data', {'reliable': false,
-                                                                      'ordered': false});
+                                                                      'ordered': false,
+                                                                      'maxRetransmits': 0});
     this.setupChannel_();
 };
 /**
@@ -163,7 +162,7 @@ system.RTCSocket.prototype.send = function (data) {
     }
     var u8 = new Uint8Array(data);
     var b64encoded = btoa(String.fromCharCode.apply(null, u8));
-    goog.asserts.assert(b64encoded.length < 256);
+    goog.asserts.assert(b64encoded.length < 512);
     this.dataChannel.send(b64encoded);
 };
 /**

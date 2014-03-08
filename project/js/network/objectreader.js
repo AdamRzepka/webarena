@@ -137,6 +137,22 @@ network.ObjectReader.prototype.getMode = function () {
 };
 
 /**
+ * @public
+ * @return {number}
+ */
+network.ObjectReader.prototype.getSnapshotTimestamp = function () {
+    return this.snapshot_.timestamp;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+network.ObjectReader.prototype.getInputTimestamp = function () {
+    return this.snapshot_.inputTimestamp;
+};
+
+/**
  * @private
  * @return number
  */

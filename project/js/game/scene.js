@@ -53,11 +53,11 @@ game.Scene = function (renderer, map, modelManager, myPlayerId, configs) {
  * @param {string} model
  * @param {game.InputBuffer} input
  */
-game.Scene.prototype.addPlayer = function (id, model, input) {
+game.Scene.prototype.addPlayer = function (id, model) {
     goog.asserts.assert(!this.characters_[id]);
     
     var player = new game.Player(this.modelManager_, this.configs_, model);
-    var controller = new game.CharacterController(this.map_.bsp, player, input);
+    var controller = new game.CharacterController(this.map_.bsp, player, id == this.myPlayerId_);
 
     this.characters_[id] = controller;
 

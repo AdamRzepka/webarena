@@ -95,12 +95,14 @@ network.Client.prototype.logger_ = goog.debug.Logger.getLogger('network.Client')
  * @param {ArrayBuffer} buffer
  */
 network.Client.prototype.update = function (buffer) {
+    
     var i = 0;
     var delta = new network.SnapshotDelta();
     var lastSnapshot = null;
     var newSnapshot = new network.Snapshot();
+    var dv = new DataView(buffer);
 
-    this.serializer_.read(delta, new DataView(buffer), 0);
+    var off = this.serializer_.read(delta, dv, 0);
     
     var lastTimestamp = delta.timestampA;
     

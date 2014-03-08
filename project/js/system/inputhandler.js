@@ -169,8 +169,10 @@ system.InputHandler.prototype.onMouseMove_ = function (dx, dy) {
 /**
  * @public
  * @return {base.InputState}
+ * Returns state increasing its timestamp firts.
  */
 system.InputHandler.prototype.getState = function () {
+    ++this.state_.timestamp;
     return this.state_;
 };
 

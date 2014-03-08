@@ -109,13 +109,14 @@ network.Serializer.prototype.write = function (snapshotDelta, dataView, offset) 
 
     dataView.setInt32(0, snapshotDelta.timestampA, true);
     dataView.setInt32(4, snapshotDelta.timestampB, true);
-    dataView.setUint16(8, snapshotDelta.objects.length, true);
-    dataView.setUint16(10, snapshotDelta.arrays.length, true);
+    dataView.setUint32(8, snapshotDelta.inputTimestamp, true);
+    dataView.setUint16(12, snapshotDelta.objects.length, true);
+    dataView.setUint16(14, snapshotDelta.arrays.length, true);
     // skip objectsCount and arraysCount for now
-    dataView.setUint8(16, snapshotDelta.removedObjects.length);
-    dataView.setUint8(17, snapshotDelta.removedArrays.length);
+    dataView.setUint8(20, snapshotDelta.removedObjects.length);
+    dataView.setUint8(21, snapshotDelta.removedArrays.length);
 
-    this.offset_ += 18;
+    this.offset_ += 22;
 
     for (i = 0; i < snapshotDelta.objects.length; ++i) {
         ob = snapshotDelta.objects[i];
@@ -135,8 +136,8 @@ network.Serializer.prototype.write = function (snapshotDelta, dataView, offset) 
         this.writeArray_(ob);
     }
 
-    dataView.setUint16(12, objectsCount, true);
-    dataView.setUint16(14, arraysCount, true);
+    dataView.setUint16(16, objectsCount, true);
+    dataView.setUint16(18, arraysCount, true);
     
     for (i = 0; i < snapshotDelta.removedObjects.length; ++i) {
         dataView.setUint16(this.offset_, snapshotDelta.removedObjects[i], true);
@@ -167,14 +168,15 @@ network.Serializer.prototype.read = function (snapshotDelta, dataView, offset) {
 
     snapshotDelta.timestampA = dataView.getInt32(0, true);
     snapshotDelta.timestampB = dataView.getInt32(4, true);
-    snapshotDelta.objects = goog.array.repeat(null, dataView.getUint16(8, true));
-    snapshotDelta.arrays = goog.array.repeat(null, dataView.getUint16(10, true));
-    objectsCount = dataView.getUint16(12, true);
-    arraysCount = dataView.getUint16(14, true);
-    removedObjectsCount = dataView.getUint8(16);
-    removedArraysCount = dataView.getUint8(17);
+    snapshotDelta.inputTimestamp = dataView.getInt32(8, true);
+    snapshotDelta.objects = goog.array.repeat(null, dataView.getUint16(12, true));
+    snapshotDelta.arrays = goog.array.repeat(null, dataView.getUint16(14, true));
+    objectsCount = dataView.getUint16(16, true);
+    arraysCount = dataView.getUint16(18, true);
+    removedObjectsCount = dataView.getUint8(20);
+    removedArraysCount = dataView.getUint8(21);
 
-    this.offset_ += 18;
+    this.offset_ += 22;
 
     for (i = 0; i < objectsCount; ++i) {
         ob = this.readObject_();

@@ -136,7 +136,7 @@ game.init = function (broker, isServer, clientId) {
             
             broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
                 var tmp = readClientUpdate(data.inputState);
-                server.onClientInput(data.playerId, tmp.timestamp);
+                server.onClientInput(data.playerId, tmp.timestamp, tmp.state.timestamp);
                 inputState[data.playerId] = tmp.state;
             });
             broker.registerEventListener(base.EventType.PLAYER_CONNECTED, function (evt, data) {
@@ -144,7 +144,7 @@ game.init = function (broker, isServer, clientId) {
                 server.addClient(id);
                 inputState[id] = new base.InputState();
                 inputBuffer[id] = new game.InputBuffer();
-                gameScene.addPlayer(id, 'assassin', inputBuffer[id]);
+                gameScene.addPlayer(id, 'assassin');
             });
         }
         
@@ -154,8 +154,9 @@ game.init = function (broker, isServer, clientId) {
         function update () {
             var i=0;
             var spawnPoint;
-            var dt = Date.now() - lastTime;
-            lastTime = Date.now();
+            // var dt = Date.now() - lastTime;
+            // lastTime = Date.now();
+            var dt = game.globals.TIME_STEP_MS;
 
             for (i = 0; i < inputBuffer.length; ++i) {
                 inputBuffer[i].step(inputState[i]);                
@@ -180,7 +181,8 @@ game.init = function (broker, isServer, clientId) {
                     // we have update
                     client.update((/**@type{ArrayBuffer}*/stateBuffer));
                     stateBuffer = null;
-                    gameScene.updateClient(0, inputBuffer[0]);                    
+                    gameScene.characters_[gameScene.myPlayerId_].updateServer(dt, inputBuffer[0]);
+                    //gameScene.updateClient(0, inputBuffer[0]);                    
                 } else {
                     // no update - just extrapolate
                     gameScene.updateClient(dt, inputBuffer[0]);
