@@ -1096,3 +1096,14 @@ base.Mat4.lerp = function (matA, matB, weight, dest) {
     
     return dest;
 };
+
+base.Mat4.getRow = function(mat, col, dest) {
+    var i = 0;
+    var from = 4 * col;
+    dest = dest || base.Vec3.create();
+    for (i = 0; i < 3; ++i, ++from) {
+        dest[i] = mat[from];
+    }
+    return dest;
+};
+

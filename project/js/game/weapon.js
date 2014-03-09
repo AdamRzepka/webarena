@@ -18,6 +18,7 @@
 'use strict';
 
 goog.require('base');
+goog.require('base.Mat4');
 goog.require('network');
 goog.provide('game.Weapon');
 goog.provide('game.MachineGun');
@@ -62,6 +63,7 @@ game.MachineGun = function (mm) {
 
     this.flash.setVisibility(false);
     this.lastShootInterval = game.MachineGun.SHOOT_INTERVAL * 2;
+    this.lineId = -1;
 };
 
 game.MachineGun.SHOOT_INTERVAL = 100;
@@ -95,10 +97,34 @@ game.MachineGun.prototype.update = function (dt, mtx) {
     this.flash.setMatrix(flashMtx);
 };
 
-game.MachineGun.prototype.shoot = function () {
-    this.rollingSpeed = 0.3;
-    this.flash.setVisibility(true);
-    this.lastShootInterval = 0;
+game.MachineGun.prototype.shoot = function (scene, camMtx, myCharacter) {
+    if (this.lastShootInterval > game.MachineGun.SHOOT_INTERVAL) {
+        this.rollingSpeed = 0.3;
+        this.flash.setVisibility(true);
+        this.lastShootInterval = 0;
+        var from = base.Mat4.getRow(camMtx, 3);
+        var dir = base.Vec3.scale(base.Mat4.getRow(camMtx, 2), 100000, base.Vec3.create());
+        base.Vec3.negate(dir);
+        var to = base.Vec3.add(from, dir, base.Vec3.create());
+        if (this.lineId == -1) {
+            var that = this;
+            scene.renderer_.registerLine(from, to,
+                                         base.Vec3.create([1,0,0]),
+                                         base.Vec3.create([0,1,0]),
+                                         function (id) {
+                                             that.lineId = id;
+                                         });
+        } else {
+            scene.renderer_.updateLine(this.lineId, from, to);
+        }
+        var player = scene.rayCastPlayers(from, to, myCharacter);
+        if (player === myCharacter) {
+            player = null;
+        }
+        if (player) {
+            console.log('hit!!!', player);
+        }
+    }
 };
 
 /**

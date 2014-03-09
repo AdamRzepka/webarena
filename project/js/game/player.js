@@ -22,6 +22,7 @@ goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('game.ModelManager');
 goog.require('network');
+goog.require('base.math');
 //goog.require('files.ResourceManager');
 
 goog.provide('game.Player');
@@ -115,6 +116,8 @@ game.Player = function (mm, configs, name, skin) {
      */
     this.tppMode = true;
 
+    this.debugLines = [];
+
     this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0);
     this.torso.startAnimation(this.animations[game.Player.Animations.TORSO_STAND], 0);
     
@@ -127,6 +130,20 @@ game.Player = function (mm, configs, name, skin) {
     //     that.torso.model.setVisibility(tppOn);
     //     that.legs.model.setVisibility(tppOn);
     // };
+    this.initDebugLines(mm.renderer);
+    this.renderer = mm.renderer;
+};
+
+game.Player.prototype.initDebugLines = function (renderer) {
+    var i = 0;
+    var that = this;
+    for (i = 0; i < 12; ++i) {
+        renderer.registerLine(base.Vec3.create(),base.Vec3.create(),
+                              base.Vec3.create([1,0,0]),base.Vec3.create([1,0,0]),
+                              function (id) {
+                                  that.debugLines.push(id);
+                              });
+    }
 };
 
 /**
@@ -386,7 +403,7 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
     base.Mat4.multiply(legsMtx, this.legs.tags[this.torsoTag],
                        torsoMtx);
     // make torso move with pitch
-    base.Mat4.rotateY(torsoMtx, -base.clamp(pitch, 0.5, 2.8) + Math.PI * 0.5);
+    base.Mat4.rotateY(torsoMtx, -base.math.clamp(pitch, 0.5, 2.8) + Math.PI * 0.5);
     this.torso.model.setMatrix(torsoMtx);
 
     headMtx = this.head.model.getMatrix();
@@ -447,6 +464,61 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
     }
     this.legs.model.setMatrix(legsMtx);
 
+    if (game.globals.drawPlayerAABB && false) {
+        var models = [this.torso];//, this.legs, this.head];
+        var minTrans, maxTrans;
+        for (var i = 0; i < models.length; ++i) {
+            minTrans = base.Vec3.create(), maxTrans = base.Vec3.create();
+            base.Vec3.add(base.Mat4.getRow(models[i].model.getMatrix(), 3),
+                          models[i].model.baseModel.framesData[0].aabbMin,
+                          minTrans);
+            base.Vec3.add(base.Mat4.getRow(models[i].model.getMatrix(), 3),
+                          models[i].model.baseModel.framesData[0].aabbMax,
+                          maxTrans);
+            var from = [
+                // bottom
+                [minTrans[0], minTrans[1], minTrans[2]],
+                [maxTrans[0], minTrans[1], minTrans[2]],
+                [maxTrans[0], maxTrans[1], minTrans[2]],
+                [minTrans[0], maxTrans[1], minTrans[2]],
+
+                // top
+                [minTrans[0], minTrans[1], maxTrans[2]],
+                [maxTrans[0], minTrans[1], maxTrans[2]],
+                [maxTrans[0], maxTrans[1], maxTrans[2]],
+                [minTrans[0], maxTrans[1], maxTrans[2]],
+
+                // sides
+                [minTrans[0], minTrans[1], minTrans[2]],
+                [minTrans[0], maxTrans[1], minTrans[2]],
+                [maxTrans[0], maxTrans[1], minTrans[2]],
+                [maxTrans[0], minTrans[1], minTrans[2]]
+            ];
+            var to = [
+                // bottom
+                [maxTrans[0], minTrans[1], minTrans[2]],
+                [maxTrans[0], maxTrans[1], minTrans[2]],
+                [minTrans[0], maxTrans[1], minTrans[2]],
+                [minTrans[0], minTrans[1], minTrans[2]],
+
+                // top
+                [maxTrans[0], minTrans[1], maxTrans[2]],
+                [maxTrans[0], maxTrans[1], maxTrans[2]],
+                [minTrans[0], maxTrans[1], maxTrans[2]],
+                [minTrans[0], minTrans[1], maxTrans[2]],
+
+                // sides
+                [minTrans[0], minTrans[1], maxTrans[2]],
+                [minTrans[0], maxTrans[1], maxTrans[2]],
+                [maxTrans[0], maxTrans[1], maxTrans[2]],
+                [maxTrans[0], minTrans[1], maxTrans[2]]
+            ];
+            for (var j = 0; j < 12; ++j) {
+                this.renderer.updateLine(this.debugLines[j], base.Vec3.create(from[j]),
+                                         base.Vec3.create(to[j]));
+            }
+        }
+    }
 };
 
 /**
@@ -490,6 +562,40 @@ game.Player.prototype.loadAnimations = function (playerPath, configs) {
     // animations[game.Player.Animation.LEGS_BACKWALK].reversed = true;
     
     return animations;
+};
+
+/**
+ * @param {base.Vec3} from
+ * @param {base.Vec3} to
+ * @return {number} fraction
+ */
+game.Player.prototype.rayCastMe = function (from, to) {
+    var models = [this.torso, this.legs, this.head];
+    var fraction, minFraction = 1;
+    var minTrans = base.Vec3.create(), maxTrans = base.Vec3.create();
+    for (var i = 0; i < models.length; ++i) {
+        var frameData = models[i].model.baseModel.framesData[0];
+        
+        // base.Mat4.multiplyVec3(models[i].model.getMatrix(),
+        //                        models[i].model.baseModel.framesData[0].aabbMin,
+        //                        minTrans);
+        // base.Mat4.multiplyVec3(models[i].model.getMatrix(),
+        //                        models[i].model.baseModel.framesData[0].aabbMax,
+        //                        maxTrans);
+        // fraction = base.math.rayAABB(minTrans,
+        //                              maxTrans,
+        //                              from, to);
+
+        var sphereTrans = base.math.transformSphere(frameData.origin, frameData.radius,
+                                                    models[i].model.getMatrix());
+        fraction = base.math.raySphere(sphereTrans.center, sphereTrans.radius,
+                                       from, to);
+        
+        if (fraction < minFraction) {
+            minFraction = fraction;
+        }
+    }
+    return minFraction;
 };
 
 /**

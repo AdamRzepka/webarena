@@ -374,7 +374,6 @@ game.CharacterController.prototype.getPlayer = function () {
  * @public
  */
 game.CharacterController.prototype.updateClient = function (dt) {
-    console.log(this.xAngVelocity);
 
     this.xAngle += this.xAngVelocity * dt;
     this.zAngle += this.zAngVelocity * dt;
@@ -403,9 +402,10 @@ game.CharacterController.prototype.updateClient = function (dt) {
 
 /**
  * @public
+ * @param {number} dt
  * @param {game.InputBuffer} input
  */
-game.CharacterController.prototype.updateServer = function (dt, input) {
+game.CharacterController.prototype.updateServer = function (dt, input, scene) {
     var dir = this.direction;
     this.torsoState = game.Player.TorsoStates.IDLE;
     this.legsState = game.Player.LegsStates.IDLE;
@@ -484,10 +484,6 @@ game.CharacterController.prototype.updateServer = function (dt, input) {
         this.torsoState = game.Player.TorsoStates.ATTACKING;
     }
 
-    if (input.getAction(base.InputState.Action.FIRE)) {
-        this.weapon_.shoot();        
-    }
-
     if (input.hasActionStarted(base.InputState.Action.CHANGING)) {
         this.torsoState = game.Player.TorsoStates.CHANGING;
     }
@@ -497,6 +493,11 @@ game.CharacterController.prototype.updateServer = function (dt, input) {
     }
     
     this.buildCameraMatrix_();
+
+    if (input.getAction(base.InputState.Action.FIRE)) {
+        this.weapon_.shoot(scene, this.camMtx, this);
+    }
+    
     this.player_.update(this.torsoState,
                         this.legsState,
                         this.position,

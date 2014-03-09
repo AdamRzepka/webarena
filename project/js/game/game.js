@@ -181,7 +181,8 @@ game.init = function (broker, isServer, clientId) {
                     // we have update
                     client.update((/**@type{ArrayBuffer}*/stateBuffer));
                     stateBuffer = null;
-                    gameScene.characters_[gameScene.myPlayerId_].updateServer(dt, inputBuffer[0]);
+                    gameScene.characters_[gameScene.myPlayerId_].updateServer(
+                        dt, inputBuffer[0],gameScene);
                     //gameScene.updateClient(0, inputBuffer[0]);                    
                 } else {
                     // no update - just extrapolate

@@ -105,7 +105,7 @@ game.InputBuffer.prototype.getDeltaY = function () {
 
 /**
  * @public
- * @return {number}
+ * @return {base.InputState}
  */
 game.InputBuffer.prototype.getState = function () {
     return this.state_;

@@ -11,6 +11,7 @@ goog.addDependency('../../../js/base/map.js', ['base.Map'], ['base', 'base.Bsp']
 goog.addDependency('../../../js/base/mat3.js', ['base.Mat3'], []);
 goog.addDependency('../../../js/base/mat4.js', ['base.Mat4'], ['base.Mat3', 'base.Vec3']);
 goog.addDependency('../../../js/base/material.js', ['base.Material', 'base.ShaderScript'], []);
+goog.addDependency('../../../js/base/math.js', ['base.math'], ['base.Vec3']);
 goog.addDependency('../../../js/base/pool.js', ['base.Pool'], ['goog.asserts']);
 goog.addDependency('../../../js/base/quat4.js', ['base.Quat4'], ['base.Mat3', 'base.Mat4', 'base.Vec3']);
 goog.addDependency('../../../js/base/vec3.js', ['base.Vec3', 'base.Vec4'], ['base.Pool']);
@@ -29,9 +30,9 @@ goog.addDependency('../../../js/game/game.js', ['game'], ['base', 'base.Broker',
 goog.addDependency('../../../js/game/globals.js', ['game.globals'], []);
 goog.addDependency('../../../js/game/inputbuffer.js', ['game.InputBuffer'], ['base.InputState', 'goog.array']);
 goog.addDependency('../../../js/game/modelmanager.js', ['game.ModelManager'], ['base.IRendererScene', 'base.ModelInstance', 'goog.debug.Logger']);
-goog.addDependency('../../../js/game/player.js', ['game.Player'], ['base', 'base.Mat4', 'base.Vec3', 'game.ModelManager', 'network']);
-goog.addDependency('../../../js/game/scene.js', ['game.Scene'], ['base.IRendererScene', 'game.CharacterController', 'game.InputBuffer', 'game.Player', 'goog.asserts', 'network', 'network.ClassInfo']);
-goog.addDependency('../../../js/game/weapon.js', ['game.MachineGun', 'game.Weapon'], ['base']);
+goog.addDependency('../../../js/game/player.js', ['game.Player'], ['base', 'base.Mat4', 'base.Vec3', 'base.math', 'game.ModelManager', 'network']);
+goog.addDependency('../../../js/game/scene.js', ['game.Scene'], ['base.IRendererScene', 'game.CharacterController', 'game.InputBuffer', 'game.MachineGun', 'game.Player', 'goog.asserts', 'network', 'network.ClassInfo']);
+goog.addDependency('../../../js/game/weapon.js', ['game.MachineGun', 'game.Weapon'], ['base', 'base.Mat4', 'network']);
 goog.addDependency('../../../js/network/classinfo.js', ['network.ClassInfo', 'network.ClassInfoBuilder', 'network.ClassInfoManager'], ['goog.asserts', 'network']);
 goog.addDependency('../../../js/network/client.js', ['network.Client'], ['base.IBroker', 'base.events', 'goog.debug.Logger', 'network', 'network.ObjectWriter', 'network.Serializer', 'network.Snapshot']);
 goog.addDependency('../../../js/network/network.js', ['network', 'network.Flags', 'network.ISynchronizable', 'network.ISynchronizer', 'network.Type'], []);

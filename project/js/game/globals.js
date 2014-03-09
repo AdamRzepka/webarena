@@ -63,4 +63,7 @@ game.globals.setTppMode = function (flag) {
     }
 };
 
-
+/**
+ * @type {boolean}
+ */
+game.globals.drawPlayerAABB = true;

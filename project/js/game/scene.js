@@ -52,7 +52,6 @@ game.Scene = function (renderer, map, modelManager, myPlayerId, configs) {
 /**
  * @param {number} id
  * @param {string} model
- * @param {game.InputBuffer} input
  */
 game.Scene.prototype.addPlayer = function (id, model) {
     goog.asserts.assert(!this.characters_[id]);
@@ -74,7 +73,7 @@ game.Scene.prototype.updateServer = function (dt, inputs) {
     var i = 0;
     for (i = 0; i < this.characters_.length; ++i) {
         if (this.characters_[i]) {
-            this.characters_[i].updateServer(dt, inputs[i]);
+            this.characters_[i].updateServer(dt, inputs[i], this);
         }
     }
 };
@@ -83,7 +82,7 @@ game.Scene.prototype.updateClient = function (dt, input) {
     for (i = 0; i < this.characters_.length; ++i) {
         if (this.characters_[i]) {
             if (i === this.myPlayerId_ && input && dt > 0) {
-                this.characters_[i].updateServer(dt, input);
+                this.characters_[i].updateServer(dt, input, this);
             }
             else {
                 this.characters_[i].updateClient(dt);
@@ -124,3 +123,31 @@ game.Scene.prototype.registerClasses = function (classInfoManager) {
     //     return new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
     // });
 };
+
+/**
+ * @return {game.CharacterController} Hit player or null
+ */
+game.Scene.prototype.rayCastPlayers = function (from, to, character) {
+    var i = 0;
+    var minPlayerFraction = 1, playerFraction;
+    var hitPlayer = null;
+    for (i = 0; i < this.characters_.length; ++i) {
+        if (this.characters_[i] === character)  // don't shoot yourself
+            continue;
+
+        playerFraction = this.characters_[i].getPlayer().rayCastMe(from, to);
+        if (minPlayerFraction > playerFraction) {
+            minPlayerFraction = playerFraction;
+            hitPlayer = this.characters_[i];
+        }
+    }
+
+    var mapFraction = 1; //base.Bsp.trace(this.map_.bsp, from, to).fraction;
+
+    if (minPlayerFraction < mapFraction && hitPlayer) {
+        return hitPlayer;
+    } else {
+        return null;
+    }
+};
+

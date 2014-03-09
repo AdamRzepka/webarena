@@ -462,12 +462,3 @@ base.makeUnremovable = function (fun) {
     }
 };
 
-base.clamp = function (x, min, max) {
-    if (x >= max) {
-        return max;
-    } else if (x <= min) {
-        return min;
-    } else {
-        return x;
-    }
-};
