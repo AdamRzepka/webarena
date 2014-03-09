@@ -208,7 +208,7 @@ function main() {
     var mylocation = window.location.origin.replace(/^http:\/\//, '').replace(/:800[0-9]$/, '');
     var config = /**@type{system.Game.Config}*/{
         gl: gl,
-        inputElement: canvas,
+        inputElement: document.getElementById('hud'),
         lobbyUrl: 'ws://' + mylocation + ':8003',
         playerData: {
             'name': 'player',

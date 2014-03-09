@@ -92,6 +92,10 @@ base.math.raySphere = function (center, radius, from, to) {
     return (t >= 0 ) ? t / dd : 1;
 };
 
+base.math.rayTriangle = function(a, b, c, from, to) {
+    // @TODO
+};
+
 base.math.transformAABB = function (min, max, mtx) {
     // TODO    
 };

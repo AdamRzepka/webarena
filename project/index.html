@@ -9,12 +9,36 @@
   <script type="text/javascript" src="deps.js"></script>
   <script type="text/javascript" src="js/main.js"></script>
 
+  <style>
+    #hud {
+    position:absolute;
+    top:0;
+    left:0;
+    width:1280px;
+    height:720px;
+    }
+    #crosshair {
+    position:absolute;
+    top:50%;
+    height:128px;
+    margin-top:-64px;
+    left:50%;
+    width:128px;
+    margin-left:-64px;
+    }
+  </style>
+
   <body onload="main();">
-    <div id="dot">
+    <div id="canvas-container">
+      <canvas id="glcanvas" width="1280" height="720">
+        Your browser does not support html5 'canvas' tag.
+      </canvas>
+      <div id="hud">
+        <div id="crosshair">
+          <img src="hud/crosshairf.png">
+        </div>
+      </div>
     </div>
-    <canvas id="glcanvas" width="1280" height="720">
-      Your browser does not support html5 'canvas' tag.
-    </canvas>
     <div id="fps">
       FPS
     </div>

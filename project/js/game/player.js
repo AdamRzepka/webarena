@@ -176,7 +176,7 @@ game.Player.PLAYERS_PATH = 'models/players/';
  * @private
  * @type {base.Vec3}
  */
-game.Player.WEAPON_OFF = base.Vec3.create([10, -10, -4]);
+game.Player.WEAPON_OFF = base.Vec3.create([8, -10, -4]);
 /**
  * @const
  * @private
