@@ -570,11 +570,16 @@ game.Player.prototype.loadAnimations = function (playerPath, configs) {
  * @return {number} fraction
  */
 game.Player.prototype.rayCastMe = function (from, to) {
+    var i, j, k;
     var models = [this.torso, this.legs, this.head];
-    var fraction, minFraction = 1;
+    var model, frameData, mesh;
+    var fraction, minFraction = 1, frame, trFraction;
+    var rayTrans;
     var minTrans = base.Vec3.create(), maxTrans = base.Vec3.create();
-    for (var i = 0; i < models.length; ++i) {
-        var frameData = models[i].model.baseModel.framesData[0];
+    for (i = 0; i < models.length; ++i) {
+        model = models[i].model;
+        frame = model.getFrameA();        
+        frameData = model.baseModel.framesData[frame];
         
         // base.Mat4.multiplyVec3(models[i].model.getMatrix(),
         //                        models[i].model.baseModel.framesData[0].aabbMin,
@@ -586,12 +591,42 @@ game.Player.prototype.rayCastMe = function (from, to) {
         //                              maxTrans,
         //                              from, to);
 
-        var sphereTrans = base.math.transformSphere(frameData.origin, frameData.radius,
-                                                    models[i].model.getMatrix());
-        fraction = base.math.raySphere(sphereTrans.center, sphereTrans.radius,
-                                       from, to);
-        
+        rayTrans = base.math.transformRay(from, to, model.getMatrix());
+
+        // var sphereTrans = base.math.transformSphere(frameData.origin, frameData.radius,
+        //                                             models[i].model.getMatrix());
+        // fraction = base.math.raySphere(frameData.origin, frameData.radius,
+        //                                rayTrans.from, rayTrans.to);
+        fraction = base.math.rayAABB(frameData.aabbMin, frameData.aabbMax,
+                                     rayTrans.from, rayTrans.to);
+                                     
+        if (fraction < 1) {
+            fraction = 1;
+            for (j = 0; j < model.baseModel.meshes.length; ++j) {
+                mesh = model.baseModel.meshes[j];
+                for (k = mesh.indicesOffset;
+                     k < mesh.indicesOffset + mesh.indicesCount;
+                     k += 3) {
+                    var stride = 32;
+                    var b1 = mesh.geometry.indices[k] * stride;
+                    var b2 = mesh.geometry.indices[k + 1] * stride;
+                    var b3 = mesh.geometry.indices[k + 2] * stride;
+                    var v1 = mesh.geometry.vertices[frame].subarray(
+                        b1, b1 + 3);
+                    var v2 = mesh.geometry.vertices[frame].subarray(
+                        b2, b2 + 3);
+                    var v3 = mesh.geometry.vertices[frame].subarray(
+                        b3, b3 + 3);
+
+                    trFraction = base.math.rayTriangle(v1, v2, v3, rayTrans.from, rayTrans.to);
+                    if (trFraction < fraction) {
+                        fraction = trFraction;
+                    }
+                }
+            } 
+        }
         if (fraction < minFraction) {
+            
             minFraction = fraction;
         }
     }

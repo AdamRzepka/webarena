@@ -97,6 +97,7 @@ game.MachineGun.prototype.update = function (dt, mtx) {
     this.flash.setMatrix(flashMtx);
 };
 
+var a = 0;
 game.MachineGun.prototype.shoot = function (scene, camMtx, myCharacter) {
     if (this.lastShootInterval > game.MachineGun.SHOOT_INTERVAL) {
         this.rollingSpeed = 0.3;
@@ -122,7 +123,7 @@ game.MachineGun.prototype.shoot = function (scene, camMtx, myCharacter) {
             player = null;
         }
         if (player) {
-            console.log('hit!!!', player);
+            console.log('hit!!!' + a++);
         }
     }
 };

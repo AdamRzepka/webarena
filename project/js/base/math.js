@@ -92,8 +92,53 @@ base.math.raySphere = function (center, radius, from, to) {
     return (t >= 0 ) ? t / dd : 1;
 };
 
-base.math.rayTriangle = function(a, b, c, from, to) {
-    // @TODO
+/**
+ * http://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+ */
+base.math.rayTriangle = function(v1, v2, v3, from, to) {
+    var o = from;
+    var d = base.Vec3.subtract(to, from, base.Vec3.create());
+    var e1 = base.Vec3.create(), e2 = base.Vec3.create();  //Edge1, Edge2
+    var p = base.Vec3.create(), q = base.Vec3.create(), t = base.Vec3.create();
+    var det, inv_det, u, v;
+    var epsilon = 0.000001;
+    var tparam;
+ 
+    //Find vectors for two edges sharing V1
+    base.Vec3.subtract(v2, v1, e1);
+    base.Vec3.subtract(v3, v1, e2);
+    //Begin calculating determinant - also used to calculate u parameter
+    base.Vec3.cross(d, e2, p);
+    //if determinant is near zero, ray lies in plane of triangle
+    det = base.Vec3.dot(e1, p);
+    //NOT CULLING
+    if(det > -epsilon && det < epsilon) return 0;
+    inv_det = 1 / det;
+ 
+    //calculate distance from V1 to ray origin
+    base.Vec3.subtract(o, v1, t);
+ 
+    //Calculate u parameter and test bound
+    u = base.Vec3.dot(t, p) * inv_det;
+    //The intersection lies outside of the triangle
+    if(u < 0 || u > 1) return 1;
+ 
+    //Prepare to test v parameter
+    base.Vec3.cross(t, e1, q);
+    
+    //Calculate V parameter and test bound
+    v = base.Vec3.dot(d, q) * inv_det;
+    //The intersection lies outside of the triangle
+    if(v < 0 || u + v  > 1) return 1;
+    
+    tparam = base.Vec3.dot(e2, q) * inv_det;
+    
+    if(tparam > epsilon) { //ray intersection
+        return tparam / base.Vec3.length(d);
+    }
+    
+    // No hit, no win
+    return 1;
 };
 
 base.math.transformAABB = function (min, max, mtx) {
@@ -109,17 +154,10 @@ base.math.transformSphere = function (center, radius, mtx) {
     };
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+base.math.transformRay = function (from, to, mtx) {
+    var mtxInv = base.Mat4.inverse(mtx, base.Mat4.identity());
+    return {
+        from: base.Mat4.multiplyVec3(mtxInv, from, base.Vec3.create()),
+        to: base.Mat4.multiplyVec3(mtxInv, to, base.Vec3.create())
+    };
+};
