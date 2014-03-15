@@ -38,28 +38,53 @@ base.math.clamp = function (x, min, max) {
  * @return {number} fraction (or one, if not hit)
  */
 base.math.rayAABB = function (min, max, from, to) {
-    var i = 0;
-    var fraction = 1;
-    var point = base.Vec3.create();
-    for (i = 0; i < 3; ++i) {
-        if (from[i] <= to[i]) {
-            if (from[i] < max[i] && to[i] > min[i]) {
-                point[i] = min[i];
-                continue;
-            }
-        }
-        if (from[i] > to[i]) {
-            if (to[i] < max[i] && from[i] > min[i]) {
-                point[i] = max[i];
-                continue;
-            }
-        }
-        return fraction;
+    var dir = base.Vec3.subtract(to, from, base.Vec3.create());
+    var hl = base.Vec3.length(dir);
+    base.Vec3.normalize(dir);
+    
+    var  tmin, tmax, tymin, tymax, tzmin, tzmax;
+    if (dir[0] >= 0) {
+        tmin = (min[0] - from[0]) / dir[0];
+        tmax = (max[0] - from[0]) / dir[0];
+    }
+    else {
+        tmin = (max[0] - from[0]) / dir[0];
+        tmax = (min[0] - from[0]) / dir[0];
+    }
+    if (dir[1] >= 0) {
+        tymin = (min[1] - from[1]) / dir[1];
+        tymax = (max[1] - from[1]) / dir[1];
+    }
+    else {
+        tymin = (max[1] - from[1]) / dir[1];
+        tymax = (min[1] - from[1]) / dir[1];
     }
 
-    fraction = base.Vec3.length(base.Vec3.subtract(point, from, base.Vec3.create())) /
-        base.Vec3.length(base.Vec3.subtract(to, from, base.Vec3.create()));
-    return fraction;
+    if ( (tmin > tymax) || (tymin > tmax) )
+        return 1;
+    if (tymin > tmin)
+        tmin = tymin;
+    if (tymax < tmax)
+        tmax = tymax;
+
+    if (dir[2] >= 0) {
+        tzmin = (min[2] - from[2]) / dir[2];
+        tzmax = (max[2] - from[2]) / dir[2];
+    } else {
+        tzmin = (max[2] - from[2]) / dir[2];
+        tzmax = (min[2] - from[2]) / dir[2];
+    }
+    if ( (tmin > tzmax) || (tzmin > tmax) )
+        return 1;
+    if (tzmin > tmin)
+        tmin = tzmin;
+    if (tzmax < tmax)
+        tmax = tzmax;
+    if (tmin > 0)
+        return tmin / hl;
+    if (tmax > 0)
+        return tmax / hl;
+    return 1;
 };
 
 /**
