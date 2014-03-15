@@ -142,9 +142,17 @@ game.Scene.prototype.rayCastPlayers = function (from, to, character) {
         }
     }
 
-    var mapFraction = 1; //base.Bsp.trace(this.map_.bsp, from, to).fraction;
+    if (!hitPlayer) {
+        return null;
+    }
 
-    if (minPlayerFraction < mapFraction && hitPlayer) {
+    var dif = base.Vec3.subtract(to, from, base.Vec3.create());
+    var point = base.Vec3.add(from, base.Vec3.scale(dif, minPlayerFraction), base.Vec3.create());
+
+    var mapTrace = base.Bsp.trace(this.map_.bsp, from, point, 0);
+    var mapHit = mapTrace.fraction < 1;
+
+    if (!mapHit) {
         return hitPlayer;
     } else {
         return null;
