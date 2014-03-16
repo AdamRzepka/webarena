@@ -35,6 +35,7 @@ game.Weapon = function() {};
 game.Weapon.prototype.update = function (dt, mtx) {};
 
 game.Weapon.prototype.shoot = function () {};
+game.Weapon.prototype.show = function (flag) {};
 
 /**
  * @constructor
@@ -97,7 +98,6 @@ game.MachineGun.prototype.update = function (dt, mtx) {
     this.flash.setMatrix(flashMtx);
 };
 
-var a = 0;
 game.MachineGun.prototype.shoot = function (scene, camMtx, myCharacter) {
     if (this.lastShootInterval > game.MachineGun.SHOOT_INTERVAL) {
         this.rollingSpeed = 0.3;
@@ -123,8 +123,16 @@ game.MachineGun.prototype.shoot = function (scene, camMtx, myCharacter) {
             player = null;
         }
         if (player) {
-            console.log('hit!!!' + a++);
+            player.addHp(-10);
+            console.log('hit!!!');
         }
+    }
+};
+
+game.MachineGun.prototype.show = function (flag) {
+    var i = 0, models = [this.weapon, this.barrel, this.flash];
+    for (i = 0; i < models.length; ++i) {
+        models[i].setVisibility(flag);
     }
 };
 

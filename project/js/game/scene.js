@@ -62,11 +62,14 @@ game.Scene.prototype.addPlayer = function (id, model) {
 
     this.characters_[id] = controller;
 
+    var spawnPoint = this.getSpawnPoint();
+    controller.respawn(spawnPoint);
+};
+
+game.Scene.prototype.getSpawnPoint = function () {
     var spawnPoints = base.Map.getSpawnPoints(this.map_);
     var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
-
-    controller.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
-        spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
+    return spawnPoint;
 };
 
 game.Scene.prototype.updateServer = function (dt, inputs) {

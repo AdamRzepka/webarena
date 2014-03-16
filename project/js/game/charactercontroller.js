@@ -168,8 +168,9 @@ game.CharacterController = function(bsp, player, owned, mm) {
      */
     this.zAngVelocity = 0;
 
-    this.xServerAngle = 0;
-    this.zServerAngle = 0;
+    this.hp = 100;
+    this.dyingProgress = 0;
+
     this.dummyInput = new game.InputBuffer();
 
     this.stateArchive_ = [];
@@ -257,7 +258,6 @@ game.CharacterController.prototype.synchronize = function (sync) {
             this.zAngVelocity = sync.synchronize(this.zAngVelocity, network.Type.FLOAT32, 0);
 
         }
-
     } else {
         this.position = sync.synchronize(this.position, network.Type.VEC3, 0);
         this.xAngle = sync.synchronize(this.xAngle, network.Type.FLOAT32, 0);
@@ -275,6 +275,17 @@ game.CharacterController.prototype.synchronize = function (sync) {
         if (sync.getMode() == network.ISynchronizer.Mode.READ) {
 //            console.log(this.xAngVelocity);
         }
+    }
+    if (sync.getMode() == network.ISynchronizer.Mode.WRITE) {
+        var hp = sync.synchronize(this.hp, network.Type.INT8, 0);
+        if (this.hp > 0 && hp <= 0) {
+            this.kill();            
+        } else if (this.hp <= 0 && hp > 0) {
+            this.respawn();
+        }
+        this.hp = hp;
+    } else {
+        this.hp = sync.synchronize(this.hp, network.Type.INT8, 0);
     }
     
 };
@@ -353,16 +364,41 @@ game.CharacterController.SCALE = 250;
 
 /**
  * @public
- * @param {base.Vec3} position
- * @param {number} zAngle
+ * @param {number} hp
  */
-game.CharacterController.prototype.respawn = function (position, zAngle) {
-    this.position = position;
-    this.zAngle = 0;
-    this.xAngle = Math.PI / 2;
-    base.Vec3.setZero(this.velocity);
-    this.buildCameraMatrix_();
+game.CharacterController.prototype.addHp = function (hp) {
+    if (this.hp <= 0) {
+        return;
+    }
+    this.hp += hp;
+    if (this.hp > 100) {
+        this.hp = 100;
+    }
+    if (this.hp <= 0) {
+        this.kill();
+    }
+};
+/**
+ * @public
+ */
+game.CharacterController.prototype.respawn = function (spawnPoint) {
+    if (spawnPoint) {
+        base.Vec3.set((/**@type{base.Vec3}*/spawnPoint['origin']), this.position);
+        this.zAngle = spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5;
+        this.xAngle = Math.PI / 2;
+        base.Vec3.setZero(this.velocity);
+        this.buildCameraMatrix_();
+    }
     this.player_.respawn();
+    this.hp = 100;
+    this.weapon_.show(true);
+};
+
+game.CharacterController.prototype.kill = function () {
+    this.dyingProgress = 0;
+    this.player_.kill();
+    this.hp = 0;
+    this.weapon_.show(false);
 };
 /**
  * @return {game.Player}
@@ -460,7 +496,7 @@ game.CharacterController.prototype.updateServer = function (dt, input, scene) {
     if (base.Vec3.length2(this.velocity) > 0.01) {
         this.legsState = game.Player.LegsStates.RUN;
         if (input.getAction(base.InputState.Action.WALK)) {
-            this.legsState = game.Player.LegsStates.WALK;            
+            this.legsState = game.Player.LegsStates.WALK;
         }
         
         if (input.getAction(base.InputState.Action.CROUCH)) {
@@ -481,7 +517,11 @@ game.CharacterController.prototype.updateServer = function (dt, input, scene) {
     }
 
     if (input.hasActionStarted(base.InputState.Action.FIRE)) {
-        this.torsoState = game.Player.TorsoStates.ATTACKING;
+        if (this.hp <= 0) {
+            this.respawn(scene.getSpawnPoint());
+        } else {
+            this.torsoState = game.Player.TorsoStates.ATTACKING;
+        }
     }
 
     if (input.hasActionStarted(base.InputState.Action.CHANGING)) {
@@ -489,7 +529,7 @@ game.CharacterController.prototype.updateServer = function (dt, input, scene) {
     }
 
     if (input.hasActionStarted(base.InputState.Action.KILL)) {
-        this.player_.kill();
+        this.kill();
     }
     
     this.buildCameraMatrix_();
@@ -565,14 +605,26 @@ game.CharacterController.TPP_CAMERA_OFFSET = base.Vec3.createVal(0, 0, 60);
  */
 game.CharacterController.prototype.buildCameraMatrix_ = function () {
     base.Mat4.identity(this.camMtx);
+
     base.Mat4.rotateZ(this.camMtx, this.zAngle);
+    if (!game.globals.tppMode && this.hp <= 0) {
+        this.dyingProgress += 0.05;
+        if (this.dyingProgress > 1) {
+            this.dyingProgress = 1;
+        }
+        base.Mat4.rotateY(this.camMtx, -Math.PI * 0.4 * this.dyingProgress);
+    }
+
     base.Mat4.rotateX(this.camMtx, this.xAngle);
+
 
     this.camMtx[13] = this.position[1];
     this.camMtx[12] = this.position[0];
     this.camMtx[14] = this.position[2] + 20;
     if (game.globals.tppMode) {
         base.Mat4.translate(this.camMtx, game.CharacterController.TPP_CAMERA_OFFSET);
+    } else if (this.hp <= 0) {
+        this.camMtx[14] -= 15 * this.dyingProgress;
     }
 };
 
