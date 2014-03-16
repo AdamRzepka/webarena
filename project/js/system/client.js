@@ -32,6 +32,7 @@ goog.require('system.RTCSocket');
 goog.require('system.InputHandler');
 goog.require('renderer.Scene');
 goog.require('files.ResourceManager');
+goog.require('system.Hud');
 
 goog.provide('system.Client');
 
@@ -86,6 +87,12 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
      * @type {base.IBroker}
      */
     this.broker_ = base.IBroker.createWorker(['game'], ['base.js', 'game.js'], 'game');
+    /**
+     * @const
+     * @private
+     * @type {system.Hud}
+     */
+    this.hud_ = new system.Hud(this.broker_);
     /**
      * @private
      * @type {system.PlayerData}

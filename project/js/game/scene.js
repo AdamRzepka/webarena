@@ -26,6 +26,7 @@ goog.require('game.Player');
 goog.require('game.CharacterController');
 goog.require('game.InputBuffer');
 goog.require('game.MachineGun');
+goog.require('base.IHud');
 
 goog.provide('game.Scene');
 
@@ -37,8 +38,9 @@ goog.provide('game.Scene');
  * @param {game.ModelManager} modelManager
  * @param {number} myPlayerId
  * @param {Object.<string,string>} configs TODO: this is ugly
+ * @param {base.IHud} hud
  */
-game.Scene = function (renderer, map, modelManager, myPlayerId, configs) {
+game.Scene = function (renderer, map, modelManager, myPlayerId, configs, hud) {
     this.globalTime_ = 0;
     this.lastTime_ = 0;
     this.configs_ = configs;
@@ -48,6 +50,7 @@ game.Scene = function (renderer, map, modelManager, myPlayerId, configs) {
     this.map_ = map;
     this.characters_ = [];
     this.myPlayerId_ = myPlayerId;
+    this.hud = hud;
 };
 /**
  * @param {number} id
@@ -58,7 +61,7 @@ game.Scene.prototype.addPlayer = function (id, model) {
     
     var player = new game.Player(this.modelManager_, this.configs_, model);
     var controller = new game.CharacterController(this.map_.bsp, player, id == this.myPlayerId_,
-                                                 this.modelManager_);
+                                                 this.modelManager_, this.hud);
 
     this.characters_[id] = controller;
 
@@ -101,6 +104,9 @@ game.Scene.prototype.updateClient = function (dt, input) {
 game.Scene.prototype.synchronize = function (sync) {
     this.characters_ = sync.synchronize(this.characters_, network.Type.OBJECT,
                                         network.Flags.ARRAY);
+    if (this.myPlayerId_ != -1 && this.characters_[this.myPlayerId_]) {
+        this.characters_[this.myPlayerId_].owned = true;
+    }
 };
 /**
  * @param {network.ClassInfoManager} classInfoManager
@@ -117,7 +123,7 @@ game.Scene.prototype.registerClasses = function (classInfoManager) {
     cim.registerClass(game.CharacterController, function () {
         var player = new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
         return new game.CharacterController(that.map_.bsp, player, false,
-                                           that.modelManager_);
+                                           that.modelManager_, that.hud);
     });
     cim.registerClass(game.MachineGun, function () {
         return new game.MachineGun(that.modelManager_);

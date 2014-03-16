@@ -59,6 +59,7 @@ goog.require('network');
 goog.require('game.Weapon');
 goog.require('game.MachineGun');
 goog.require('game.ModelManager');
+goog.require('base.IHud');
 
 goog.provide('game.CharacterController');
 
@@ -69,8 +70,9 @@ goog.provide('game.CharacterController');
  * @param {game.Player} player
  * @param {boolean} owned
  * @param {game.ModelManager} mm
+ * @param {base.IHud} hud
  */
-game.CharacterController = function(bsp, player, owned, mm) {
+game.CharacterController = function(bsp, player, owned, mm, hud) {
     /**
      * @const
      * @private
@@ -167,6 +169,8 @@ game.CharacterController = function(bsp, player, owned, mm) {
      * @type {number}
      */
     this.zAngVelocity = 0;
+
+    this.hud = hud;
 
     this.hp = 100;
     this.dyingProgress = 0;
@@ -278,10 +282,15 @@ game.CharacterController.prototype.synchronize = function (sync) {
     }
     if (sync.getMode() == network.ISynchronizer.Mode.WRITE) {
         var hp = sync.synchronize(this.hp, network.Type.INT8, 0);
-        if (this.hp > 0 && hp <= 0) {
-            this.kill();            
-        } else if (this.hp <= 0 && hp > 0) {
-            this.respawn();
+        if (this.hp !== hp) {
+            if (this.owned) {
+                this.hud.setHp(hp);
+            }
+            if (this.hp > 0 && hp <= 0) {
+                this.kill();            
+            } else if (this.hp <= 0 && hp > 0) {
+                this.respawn();
+            }
         }
         this.hp = hp;
     } else {
@@ -623,6 +632,9 @@ game.CharacterController.prototype.buildCameraMatrix_ = function () {
     this.camMtx[14] = this.position[2] + 20;
     if (game.globals.tppMode) {
         base.Mat4.translate(this.camMtx, game.CharacterController.TPP_CAMERA_OFFSET);
+    } else if (this.legsState == game.Player.LegsStates.IDLE_CROUCH
+              || this.legsState == game.Player.LegsStates.CROUCH) {
+        this.camMtx[14] -= 10;
     } else if (this.hp <= 0) {
         this.camMtx[14] -= 15 * this.dyingProgress;
     }

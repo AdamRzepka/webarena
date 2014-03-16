@@ -36,6 +36,7 @@ goog.require('game.globals');
 goog.require('game.ModelManager');
 goog.require('game.Player');
 goog.require('game.DummyRendererScene');
+goog.require('game.DummyHud');
 goog.require('game.Scene');
 goog.require('network');
 goog.require('network.Client');
@@ -54,6 +55,7 @@ game.init = function (broker, isServer, clientId) {
     var map;
     var configs = {};
     var inputBuffer = [];
+    var hud;
 
     //var rm = new files.ResourceManager();
     //var mapName = 'aggressor';
@@ -62,9 +64,12 @@ game.init = function (broker, isServer, clientId) {
 
     if (isServer) {
         scene = new game.DummyRendererScene();
+        hud = new game.DummyHud(broker);
     } else {
         scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                                   base.IRendererScene);
+        hud = /**@type{base.IHud}*/broker.createProxy('base.IHud',
+                                                      base.IHud);
     }
     modelManager = new game.ModelManager(scene);
     
@@ -93,7 +98,7 @@ game.init = function (broker, isServer, clientId) {
         // var player = new game.Player(modelManager, configs, 'assassin', 'default');
         // var characterController = new game.CharacterController(map.bsp, player, inputBuffer[0]);
         var gameScene = new game.Scene(scene, (/**@type {base.Map}*/map), modelManager, clientId,
-                                       configs);
+                                       configs, hud);
 
         var inputState = [];
         var client, server;
