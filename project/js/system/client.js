@@ -331,7 +331,8 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
                 models: archive.map.models,
                 lightmapData: null,  // game worker doesn't need lightmap
                 bsp: archive.map.bsp,
-                entities: archive.map.entities
+                entities: archive.map.entities,
+                entitiesModels: archive.map.entitiesModels
             });
         }
     };

@@ -186,3 +186,9 @@ base.math.transformRay = function (from, to, mtx) {
         to: base.Mat4.multiplyVec3(mtxInv, to, base.Vec3.create())
     };
 };
+
+base.math.isInAABB = function (min, max, point) {
+    return point[0] >= min[0] && point[0] <= max[0] &&
+        point[1] >= min[1] && point[1] <= max[1] &&
+        point[2] >= min[2] && point[2] <= max[2];
+};

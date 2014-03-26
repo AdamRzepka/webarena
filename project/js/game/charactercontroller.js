@@ -226,6 +226,9 @@ game.CharacterController.prototype.synchronize = function (sync) {
                 this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
                 this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
                 this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
+                this.xAngVelocity = sync.synchronize(this.xAngVelocity, network.Type.FLOAT32, 0);
+                this.zAngVelocity = sync.synchronize(this.zAngVelocity, network.Type.FLOAT32, 0);
+
 
                 var buffer = new game.InputBuffer();
                 buffer.step(state.input);
@@ -401,6 +404,7 @@ game.CharacterController.prototype.respawn = function (spawnPoint) {
     this.player_.respawn();
     this.hp = 100;
     this.weapon_.show(true);
+    this.hud.setHp(this.hp);
 };
 
 game.CharacterController.prototype.kill = function () {

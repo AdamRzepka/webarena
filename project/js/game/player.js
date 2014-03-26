@@ -230,6 +230,10 @@ game.Player.prototype.getWeaponMtx = function () {
     return this.weaponMtx;
 };
 
+game.Player.prototype.getPosition = function () {
+    return base.Mat4.getRow(this.legs.model.getMatrix(), 3, base.Vec3.create());
+};
+
 /**
  * @public
  * @return {boolean}

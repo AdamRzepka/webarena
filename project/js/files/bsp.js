@@ -100,7 +100,7 @@ files.bsp.parse_ = function(src) {
     
     compiledModels = files.bsp.compileMapModels_(verts, faces, meshVerts, lightmapData, shaders);
 
-    map = new base.Map(compiledModels, lightmapData, bspBuilder.getBsp(), entities);
+    map = new base.Map(compiledModels, lightmapData, bspBuilder.getBsp(), entities, models);
 
     return map;
     
@@ -530,16 +530,16 @@ files.bsp.readModels_ = function(lump, src) {
     src.seek(lump.offset);
     for (var i = 0; i < count; ++i) {
 	models[i] = {
-	    aabbMin: {
-		x: src.readFloat(),
-		y: src.readFloat(),
-		z: src.readFloat()
-	    },
-	    aabbMax: {
-		x: src.readFloat(),
-		y: src.readFloat(),
-		z: src.readFloat()
-	    },
+	    aabbMin: [
+		src.readFloat(),
+		src.readFloat(),
+		src.readFloat()
+	    ],
+	    aabbMax: [
+		src.readFloat(),
+		src.readFloat(),
+		src.readFloat()
+	    ],
 	    faceOff: src.readLong(),
 	    faceCount: src.readLong(),
 	    brushOff: src.readLong(),

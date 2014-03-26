@@ -82,6 +82,7 @@ game.Scene.prototype.updateServer = function (dt, inputs) {
             this.characters_[i].updateServer(dt, inputs[i], this);
         }
     }
+    this.checkMapItems();
 };
 game.Scene.prototype.updateClient = function (dt, input) {
     var i = 0;
@@ -167,4 +168,30 @@ game.Scene.prototype.rayCastPlayers = function (from, to, character) {
         return null;
     }
 };
+
+game.Scene.prototype.checkMapItems = function () {
+    var i = 0;
+    var j = 0;
+    var teleports = base.Map.getTeleports(this.map_);
+    for (i = 0; i < this.characters_.length; ++i) {
+        var charact = this.characters_[i];
+        for (j = 0; j < teleports.length; ++j) {
+            var pos = charact.position;
+            
+            
+            if (base.math.isInAABB(teleports[j].min, teleports[j].max, pos)) {
+                console.log('player ' + i + ' in teleport');
+                base.Vec3.set(teleports[j].destOrigin, charact.position);
+                charact.zAngle = teleports[j].destAngle * Math.PI / 180
+                    - Math.PI * 0.5;
+                base.Vec3.setZero(charact.velocity);
+            }
+        }
+    }
+};
+
+
+
+
+
 
