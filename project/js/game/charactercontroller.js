@@ -169,10 +169,17 @@ game.CharacterController = function(bsp, player, owned, mm, hud) {
      * @type {number}
      */
     this.zAngVelocity = 0;
-
+    /**
+     * @type {base.IHud}
+     */
     this.hud = hud;
-
+    /**
+     * @type {number}
+     */
     this.hp = 100;
+    /**
+     * @type {number}
+     */
     this.dyingProgress = 0;
 
     this.dummyInput = new game.InputBuffer();

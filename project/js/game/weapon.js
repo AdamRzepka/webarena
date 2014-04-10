@@ -34,8 +34,9 @@ game.Weapon = function() {};
  */
 game.Weapon.prototype.update = function (dt, mtx) {};
 
-game.Weapon.prototype.shoot = function () {};
+game.Weapon.prototype.shoot = function (scene, camMtx, myCharacter) {};
 game.Weapon.prototype.show = function (flag) {};
+game.Weapon.prototype.remove = function (mm) {};
 
 /**
  * @constructor
@@ -124,7 +125,6 @@ game.MachineGun.prototype.shoot = function (scene, camMtx, myCharacter) {
         }
         if (player) {
             player.addHp(-10);
-            console.log('hit!!!');
         }
     }
 };
@@ -155,3 +155,8 @@ game.MachineGun.prototype.synchronize = function (sync) {
     }
 };
 
+game.MachineGun.prototype.remove = function (mm) {
+    mm.removeInstance(this.weapon);
+    mm.removeInstance(this.flash);
+    mm.removeInstance(this.barrel);
+};

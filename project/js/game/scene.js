@@ -51,6 +51,7 @@ game.Scene = function (renderer, map, modelManager, myPlayerId, configs, hud) {
     this.characters_ = [];
     this.myPlayerId_ = myPlayerId;
     this.hud = hud;
+    this.teleports = base.Map.getTeleports(map);
 };
 /**
  * @param {number} id
@@ -125,9 +126,13 @@ game.Scene.prototype.registerClasses = function (classInfoManager) {
         var player = new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
         return new game.CharacterController(that.map_.bsp, player, false,
                                            that.modelManager_, that.hud);
+    }, function (cc) {
+        cc.getPlayer().remove(that.modelManager_);
     });
     cim.registerClass(game.MachineGun, function () {
         return new game.MachineGun(that.modelManager_);
+    }, function (mg) {
+        mg.remove(that.modelManager_);
     });
     // cim.registerClass(game.Player, function () {
     //     return new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
@@ -172,15 +177,12 @@ game.Scene.prototype.rayCastPlayers = function (from, to, character) {
 game.Scene.prototype.checkMapItems = function () {
     var i = 0;
     var j = 0;
-    var teleports = base.Map.getTeleports(this.map_);
+    var teleports = this.teleports;
     for (i = 0; i < this.characters_.length; ++i) {
         var charact = this.characters_[i];
         for (j = 0; j < teleports.length; ++j) {
             var pos = charact.position;
-            
-            
             if (base.math.isInAABB(teleports[j].min, teleports[j].max, pos)) {
-                console.log('player ' + i + ' in teleport');
                 base.Vec3.set(teleports[j].destOrigin, charact.position);
                 charact.zAngle = teleports[j].destAngle * Math.PI / 180
                     - Math.PI * 0.5;

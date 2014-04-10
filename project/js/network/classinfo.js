@@ -185,6 +185,8 @@ network.ClassInfoManager.prototype.registerClass = function (constructor,
 
     // adding metadata to prototype
     constructor.prototype.__networkClassId__ = classId;
+    
+    destroyCallback(sampleObj);
 };
 
 network.ClassInfoManager.prototype.getClassInfo = function (id) {

@@ -54,7 +54,6 @@ base.Map = function(models, lightmapData, bsp, entities, entitiesModels) {
     this.entities = entities;
     /**
      * @const
-     * @type
      */
     this.entitiesModels = entitiesModels;
 };
@@ -130,7 +129,7 @@ base.Map.getTeleports = function (map) {
     var result = [];
 
     for (i = 0; i < teleports.length; ++i) {
-        var modelNum = parseInt(teleports[i]['model'].substr(1));
+        var modelNum = parseInt(teleports[i]['model'].substr(1), 10);
         var model = map.entitiesModels[modelNum];
         if (!model) {
             continue;
@@ -152,7 +151,7 @@ base.Map.getTeleports = function (map) {
             min: model.aabbMin,
             max: model.aabbMax,
             destOrigin: trg['origin'],
-            destAngle: trg['angle']
+            destAngle: trg['angle'] || 0
         });
     }
     return result;

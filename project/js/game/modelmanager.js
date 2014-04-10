@@ -31,7 +31,6 @@ goog.provide('game.ModelManager');
  */
 game.ModelManager = function (renderer) {
     /**
-     * @private
      * @const
      * @type {base.IRendererScene}
      */
@@ -154,6 +153,19 @@ game.ModelManager.prototype.makeInstance = function (modelPath, matrix, skinName
     // });
 
     return instance;
+};
+
+game.ModelManager.prototype.removeInstance = function (model) {
+    var i, instance;
+    for (i = 0; i < this.instances.length; ++i) {
+        instance = this.instances[i];
+        if (model === instance) {
+            this.instances[i] = this.instances.pop();
+            break;
+        }
+    }
+    this.renderer.unregister(model.id);
+    return;
 };
 
 /**

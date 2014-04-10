@@ -312,7 +312,7 @@ renderer.Renderer.prototype.addModelInstance = function (modelInstance) {
 renderer.Renderer.prototype.removeModelInstance = function (modelInstance) {
     var i;
     for (i = 0; i < this.meshInstances_.length; ++i) {
-        if (this.meshInstances_[i].modelInstance === modelInstance) {
+        if (this.meshInstances_[i] && this.meshInstances_[i].modelInstance === modelInstance) {
             this.meshInstances_[i] = null;
         }
     }

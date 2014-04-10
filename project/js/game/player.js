@@ -467,62 +467,6 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
         base.Mat4.rotateZ(legsMtx, this.legsAngle);
     }
     this.legs.model.setMatrix(legsMtx);
-
-    if (game.globals.drawPlayerAABB && false) {
-        var models = [this.torso];//, this.legs, this.head];
-        var minTrans, maxTrans;
-        for (var i = 0; i < models.length; ++i) {
-            minTrans = base.Vec3.create(), maxTrans = base.Vec3.create();
-            base.Vec3.add(base.Mat4.getRow(models[i].model.getMatrix(), 3),
-                          models[i].model.baseModel.framesData[0].aabbMin,
-                          minTrans);
-            base.Vec3.add(base.Mat4.getRow(models[i].model.getMatrix(), 3),
-                          models[i].model.baseModel.framesData[0].aabbMax,
-                          maxTrans);
-            var from = [
-                // bottom
-                [minTrans[0], minTrans[1], minTrans[2]],
-                [maxTrans[0], minTrans[1], minTrans[2]],
-                [maxTrans[0], maxTrans[1], minTrans[2]],
-                [minTrans[0], maxTrans[1], minTrans[2]],
-
-                // top
-                [minTrans[0], minTrans[1], maxTrans[2]],
-                [maxTrans[0], minTrans[1], maxTrans[2]],
-                [maxTrans[0], maxTrans[1], maxTrans[2]],
-                [minTrans[0], maxTrans[1], maxTrans[2]],
-
-                // sides
-                [minTrans[0], minTrans[1], minTrans[2]],
-                [minTrans[0], maxTrans[1], minTrans[2]],
-                [maxTrans[0], maxTrans[1], minTrans[2]],
-                [maxTrans[0], minTrans[1], minTrans[2]]
-            ];
-            var to = [
-                // bottom
-                [maxTrans[0], minTrans[1], minTrans[2]],
-                [maxTrans[0], maxTrans[1], minTrans[2]],
-                [minTrans[0], maxTrans[1], minTrans[2]],
-                [minTrans[0], minTrans[1], minTrans[2]],
-
-                // top
-                [maxTrans[0], minTrans[1], maxTrans[2]],
-                [maxTrans[0], maxTrans[1], maxTrans[2]],
-                [minTrans[0], maxTrans[1], maxTrans[2]],
-                [minTrans[0], minTrans[1], maxTrans[2]],
-
-                // sides
-                [minTrans[0], minTrans[1], maxTrans[2]],
-                [minTrans[0], maxTrans[1], maxTrans[2]],
-                [maxTrans[0], maxTrans[1], maxTrans[2]],
-                [maxTrans[0], minTrans[1], maxTrans[2]]
-            ];
-            for (var j = 0; j < 12; ++j) {
-                this.renderer.updateLine(this.debugLines[j], base.Vec3.create(from[j]),
-                                         base.Vec3.create(to[j]));
-            }
-        }
-    }
 };
 
 /**
@@ -627,6 +571,12 @@ game.Player.prototype.rayCastMe = function (from, to) {
         }
     }
     return minFraction;
+};
+
+game.Player.prototype.remove = function(mm) {
+    mm.removeInstance(this.head.model);
+    mm.removeInstance(this.torso.model);
+    mm.removeInstance(this.legs.model);
 };
 
 /**

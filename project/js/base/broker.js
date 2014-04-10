@@ -108,7 +108,7 @@ base.IBroker.createWorker = function (debugDeps, compiledDeps, name) {
  * @public
  * @type {boolean}
  */
-base.IBroker.DISABLE_WORKERS = true;
+base.IBroker.DISABLE_WORKERS = false;
 /**
  * @enum {number}
  */
