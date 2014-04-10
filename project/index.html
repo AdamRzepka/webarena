@@ -11,6 +11,7 @@
 
   <style>
     #canvas-container{
+    position:absolute;
     width:1280px;
     height:720px;
     }
@@ -36,7 +37,7 @@
     left:1%;
     font-family:sans-serif;
     font-size:200%;
-    color:#E02020;
+    color:#ffffff;
     }
     #glcanvas {
     position:absolute;
@@ -45,9 +46,46 @@
     width:1280px;
     height:720px;
     }
+    body {
+    background-color:#101010;
+    }
+    #fps {
+    visibility:hidden;
+    }
+    #link {
+    font-family:sans-serif;
+    color:#ffffff;
+    top:800px;
+    position:absolute;
+    }
+    a:link {color:#a0a0a0;}
+    a:visited {color:#a0a0a0;}
+    a:hover {color:#a0a0a0;}
+    a:active {color:#a0a0a0;}
+    #frame{
+    margin-left:auto;
+    margin-right:auto;
+    width:1280px;
+    }
+    #header{
+    color:#ffffff;
+    text-align:center;
+    }
+    #loader{
+    color:#ffffff;
+    text-align:center;
+    font-family:sans-serif;
+    font-size:200%;
+    position:absolute;
+    width:1280px;
+    height:720px;
+    background-color:#101010;
+    }
   </style>
 
   <body onload="main();">
+    <h1 id="header">Web Arena</h1>
+    <div id="frame">
     <div id="canvas-container">
       <canvas id="glcanvas" width="1280" height="720">
         Your browser does not support html5 'canvas' tag.
@@ -66,8 +104,8 @@
     </div>
     <div id="link">
     </div>
-    <div id="time">
-      time
+    <div id="loader">
+      Loading...
     </div>
   </body>
 </html>

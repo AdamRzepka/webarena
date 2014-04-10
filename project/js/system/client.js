@@ -267,18 +267,18 @@ system.Client.prototype.initRTC_ = function () {
     var lastTime = Date.now();
     var sum = 0;
     var count = 0;
-    var timeElement = document.getElementById('time');
+    //var timeElement = document.getElementById('time');
 
     this.serverSocket_.onmessage = function (evt) {
         // debug
-        sum += (Date.now() - lastTime);
-        lastTime = Date.now();
-        count++;
-        if (sum > 1000) {
-            timeElement.textContent = count;
-            sum -= 1000;
-            count = 0;
-        }
+        // sum += (Date.now() - lastTime);
+        // lastTime = Date.now();
+        // count++;
+        // if (sum > 1000) {
+        //     timeElement.textContent = count;
+        //     sum -= 1000;
+        //     count = 0;
+        // }
 
         // var dv = new DataView(evt.data);
         // assume that snapshot id is first uint in message

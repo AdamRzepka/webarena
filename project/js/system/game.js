@@ -117,7 +117,11 @@ system.Game.prototype.init_ = function () {
                                              that.rm_);
             that.client_.onGameStarted = function () {
                 that.logger_.log(goog.debug.Logger.Level.INFO,
-                                 'client connected');        
+                                 'client connected');
+                var loader = document.getElementById('loader');
+                if (loader) {
+                    loader.style.visibility = 'hidden';
+                }
             };
         };
     } else {
@@ -126,7 +130,11 @@ system.Game.prototype.init_ = function () {
                                          this.rm_);
         this.client_.onGameStarted = function () {
             that.logger_.log(goog.debug.Logger.Level.INFO,
-                             'client connected');        
+                             'client connected');
+            var loader = document.getElementById('loader');
+            if (loader) {
+                loader.style.visibility = 'hidden';
+            }
         };        
     }
 };
