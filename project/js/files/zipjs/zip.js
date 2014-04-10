@@ -197,11 +197,13 @@ files.zipjs = (function(obj) {
 	     if (!that.data) {
 		 request = new XMLHttpRequest();
 		 request.addEventListener("load", function() {
-					      if (!that.size)
-						  that.size = Number(request.getResponseHeader("Content-Length"));
-					      that.data = new Uint8Array(request.response);
-					      callback();
-				          }, false);
+		     // if (!that.size)
+		     //     that.size = Number(request.getResponseHeader("Content-Length"));
+		     that.data = new Uint8Array(request.response);
+                     // workaround for not working Content-Length in RHOS server
+                     that.size = that.data.length;
+		     callback();
+		 }, false);
 		 request.addEventListener("error", onerror, false);
 		 request.open("GET", url);
 		 request.responseType = "arraybuffer";
@@ -211,14 +213,16 @@ files.zipjs = (function(obj) {
 	 }
 
 	 function init(callback, onerror) {
-	     var request = new XMLHttpRequest();
-	     request.addEventListener("load", function() {
-				          that.size = Number(request.getResponseHeader("Content-Length"));
-				          callback();
-			              }, false);
-	     request.addEventListener("error", onerror, false);
-	     request.open("HEAD", url);
-	     request.send();
+             // workaround for not working Content-Length in RHOS server
+             getData(callback, onerror);
+	     // var request = new XMLHttpRequest();
+	     // request.addEventListener("load", function() {
+	     //     that.size = Number(request.getResponseHeader("Content-Length"));
+	     //     callback();
+	     // }, false);
+	     // request.addEventListener("error", onerror, false);
+	     // request.open("HEAD", url);
+	     // request.send();
 	 }
 
 	 function readUint8Array(index, length, callback, onerror) {
