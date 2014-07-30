@@ -2,7 +2,7 @@
 
 ## Summary
 
-A clone of OpenArena (http://openarena.ws/) written (by hand) in JavaScript.
+A clone of OpenArena (http://openarena.ws/) written (by hand) in JavaScript. To see the current code, checkout gameplay branch.
 
 It was my Master of Science project.
 
