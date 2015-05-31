@@ -575,11 +575,7 @@ renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage
 
     var program = stage.program;
     if(!program) {
-        if(shader.model) {
-            program = this.modelProgram;
-        } else {
-            program = this.defaultProgram;
-        }
+        program = this.defaultModelProgram;
     }
 
     gl.useProgram(program.glProgram);

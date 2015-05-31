@@ -115,7 +115,8 @@ system.RTCSocket.prototype.readSignallingMessage = function (msg) {
         }, onError);
         break;
     case system.RTCSocket.SignallingMessage.Type.CANDIDATE:
-        this.peerConnection.addIceCandidate(new RTCIceCandidate(msg.data));
+        var IceCandidate = window['RTCIceCandidate'] || window['mozRTCIceCandidate'];
+        this.peerConnection.addIceCandidate(new IceCandidate(msg.data));
         break;
     }
 };

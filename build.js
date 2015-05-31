@@ -26,8 +26,8 @@
     "externs": ["tools/externs.js"],
     "mode": "ADVANCED",
     "level": "VERBOSE",
-    "debug": true,
-    "pretty-print": true,
+    "debug": false,
+    "pretty-print": false,
     "define": {
 	"goog.DEBUG": false
     },

@@ -37,4 +37,4 @@ system.ISocket.prototype.onclose = function () {};
  * @implements {system.ISocket}
  * @typedef {WebSocket}
  */
-system.WebSocket = WebSocket;
+system.WebSocket = window['WebSocket'];

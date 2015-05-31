@@ -374,9 +374,9 @@ system.Client.prototype.initUpdates_ = function () {
     var that = this;
     var inputMessage_ = new DataView(new ArrayBuffer(system.Client.INPUT_MESSAGE_SIZE));
     
-    var raf = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-            window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
-            window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
+    var raf = window['requestAnimationFrame'] || window['mozRequestAnimationFrame'] ||
+            window['webkitRequestAnimationFrame'] || window['msRequestAnimationFrame'] ||
+            window['oRequestAnimationFrame'] || function (fn) { setTimeout(fn, 16); };
 
     var lastTime = Date.now();
     var fpsCounter = 0;

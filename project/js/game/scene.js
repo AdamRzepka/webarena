@@ -121,18 +121,22 @@ game.Scene.prototype.registerClasses = function (classInfoManager) {
         return new game.Scene(that.renderer_, that.map_, that.modelManager_, that.configs_);
     });
     this.__networkClassId__ = game.Scene.prototype.__networkClassId__; // FIXME
-    
+
     cim.registerClass(game.CharacterController, function () {
         var player = new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');
         return new game.CharacterController(that.map_.bsp, player, false,
                                            that.modelManager_, that.hud);
     }, function (cc) {
-        cc.getPlayer().remove(that.modelManager_);
+        setTimeout(function() {
+            cc.getPlayer().remove(that.modelManager_);
+        }, 100);
     });
     cim.registerClass(game.MachineGun, function () {
         return new game.MachineGun(that.modelManager_);
     }, function (mg) {
-        mg.remove(that.modelManager_);
+        setTimeout(function() {
+            mg.remove(that.modelManager_);
+        }, 100);
     });
     // cim.registerClass(game.Player, function () {
     //     return new game.Player(that.modelManager_, that.configs_, 'assassin', 'default');

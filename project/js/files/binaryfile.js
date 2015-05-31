@@ -37,7 +37,7 @@ goog.provide('files.BinaryFile');
  */
 files.BinaryFile = function(data) {
     this.buffer = data;
-    this.length = data.length;
+    this.length = data.byteLength;
     this.offset = 0;
     this.data = data;
     this.dataView = new DataView(data);
