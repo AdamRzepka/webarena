@@ -88,6 +88,7 @@ network.Server = function (broker, scene) {
 network.Server.ClientData = function () {
     this.snapshots = [];
     this.lastSnapshot = 0;
+    this.inputTimestamp = 0;
 };
 
 /**
@@ -114,9 +115,10 @@ network.Server.prototype.addClient = function (clientId) {
 /**
  * @public
  * @param {number} clientId
- * @param {number} timestamp
+ * @param {number} snapshotTimestamp
+ * @param {number} inputTimestamp
  */
-network.Server.prototype.onClientInput = function (clientId, timestamp) {
+network.Server.prototype.onClientInput = function (clientId, snapshotTimestamp, inputTimestamp) {
     var i = 0;
     if (clientId >= this.clientsData_.length || clientId < 0) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
@@ -128,23 +130,24 @@ network.Server.prototype.onClientInput = function (clientId, timestamp) {
 
     for (i = 0; i < client.snapshots.length; ++i) {
         if (client.snapshots[i]) {
-            if (client.snapshots[i].timestamp < timestamp) {
+            if (client.snapshots[i].timestamp < snapshotTimestamp) {
                 client.snapshots[i] = null;
-            } else if (client.snapshots[i].timestamp === timestamp) {
-                client.lastSnapshot = timestamp;
+            } else if (client.snapshots[i].timestamp === snapshotTimestamp) {
+                client.lastSnapshot = snapshotTimestamp;
+                client.inputTimestamp = inputTimestamp;
                 found = true;
             }
         }
     }
     if (!found) {
         this.logger_.log(goog.debug.Logger.Level.WARNING,
-                         "Don't have snapshot with timestamp " + timestamp);
+                         "Don't have snapshot with timestamp " + snapshotTimestamp);
     }
 };
 
 /**
  * @public
- * @param {number} dt in seconds
+ * @param {number} dt in milliseconds
  */
 network.Server.prototype.update = function (dt) {
     var time = this.accTime_ + dt;
@@ -197,6 +200,7 @@ network.Server.prototype.clientUpdate_ = function (id, client, snapshot) {
         goog.asserts.assert(lastSnapshot);
     }
     network.Snapshot.diff(lastSnapshot, snapshot, delta);
+    delta.inputTimestamp = client.inputTimestamp;
 
     var size = this.serializer_.write(delta, buffer, 0);
     var buff = buffer.buffer.slice(0, size);
@@ -218,5 +222,6 @@ network.Server.prototype.clientUpdate_ = function (id, client, snapshot) {
  * @const
  * @private
  * @type {number}
+ * In milliseconds
  */
-network.Server.UPDATE_INTERVAL = 1/20;
+network.Server.UPDATE_INTERVAL = 40;

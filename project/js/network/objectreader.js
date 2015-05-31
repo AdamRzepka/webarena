@@ -18,7 +18,6 @@
 'use strict';
 
 goog.require('goog.asserts');
-goog.require('goog.array');
 goog.require('network');
 goog.require('network.Snapshot');
 goog.require('network.ClassInfo');
@@ -138,6 +137,22 @@ network.ObjectReader.prototype.getMode = function () {
 };
 
 /**
+ * @public
+ * @return {number}
+ */
+network.ObjectReader.prototype.getSnapshotTimestamp = function () {
+    return this.snapshot_.timestamp;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+network.ObjectReader.prototype.getInputTimestamp = function () {
+    return this.snapshot_.inputTimestamp;
+};
+
+/**
  * @private
  * @return number
  */
@@ -245,10 +260,16 @@ network.ObjectReader.prototype.readObject_ = function (obj) {
  * @param {*} data
  */
 network.ObjectReader.prototype.readPrimitive_ = function (data) {
+    var i = 0;
     var state = this.stack_[this.top_];
     var buffer = state.objectBuffer;
+    var copy = null;
     if (data.constructor == Float32Array) {
-        buffer.data[state.index++] = new Float32Array(goog.array.clone(data));
+        copy = new Float32Array(data.length);
+        for (i = 0; i < data.length; ++i) {
+            copy[i] = data[i];
+        }
+        buffer.data[state.index++] = copy;
     } else {
         buffer.data[state.index++] = data;
     }

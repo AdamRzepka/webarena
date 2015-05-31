@@ -56,6 +56,10 @@ goog.require('base.Bsp');
 goog.require('game.globals');
 goog.require('game.InputBuffer');
 goog.require('network');
+goog.require('game.Weapon');
+goog.require('game.MachineGun');
+goog.require('game.ModelManager');
+goog.require('base.IHud');
 
 goog.provide('game.CharacterController');
 
@@ -63,10 +67,12 @@ goog.provide('game.CharacterController');
  * @constructor
  * @implements {network.ISynchronizable}
  * @param {base.Bsp} bsp
- * @param {game.InputBuffer} input
  * @param {game.Player} player
+ * @param {boolean} owned
+ * @param {game.ModelManager} mm
+ * @param {base.IHud} hud
  */
-game.CharacterController = function(bsp, input, player) {
+game.CharacterController = function(bsp, player, owned, mm, hud) {
     /**
      * @const
      * @private
@@ -76,9 +82,9 @@ game.CharacterController = function(bsp, input, player) {
     /**
      * @const
      * @private
-     * @type {game.InputBuffer}
+     * @type {boolean}
      */
-    this.input = input;
+    this.owned = owned;
     /**
      * @private
      * @type {base.Vec3}
@@ -138,6 +144,47 @@ game.CharacterController = function(bsp, input, player) {
      * @type {game.Player}
      */
     this.player_ = player;
+    /**
+     * @private
+     * @type {game.Weapon}
+     */
+    this.weapon_ = new game.MachineGun(mm);
+    /**
+     * @private
+     * @type {game.Player.TorsoStates}
+     */
+    this.torsoState = game.Player.TorsoStates.IDLE;
+    /**
+     * @private
+     * @type {game.Player.LegsStates}
+     */
+    this.legsState = game.Player.LegsStates.IDLE;
+    /**
+     * @private
+     * @type {number}
+     */
+    this.xAngVelocity = 0;
+    /**
+     * @private
+     * @type {number}
+     */
+    this.zAngVelocity = 0;
+    /**
+     * @type {base.IHud}
+     */
+    this.hud = hud;
+    /**
+     * @type {number}
+     */
+    this.hp = 100;
+    /**
+     * @type {number}
+     */
+    this.dyingProgress = 0;
+
+    this.dummyInput = new game.InputBuffer();
+
+    this.stateArchive_ = [];
     
     this.buildCameraMatrix_();
 };
@@ -148,14 +195,118 @@ game.CharacterController = function(bsp, input, player) {
  * @suppress {checkTypes}
  */
 game.CharacterController.prototype.synchronize = function (sync) {
-    this.velocity = sync.synchronize(this.velocity, network.Type.VEC3, 0);
-    this.position = sync.synchronize(this.position, network.Type.VEC3, 0);
-    this.direction = sync.synchronize(this.direction, network.Type.VEC3,
-                                     network.Flags.NORMAL_VECTOR);
-    this.xAngle = sync.synchronize(this.xAngle, network.Type.FLOAT32, 0);
-    this.zAngle = sync.synchronize(this.zAngle, network.Type.FLOAT32, 0);
-    this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
-    this.player_ = sync.synchronize(this.player_, network.Type.OBJECT, 0);
+    var i = 0;
+
+    sync.synchronize(this.weapon_, network.Type.OBJECT, 0);
+    if (sync.getMode() == network.ISynchronizer.Mode.WRITE && this.owned) {
+        var pos = new Float32Array(5);
+
+        var serverPosition = sync.synchronize(this.position, network.Type.VEC3, 0);
+        var xServerAngle = sync.synchronize(this.xAngle, network.Type.FLOAT32, 0);
+        var zServerAngle = sync.synchronize(this.zAngle, network.Type.FLOAT32, 0);
+        
+        var state = null;
+        while (this.stateArchive_.length &&
+               this.stateArchive_[0].input.timestamp <= sync.getInputTimestamp()) {
+            if (this.stateArchive_[0].input.timestamp === sync.getInputTimestamp()) {
+                state = this.stateArchive_[0];
+                break;
+            }
+            this.stateArchive_.shift();
+        }
+
+        if (state !== null) {
+            var diff = (Math.abs(xServerAngle - state.xAngle) > 0.5) || 
+                    (Math.abs(zServerAngle - state.zAngle) > 0.5) ||
+                    (Math.abs(serverPosition[0] - state.position[0]) > 20) ||
+                    (Math.abs(serverPosition[1] - state.position[1]) > 20) ||
+                    (Math.abs(serverPosition[2] - state.position[2]) > 20);
+            if (diff) {
+                this.position = serverPosition;
+                this.xAngle = xServerAngle;
+                this.zAngle = zServerAngle;
+                
+                this.velocity = sync.synchronize(this.velocity, network.Type.VEC3, 0);
+                this.direction = sync.synchronize(this.direction, network.Type.VEC3,
+                                                  network.Flags.NORMAL_VECTOR);
+                
+                this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
+                this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
+                this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
+                this.xAngVelocity = sync.synchronize(this.xAngVelocity, network.Type.FLOAT32, 0);
+                this.zAngVelocity = sync.synchronize(this.zAngVelocity, network.Type.FLOAT32, 0);
+
+
+                var buffer = new game.InputBuffer();
+                buffer.step(state.input);
+                for (i = 1; i < this.stateArchive_.length; ++i) {
+                    buffer.step(this.stateArchive_[i].input);
+                    this.updateServer(game.globals.TIME_STEP_MS, buffer);
+                    this.stateArchive_.pop();
+                }
+            } else {
+                sync.synchronize(this.velocity, network.Type.VEC3, 0);
+                sync.synchronize(this.direction, network.Type.VEC3,
+                                                  network.Flags.NORMAL_VECTOR);
+                
+                sync.synchronize(this.onGround, network.Type.BOOL, 0);
+                sync.synchronize(this.torsoState, network.Type.INT8, 0);
+                sync.synchronize(this.legsState, network.Type.INT8, 0);
+                sync.synchronize(this.xAngVelocity, network.Type.FLOAT32, 0);
+                sync.synchronize(this.zAngVelocity, network.Type.FLOAT32, 0);
+
+            }
+        } else {
+            this.position = serverPosition;
+            this.xAngle = xServerAngle;
+            this.zAngle = zServerAngle;
+            
+            this.velocity = sync.synchronize(this.velocity, network.Type.VEC3, 0);
+            this.direction = sync.synchronize(this.direction, network.Type.VEC3,
+                                              network.Flags.NORMAL_VECTOR);
+            
+            this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
+            this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
+            this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
+            this.xAngVelocity = sync.synchronize(this.xAngVelocity, network.Type.FLOAT32, 0);
+            this.zAngVelocity = sync.synchronize(this.zAngVelocity, network.Type.FLOAT32, 0);
+
+        }
+    } else {
+        this.position = sync.synchronize(this.position, network.Type.VEC3, 0);
+        this.xAngle = sync.synchronize(this.xAngle, network.Type.FLOAT32, 0);
+        this.zAngle = sync.synchronize(this.zAngle, network.Type.FLOAT32, 0);
+        this.velocity = sync.synchronize(this.velocity, network.Type.VEC3, 0);
+        this.direction = sync.synchronize(this.direction, network.Type.VEC3,
+                                          network.Flags.NORMAL_VECTOR);
+        
+        this.onGround = sync.synchronize(this.onGround, network.Type.BOOL, 0);
+        this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
+        this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
+        this.xAngVelocity = sync.synchronize(this.xAngVelocity, network.Type.FLOAT32, 0);
+        this.zAngVelocity = sync.synchronize(this.zAngVelocity, network.Type.FLOAT32, 0);
+
+        if (sync.getMode() == network.ISynchronizer.Mode.READ) {
+//            console.log(this.xAngVelocity);
+        }
+    }
+    if (sync.getMode() == network.ISynchronizer.Mode.WRITE) {
+        var hp = sync.synchronize(this.hp, network.Type.INT8, 0);
+        if (this.hp !== hp) {
+            if (this.owned) {
+                this.hud.setHp(hp);
+            }
+            if (this.hp > 0 && hp <= 0) {
+                this.kill();            
+            } else if (this.hp <= 0 && hp > 0) {
+                this.respawn();
+            }
+        }
+        this.hp = hp;
+    } else {
+        this.hp = sync.synchronize(this.hp, network.Type.INT8, 0);
+    }
+    
 };
 
 // Some movement constants ripped from the Q3 Source code
@@ -232,43 +383,109 @@ game.CharacterController.SCALE = 250;
 
 /**
  * @public
- * @param {base.Vec3} position
- * @param {number} zAngle
+ * @param {number} hp
  */
-game.CharacterController.prototype.respawn = function (position, zAngle) {
-    this.position = position;
-    this.zAngle = 0;
-    this.xAngle = Math.PI / 2;
-    base.Vec3.setZero(this.velocity);
-    this.buildCameraMatrix_();
-    this.player_.respawn();
+game.CharacterController.prototype.addHp = function (hp) {
+    if (this.hp <= 0) {
+        return;
+    }
+    this.hp += hp;
+    if (this.hp > 100) {
+        this.hp = 100;
+    }
+    if (this.hp <= 0) {
+        this.kill();
+    }
 };
 /**
  * @public
  */
-game.CharacterController.prototype.update = function () {
-    var dir = this.direction;
-    var torsoState = game.Player.TorsoStates.IDLE;
-    var legsState = game.Player.LegsStates.IDLE;
+game.CharacterController.prototype.respawn = function (spawnPoint) {
+    if (spawnPoint) {
+        base.Vec3.set((/**@type{base.Vec3}*/spawnPoint['origin']), this.position);
+        this.zAngle = spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5;
+        this.xAngle = Math.PI / 2;
+        base.Vec3.setZero(this.velocity);
+        this.buildCameraMatrix_();
+    }
+    this.player_.respawn();
+    this.hp = 100;
+    this.weapon_.show(true);
+    this.hud.setHp(this.hp);
+};
+
+game.CharacterController.prototype.kill = function () {
+    this.dyingProgress = 0;
+    this.player_.kill();
+    this.hp = 0;
+    this.weapon_.show(false);
+};
+/**
+ * @return {game.Player}
+ */
+game.CharacterController.prototype.getPlayer = function () {
+    return this.player_;
+};
+/**
+ * @public
+ */
+game.CharacterController.prototype.updateClient = function (dt) {
+
+    this.xAngle += this.xAngVelocity * dt;
+    this.zAngle += this.zAngVelocity * dt;
     
+    base.Mat4.identity(this.camMtx);
+    base.Mat4.rotateZ(this.camMtx, this.zAngle);
+        
+    base.Mat4.multiplyVec3(this.camMtx, this.direction, this.directionTrans);
+
+    if (dt > 0) {
+        if (!this.player_.isDead() || !this.onGround) {
+            this.move(this.directionTrans, this.dummyInput);
+        }
+    }
+
+    this.buildCameraMatrix_();
+    this.player_.update(this.torsoState,
+                        this.legsState,
+                        this.position,
+                        this.direction,
+                        this.zAngle,
+                        this.xAngle,
+                        this.camMtx);
+    this.weapon_.update(dt, this.player_.getWeaponMtx());
+};
+
+/**
+ * @public
+ * @param {number} dt
+ * @param {game.InputBuffer} input
+ */
+game.CharacterController.prototype.updateServer = function (dt, input, scene) {
+    var dir = this.direction;
+    this.torsoState = game.Player.TorsoStates.IDLE;
+    this.legsState = game.Player.LegsStates.IDLE;
+
     base.Vec3.setZero(dir);
 
-    if (this.input.getAction(base.InputState.Action.UP)) {
+    if (input.getAction(base.InputState.Action.UP)) {
 	dir[1] += 1;
     }
-    if (this.input.getAction(base.InputState.Action.DOWN)) {
+    if (input.getAction(base.InputState.Action.DOWN)) {
 	dir[1] -= 1;
     }
-    if (this.input.getAction(base.InputState.Action.LEFT)) {
+    if (input.getAction(base.InputState.Action.LEFT)) {
 	dir[0] -= 1;
     }
-    if (this.input.getAction(base.InputState.Action.RIGHT)) {
+    if (input.getAction(base.InputState.Action.RIGHT)) {
 	dir[0] += 1;
     }
+    var lastZAngle = this.zAngle;
+    var lastXAngle = this.xAngle;
 
     if (!this.player_.isDead()) {
-        //this.zAngle = this.input.getCursorX() / 200.0;
-        this.zAngle -= this.input.getDeltaX() / 200.0;
+        this.zAngle -= input.getDeltaX() / 200.0;
+//        this.zAngle = -input.getX() / 200.0 % (2 * Math.PI);
         if (this.zAngle > 2 * Math.PI) {
             this.zAngle -= 2 * Math.PI;
         }
@@ -276,7 +493,8 @@ game.CharacterController.prototype.update = function () {
             this.zAngle += 2 * Math.PI;
         }
 
-        this.xAngle -= this.input.getDeltaY() / 200.0;
+        // this.xAngle = -input.getY() / 200.0 + Math.PI * 0.5;
+        this.xAngle -= input.getDeltaY() / 200.0;
         if (this.xAngle > Math.PI) {
             this.xAngle = Math.PI;
         }
@@ -284,6 +502,8 @@ game.CharacterController.prototype.update = function () {
             this.xAngle = 0;
         }
     }
+    this.xAngVelocity = (this.xAngle - lastXAngle) / dt;
+    this.zAngVelocity = (this.zAngle - lastZAngle) / dt;
 
     base.Mat4.identity(this.camMtx);
     base.Mat4.rotateZ(this.camMtx, this.zAngle);
@@ -291,53 +511,68 @@ game.CharacterController.prototype.update = function () {
     base.Mat4.multiplyVec3(this.camMtx, dir, this.directionTrans);
 
     if (!this.player_.isDead() || !this.onGround)
-        this.move(this.directionTrans);
+        this.move(this.directionTrans, input);
 
     if (base.Vec3.length2(this.velocity) > 0.01) {
-        legsState = game.Player.LegsStates.RUN;
-        if (this.input.getAction(base.InputState.Action.WALK)) {
-            legsState = game.Player.LegsStates.WALK;            
+        this.legsState = game.Player.LegsStates.RUN;
+        if (input.getAction(base.InputState.Action.WALK)) {
+            this.legsState = game.Player.LegsStates.WALK;
         }
         
-        if (this.input.getAction(base.InputState.Action.CROUCH)) {
-            legsState = game.Player.LegsStates.CROUCH;
+        if (input.getAction(base.InputState.Action.CROUCH)) {
+            this.legsState = game.Player.LegsStates.CROUCH;
         }        
-    } else if (this.input.getAction(base.InputState.Action.CROUCH)) {
-        legsState = game.Player.LegsStates.IDLE_CROUCH;
+    } else if (input.getAction(base.InputState.Action.CROUCH)) {
+        this.legsState = game.Player.LegsStates.IDLE_CROUCH;
     }
     
     if (!this.onGround) {
-        legsState = game.Player.LegsStates.IN_AIR;
+        this.legsState = game.Player.LegsStates.IN_AIR;
     }
 
     if (!this.player_.isDead() && this.onGround
-        && this.input.hasActionStarted(base.InputState.Action.JUMP)) {
+        && input.hasActionStarted(base.InputState.Action.JUMP)) {
         this.jump();
-        legsState = game.Player.LegsStates.JUMP;
+        this.legsState = game.Player.LegsStates.JUMP;
     }
 
-    if (this.input.hasActionStarted(base.InputState.Action.FIRE)) {
-        torsoState = game.Player.TorsoStates.ATTACKING;
+    if (input.hasActionStarted(base.InputState.Action.FIRE)) {
+        if (this.hp <= 0) {
+            this.respawn(scene.getSpawnPoint());
+        } else {
+            this.torsoState = game.Player.TorsoStates.ATTACKING;
+        }
     }
 
-    if (this.input.hasActionStarted(base.InputState.Action.CHANGING)) {
-        torsoState = game.Player.TorsoStates.CHANGING;
+    if (input.hasActionStarted(base.InputState.Action.CHANGING)) {
+        this.torsoState = game.Player.TorsoStates.CHANGING;
     }
 
-    if (this.input.hasActionStarted(base.InputState.Action.KILL)) {
-        this.player_.kill();
+    if (input.hasActionStarted(base.InputState.Action.KILL)) {
+        this.kill();
     }
-
     
     this.buildCameraMatrix_();
-    this.player_.update(torsoState,
-                        legsState,
+
+    if (input.getAction(base.InputState.Action.FIRE)) {
+        this.weapon_.shoot(scene, this.camMtx, this);
+    }
+    
+    this.player_.update(this.torsoState,
+                        this.legsState,
                         this.position,
-                        this.velocity,
-                        dir,
+                        this.direction,
                         this.zAngle,
                         this.xAngle,
                         this.camMtx);
+    this.weapon_.update(dt, this.player_.getWeaponMtx());
+    
+    this.stateArchive_.push({
+        position: this.position,
+        xAngle: this.xAngle,
+        zAngle: this.zAngle,
+        input: input.getState()
+    });
 };
 
 /**
@@ -390,14 +625,29 @@ game.CharacterController.TPP_CAMERA_OFFSET = base.Vec3.createVal(0, 0, 60);
  */
 game.CharacterController.prototype.buildCameraMatrix_ = function () {
     base.Mat4.identity(this.camMtx);
+
     base.Mat4.rotateZ(this.camMtx, this.zAngle);
+    if (!game.globals.tppMode && this.hp <= 0) {
+        this.dyingProgress += 0.05;
+        if (this.dyingProgress > 1) {
+            this.dyingProgress = 1;
+        }
+        base.Mat4.rotateY(this.camMtx, -Math.PI * 0.4 * this.dyingProgress);
+    }
+
     base.Mat4.rotateX(this.camMtx, this.xAngle);
+
 
     this.camMtx[13] = this.position[1];
     this.camMtx[12] = this.position[0];
     this.camMtx[14] = this.position[2] + 20;
     if (game.globals.tppMode) {
         base.Mat4.translate(this.camMtx, game.CharacterController.TPP_CAMERA_OFFSET);
+    } else if (this.legsState == game.Player.LegsStates.IDLE_CROUCH
+              || this.legsState == game.Player.LegsStates.CROUCH) {
+        this.camMtx[14] -= 10;
+    } else if (this.hp <= 0) {
+        this.camMtx[14] -= 15 * this.dyingProgress;
     }
 };
 
@@ -518,7 +768,7 @@ game.CharacterController.prototype.jump = function() {
  * @param {base.Vec3} dir
  * @return {base.Vec3}
  */
-game.CharacterController.prototype.move = function(dir) {
+game.CharacterController.prototype.move = function(dir, input) {
 //    game.globals.TIME_STEP = frameTime*0.0075;
     
     this.groundCheck();
@@ -526,7 +776,7 @@ game.CharacterController.prototype.move = function(dir) {
     base.Vec3.normalize(dir);
     
     if(this.onGround) {
-        this.walkMove(dir);
+        this.walkMove(dir, input);
     } else {
         this.airMove(dir);
     }
@@ -549,13 +799,13 @@ game.CharacterController.prototype.airMove = function(dir) {
  * @private
  * @param {base.Vec3} dir
  */
-game.CharacterController.prototype.walkMove = function(dir) {
+game.CharacterController.prototype.walkMove = function(dir, input) {
     this.applyFriction();
     
     var speed = base.Vec3.length(dir) * game.CharacterController.SCALE;
 
-    if (this.input.getAction(base.InputState.Action.CROUCH) ||
-        this.input.getAction(base.InputState.Action.WALK)) {
+    if (input.getAction(base.InputState.Action.CROUCH) ||
+        input.getAction(base.InputState.Action.WALK)) {
         speed *= 0.3;
     }
     

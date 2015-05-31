@@ -172,6 +172,15 @@ renderer.Renderer.prototype.getTexture = function (name) {
 
 /**
  * @public
+ * @param {number} id
+ * @return {renderer.Material}
+ */
+renderer.Renderer.prototype.getMaterial = function (id) {
+    return this.materialManager_.getMaterialById(id);
+};
+
+/**
+ * @public
  * Where the magic happens...
  */
 renderer.Renderer.prototype.render = function () {
@@ -257,7 +266,7 @@ renderer.Renderer.prototype.addModel = function (model) {
 	mesh = meshes[j];
 
 	materials = mesh.materialNames.map(goog.bind(function (name) {
-	    return this.materialManager_.getMaterial(
+	    return this.materialManager_.getMaterialId(
 		name,
 		mesh.lightningType);
 	}, this));
@@ -287,8 +296,8 @@ renderer.Renderer.prototype.addModelInstance = function (modelInstance) {
 	    meshInstance =
 	        new renderer.MeshInstance(baseMesh,
                                           modelInstance,
-				          /**@type{renderer.Material}*/
-                                          (baseMesh.materials[skinId]));
+                                          this.materialManager_.getMaterialById(
+                                              baseMesh.materials[skinId]));
 	    this.meshInstances_.push(meshInstance);
         }
     }
@@ -303,7 +312,7 @@ renderer.Renderer.prototype.addModelInstance = function (modelInstance) {
 renderer.Renderer.prototype.removeModelInstance = function (modelInstance) {
     var i;
     for (i = 0; i < this.meshInstances_.length; ++i) {
-        if (this.meshInstances_[i].modelInstance === modelInstance) {
+        if (this.meshInstances_[i] && this.meshInstances_[i].modelInstance === modelInstance) {
             this.meshInstances_[i] = null;
         }
     }

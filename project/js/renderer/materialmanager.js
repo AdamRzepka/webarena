@@ -81,10 +81,15 @@ renderer.MaterialManager = function(gl) {
 
     /**
      * @private
-     * @type {Object.<string, renderer.Material>}
-     * Cache for materials
+     * @type {Object.<string, number>}
+     * Maps material name to id for fast searching
      */
-    this.materials = {};
+    this.materialsMap = {};
+    /**
+     * @private
+     * @type {Array.<renderer.Material>}
+     */
+    this.materials = [];
     /**
      * @private
      * @type {WebGLTexture}
@@ -156,20 +161,13 @@ renderer.MaterialManager.prototype.buildShaders = function (shaderScripts, image
     {
         if (shaderScripts.hasOwnProperty(name)) {
 	    shaderScript = shaderScripts[name];
-	    this.materials[name] = new renderer.Material(
+            this.materialsMap[name] = this.materials.length;
+	    this.materials.push(new renderer.Material(
 	        this.build(this.gl, shaderScript),
 	        null,
-	        base.LightningType.LIGHT_CUSTOM);
+	        base.LightningType.LIGHT_CUSTOM));
         }
     }
-    // for (i = 0; i < shaderScripts.length; ++i) {
-    //     shaderScript = shaderScripts[i];
-    //     name = shaderScript.name;
-    //     this.materials[name] = new renderer.Material(
-    //         this.build(this.gl, shaderScript),
-    //         null,
-    //         base.LightningType.LIGHT_CUSTOM);
-    // }
 };
 
 /**
@@ -190,11 +188,12 @@ renderer.MaterialManager.prototype.buildSpecialMaterial = function (materialName
     shader.name = materialName;
     // @todo: patch
     //shader.cull = goog.webgl.FRONT_AND_BACK;
+    this.materialsMap[materialName] = this.materials.length;
 
-    this.materials[materialName] = new renderer.Material(
+    this.materials.push(new renderer.Material(
         shader,
         null,
-        base.LightningType.LIGHT_CUSTOM);
+        base.LightningType.LIGHT_CUSTOM));
 };
 
 /**
@@ -225,18 +224,18 @@ renderer.MaterialManager.prototype.buildLightmap = function (lightmapData) {
  * @public
  * @param {string} name
  * @param {base.LightningType} lightningType
- * @return {renderer.Material}
+ * @return {number}
  */
-renderer.MaterialManager.prototype.getMaterial = function (name, lightningType) {
+renderer.MaterialManager.prototype.getMaterialId = function (name, lightningType) {
     var shader,
         shaderSrc,
-        material = this.materials[name],
+        materialId = this.materialsMap[name],
         defTexture,
         gl = this.gl,
-        i;
+        material;
 
     // material not defined explicitly - use default
-    if (!material) {
+    if (!materialId) {
 	defTexture = this.textures[name];
 	if (!defTexture) {
 	    this.logger.log(goog.debug.Logger.Level.WARNING, 'Texture ' +
@@ -249,9 +248,21 @@ renderer.MaterialManager.prototype.getMaterial = function (name, lightningType) 
 	    defTexture,
 	    lightningType
 	);
+        this.materialsMap[name] = materialId = this.materials.length;
+        this.materials.push(material);
     }
-
-    return /**@type{renderer.Material}*/material;
+    // TODO: if material already exists, check if lightiningType is the same.
+    return materialId;
+};
+/**
+ * @public
+ * @param {number} id
+ * @return {renderer.Material}
+ */
+renderer.MaterialManager.prototype.getMaterialById = function (id) {
+    var material = this.materials[id];
+    goog.asserts.assert(material);
+    return material;
 };
 
 /**
@@ -564,11 +575,7 @@ renderer.MaterialManager.prototype.setShaderStage = function(shader, shaderStage
 
     var program = stage.program;
     if(!program) {
-        if(shader.model) {
-            program = this.modelProgram;
-        } else {
-            program = this.defaultProgram;
-        }
+        program = this.defaultModelProgram;
     }
 
     gl.useProgram(program.glProgram);

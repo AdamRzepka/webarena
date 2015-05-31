@@ -386,7 +386,8 @@ base.Mesh = function(geometry, indicesOffset, indicesCount, materialNames, light
     this.lightningType = lightningType;
      
     /**
-     * @type {Array.<base.Material>}
+     * @type {Array.<number>}
+     * ids of materials
      */
     this.materials = [];
 };
@@ -461,12 +462,3 @@ base.makeUnremovable = function (fun) {
     }
 };
 
-base.clamp = function (x, min, max) {
-    if (x >= max) {
-        return max;
-    } else if (x <= min) {
-        return min;
-    } else {
-        return x;
-    }
-};

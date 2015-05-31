@@ -36,6 +36,8 @@ goog.require('game.globals');
 goog.require('game.ModelManager');
 goog.require('game.Player');
 goog.require('game.DummyRendererScene');
+goog.require('game.DummyHud');
+goog.require('game.Scene');
 goog.require('network');
 goog.require('network.Client');
 goog.require('network.Server');
@@ -45,13 +47,15 @@ goog.provide('game');
 /**
  * @param {base.IBroker} broker
  * @param {boolean} isServer
+ * @param {number} clientId client only
  */
-game.init = function (broker, isServer) {
+game.init = function (broker, isServer, clientId) {
     var scene;
     var modelManager;
     var map;
     var configs = {};
-    var inputBuffer = [new game.InputBuffer(), new game.InputBuffer()];
+    var inputBuffer = [];
+    var hud;
 
     //var rm = new files.ResourceManager();
     //var mapName = 'aggressor';
@@ -60,9 +64,12 @@ game.init = function (broker, isServer) {
 
     if (isServer) {
         scene = new game.DummyRendererScene();
+        hud = new game.DummyHud(broker);
     } else {
         scene = /**@type{base.IRendererScene}*/broker.createProxy('base.IRendererScene',
                                                                   base.IRendererScene);
+        hud = /**@type{base.IHud}*/broker.createProxy('base.IHud',
+                                                      base.IHud);
     }
     modelManager = new game.ModelManager(scene);
     
@@ -88,56 +95,77 @@ game.init = function (broker, isServer) {
 	
         var camera = new game.FreeCamera(inputBuffer[1], base.Vec3.create([0,0,0]));
         
-        var player = new game.Player(modelManager, configs, 'assassin', 'default');
-        var characterController = new game.CharacterController(map.bsp, inputBuffer[0], player);
-        var spawnPoints = base.Map.getSpawnPoints(map);
-        var spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+        // var player = new game.Player(modelManager, configs, 'assassin', 'default');
+        // var characterController = new game.CharacterController(map.bsp, player, inputBuffer[0]);
+        var gameScene = new game.Scene(scene, (/**@type {base.Map}*/map), modelManager, clientId,
+                                       configs, hud);
 
-        var inputState = [new base.InputState(), new base.InputState()];
+        var inputState = [];
         var client, server;
-        /**
-         * @suppress {checkTypes}
-         */
-        function registerClasses(classInfoManager) {
-            var cim = classInfoManager;
-            cim.registerClass(game.CharacterController, function () {
-                return new game.CharacterController(map.bsp, inputBuffer[0], player);
-            });
-            cim.registerClass(game.Player, function () {
-                return new game.Player(modelManager, configs, 'assassin', 'default');
-            });
-            cim.registerClass(game.FreeCamera, function () {
-                return new game.FreeCamera(inputBuffer[1], base.Vec3.create([0,0,0]));
-            });
+        // /**
+        //  * @suppress {checkTypes}
+        //  */
+        // function registerClasses(classInfoManager) {
+        //     var cim = classInfoManager;
+        //     cim.registerClass(game.CharacterController, function () {
+        //         return new game.CharacterController(map.bsp, inputBuffer[0], player);
+        //     });
+        //     cim.registerClass(game.Player, function () {
+        //         return new game.Player(modelManager, configs, 'assassin', 'default');
+        //     });
+        //     cim.registerClass(game.FreeCamera, function () {
+        //         return new game.FreeCamera(inputBuffer[1], base.Vec3.create([0,0,0]));
+        //     });
 
-        };
+        // };
+        var stateBuffer;
 
         if (!isServer) {
-            client = new network.Client(broker, characterController);
-            registerClasses(client.getClassInfoManager());
+            client = new network.Client(broker, gameScene);
+            gameScene.registerClasses(client.getClassInfoManager());
+            inputBuffer.push(new game.InputBuffer());
+            inputState.push(new base.InputState());
+            broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
+                goog.asserts.assert(data.playerId === clientId);
+                inputState[0] = data.inputState;
+            });
+            broker.registerEventListener(base.EventType.STATE_UPDATE, function (type, buffer) {
+                stateBuffer = buffer;
+//                client.update((/**@type{ArrayBuffer}*/buffer));
+            });
+//            registerClasses(client.getClassInfoManager());
         } else {
-            server = new network.Server(broker, characterController);
-            registerClasses(server.getClassInfoManager());
+            server = new network.Server(broker, gameScene);
+            gameScene.registerClasses(server.getClassInfoManager());
+//            registerClasses(server.getClassInfoManager());
             
             broker.registerEventListener(base.EventType.INPUT_UPDATE, function (evt, data) {
                 var tmp = readClientUpdate(data.inputState);
-                server.onClientInput(data.playerId, tmp.timestamp);
+                server.onClientInput(data.playerId, tmp.timestamp, tmp.state.timestamp);
                 inputState[data.playerId] = tmp.state;
             });
             broker.registerEventListener(base.EventType.PLAYER_CONNECTED, function (evt, data) {
-                server.addClient(data['gameId']);
+                var id = data['gameId'];
+                server.addClient(id);
+                inputState[id] = new base.InputState();
+                inputBuffer[id] = new game.InputBuffer();
+                gameScene.addPlayer(id, 'assassin');
             });
         }
         
-        characterController.respawn(/**@type{base.Vec3}*/spawnPoint['origin'],
-            spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
-        scene.updateCamera(characterController.getCameraMatrix());
+//        scene.updateCamera(characterController.getCameraMatrix());
+        var lastTime = Date.now();
 
         function update () {
+            var i=0;
             var spawnPoint;
+            // var dt = Date.now() - lastTime;
+            // lastTime = Date.now();
+            var dt = game.globals.TIME_STEP_MS;
 
-            inputBuffer[0].step(inputState[0]);
-            inputBuffer[1].step(inputState[1]);
+            for (i = 0; i < inputBuffer.length; ++i) {
+                inputBuffer[i].step(inputState[i]);                
+            }
 
             // if (inputBuffer.hasActionStarted(base.InputState.Action.RESPAWN)) {
             //     spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
@@ -146,19 +174,38 @@ game.init = function (broker, isServer) {
             //         spawnPoint['angle'] * Math.PI / 180 - Math.PI * 0.5);
             // }
 
-            if (game.globals.freeCameraControl || game.globals.freeCamera) {
-                camera.update();
+            // if (game.globals.freeCameraControl || game.globals.freeCamera) {
+            //     camera.update();
+            // } else {
+            //     characterController.update();
+            // }
+            if (isServer) {
+                gameScene.updateServer(dt, inputBuffer);
             } else {
-                characterController.update();
+                if (stateBuffer) {
+                    // we have update
+                    client.update((/**@type{ArrayBuffer}*/stateBuffer));
+                    stateBuffer = null;
+                    gameScene.characters_[gameScene.myPlayerId_].updateServer(
+                        dt, inputBuffer[0],gameScene);
+                    //gameScene.updateClient(0, inputBuffer[0]);                    
+                } else {
+                    // no update - just extrapolate
+                    gameScene.updateClient(dt, inputBuffer[0]);
+                }
             }
-            if (game.globals.freeCameraView || game.globals.freeCamera) {
-                scene.updateCamera(camera.getCameraMatrix());
-            } else {
-                scene.updateCamera(characterController.getCameraMatrix());
+            // if (game.globals.freeCameraView || game.globals.freeCamera) {
+            //     scene.updateCamera(camera.getCameraMatrix());
+            // } else {
+            //     scene.updateCamera(characterController.getCameraMatrix());
+            // }
+            if (!isServer && gameScene.characters_[clientId]) {
+                gameScene.characters_[clientId].getPlayer().setFppMode();
+                scene.updateCamera(gameScene.characters_[clientId].getCameraMatrix());
             }
 
             if (isServer) {
-                server.update(1/60);
+                server.update(dt);
             };
 
             modelManager.syncWithRenderer();

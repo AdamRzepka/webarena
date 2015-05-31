@@ -53,9 +53,7 @@ system.RTCSocket = function (signallingCallback) {
      * @private
      * @type {RTCPeerConnection}
      */
-    this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION, {
-        'optional': [{'RtpDataChannels': true}]
-    });
+    this.peerConnection = new RTCPeerConnection(RTC_CONFIGURATION, {});
     /**
      * @private
      * @type {RTCDataChannel}
@@ -105,7 +103,9 @@ system.RTCSocket.prototype.readSignallingMessage = function (msg) {
     
     switch (msg.type) {
     case system.RTCSocket.SignallingMessage.Type.DESCRIPTION:
-        
+        var RTCSessionDescription = window['mozRTCSessionDescription'] ||
+            window['RTCSessionDescription'] || window['webkitRTCSessionDescription'];
+        goog.asserts.assert(RTCSessionDescription);
         this.peerConnection.setRemoteDescription(new RTCSessionDescription(msg.data), function () {
             that.logger_.log(goog.debug.Logger.Level.INFO,
                              'Got remote description');
@@ -115,7 +115,8 @@ system.RTCSocket.prototype.readSignallingMessage = function (msg) {
         }, onError);
         break;
     case system.RTCSocket.SignallingMessage.Type.CANDIDATE:
-        this.peerConnection.addIceCandidate(new RTCIceCandidate(msg.data));
+        var IceCandidate = window['RTCIceCandidate'] || window['mozRTCIceCandidate'];
+        this.peerConnection.addIceCandidate(new IceCandidate(msg.data));
         break;
     }
 };
@@ -141,7 +142,8 @@ system.RTCSocket.prototype.onerror = function () {};
  */
 system.RTCSocket.prototype.open = function () {
     this.dataChannel = this.peerConnection.createDataChannel('data', {'reliable': false,
-                                                                      'ordered': false});
+                                                                      'ordered': false,
+                                                                      'maxRetransmits': 0});
     this.setupChannel_();
 };
 /**
@@ -161,7 +163,7 @@ system.RTCSocket.prototype.send = function (data) {
     }
     var u8 = new Uint8Array(data);
     var b64encoded = btoa(String.fromCharCode.apply(null, u8));
-    goog.asserts.assert(b64encoded.length < 256);
+    goog.asserts.assert(b64encoded.length < 512);
     this.dataChannel.send(b64encoded);
 };
 /**
@@ -184,6 +186,7 @@ system.RTCSocket.prototype.estabilishConnection_ = function () {
     var onLocalDescription = goog.bind(this.onLocalDescription_, this);
 
     this.peerConnection.onnegotiationneeded = function () {
+        that.logger_.log(goog.debug.Logger.Level.INFO, "onnegotiationneeded");
         that.peerConnection.createOffer(onLocalDescription, onError);
     };
 
@@ -207,6 +210,9 @@ system.RTCSocket.prototype.estabilishConnection_ = function () {
  */
 system.RTCSocket.prototype.setupChannel_ = function () {
     var that = this;
+    var onError = goog.bind(this.onError_, this);
+    var onLocalDescription = goog.bind(this.onLocalDescription_, this);
+
     this.dataChannel.binaryType = "arraybuffer";
     this.dataChannel.onopen = function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,
@@ -226,6 +232,11 @@ system.RTCSocket.prototype.setupChannel_ = function () {
                          'Data Channel closed');        
         that.onclose();
     };
+
+    if (navigator.userAgent.indexOf('Firefox') !== -1) {
+        // firefox won't run onnegotiationneeded
+        that.peerConnection.createOffer(onLocalDescription, onError);
+    }
 };
 /**
  * @private
@@ -244,7 +255,7 @@ system.RTCSocket.prototype.onLocalDescription_ = function (desc) {
     var onError = goog.bind(this.onError_, this);
 
     this.logger_.log(goog.debug.Logger.Level.INFO,
-                     'Got local description');        
+                     'Got local description');
     this.peerConnection.setLocalDescription(desc, function () {
         that.logger_.log(goog.debug.Logger.Level.INFO,
                          'Local description set');

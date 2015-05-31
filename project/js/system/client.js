@@ -32,6 +32,7 @@ goog.require('system.RTCSocket');
 goog.require('system.InputHandler');
 goog.require('renderer.Scene');
 goog.require('files.ResourceManager');
+goog.require('system.Hud');
 
 goog.provide('system.Client');
 
@@ -86,6 +87,12 @@ system.Client = function (matchId, playerData, lobbyUrl, gl, inputElement, rm) {
      * @type {base.IBroker}
      */
     this.broker_ = base.IBroker.createWorker(['game'], ['base.js', 'game.js'], 'game');
+    /**
+     * @const
+     * @private
+     * @type {system.Hud}
+     */
+    this.hud_ = new system.Hud(this.broker_);
     /**
      * @private
      * @type {system.PlayerData}
@@ -221,9 +228,9 @@ system.Client.prototype.initGame_ = function (level, archives) {
                                            that.lastSnapshot_ = /**@type{number}*/timestamp;
                                        });
 
-    this.broker_.executeFunction(function (broker) {
-        game.init((/**@type{base.IBroker}*/broker), false);
-    }, []);
+    this.broker_.executeFunction(function (clientId, broker) {
+        game.init((/**@type{base.IBroker}*/broker), false, (/**@type{number}*/clientId));
+    }, [that.playerData_['gameId']]);
 
     deferred.awaitDeferred(this.loadResources_(archives, this.rendererScene_));
 
@@ -257,11 +264,27 @@ system.Client.prototype.initRTC_ = function () {
                          'RTCSocket opened');
         deferred.callback();
     };
+    var lastTime = Date.now();
+    var sum = 0;
+    var count = 0;
+    //var timeElement = document.getElementById('time');
+
     this.serverSocket_.onmessage = function (evt) {
+        // debug
+        // sum += (Date.now() - lastTime);
+        // lastTime = Date.now();
+        // count++;
+        // if (sum > 1000) {
+        //     timeElement.textContent = count;
+        //     sum -= 1000;
+        //     count = 0;
+        // }
+
         // var dv = new DataView(evt.data);
         // assume that snapshot id is first uint in message
         // TODO fix this
         // that.lastSnapshot_ = dv.getInt32(0, true);
+        
         that.broker_.fireEvent(base.EventType.STATE_UPDATE, evt.data,
                                base.IBroker.EventScope.REMOTE, [evt.data]);
     };
@@ -308,7 +331,8 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
                 models: archive.map.models,
                 lightmapData: null,  // game worker doesn't need lightmap
                 bsp: archive.map.bsp,
-                entities: archive.map.entities
+                entities: archive.map.entities,
+                entitiesModels: archive.map.entitiesModels
             });
         }
     };
@@ -325,22 +349,22 @@ system.Client.prototype.loadResources_ = function (archives, scene) {
  * @private
  * @type {number}
  */
-system.Client.INPUT_MESSAGE_SIZE = 16;
+system.Client.INPUT_MESSAGE_SIZE = 18;
 /*
  * Input message format
- * lastSnapshot - 4 bytes
+ * lastSnapshotId - 4 bytes
+ * inputId - 4 bytes
  * cursorX - 4 bytes
  * cursorY - 4 bytes
  * actions - 2 bytes
- * *unused* - 2 bytes
  */
 
 /**
  * @private
  */
-system.Client.prototype.sendInputMessage_ = function (dataView) {
+system.Client.prototype.sendInputMessage_ = function (dataView, state) {
     dataView.setUint32(0, this.lastSnapshot_, true);
-    base.InputState.serialize(this.input_.getState(), dataView, 4);
+    base.InputState.serialize(state, dataView, 4);
     this.serverSocket_.send(dataView.buffer);
 };
 /**
@@ -350,9 +374,9 @@ system.Client.prototype.initUpdates_ = function () {
     var that = this;
     var inputMessage_ = new DataView(new ArrayBuffer(system.Client.INPUT_MESSAGE_SIZE));
     
-    var raf = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-            window.webkitRequestAnimationFrame || window.msRequestAnimationFrame ||
-            window.oRequestAnimationFrame || function (fn) { setTimeout(fn, 16); };
+    var raf = window['requestAnimationFrame'] || window['mozRequestAnimationFrame'] ||
+            window['webkitRequestAnimationFrame'] || window['msRequestAnimationFrame'] ||
+            window['oRequestAnimationFrame'] || function (fn) { setTimeout(fn, 16); };
 
     var lastTime = Date.now();
     var fpsCounter = 0;
@@ -363,9 +387,29 @@ system.Client.prototype.initUpdates_ = function () {
             inputState: null
     };
 
-    function update() {
-        // Note: we accept one frame lag between input and renderer on the client.
+    var lastInputTime = 0;
+
+    function updateInput() {
+//        var INPUT_SEND_INTERVAL = 1000/60;
+        var state = that.input_.getState();
+        // if (Date.now() - lastInputTime > INPUT_SEND_INTERVAL) {
+        //     // input
+        //     lastInputTime = Date.now();
+        // }
+
+        if (!flags.GAME_WORKER || base.IBroker.DISABLE_WORKERS) {
+            // inputState can't be passed by reference
+            inputUpdateData.inputState = goog.object.unsafeClone(state);
+        } else {
+            inputUpdateData.inputState = state;
+        }
+
+        that.sendInputMessage_(inputMessage_, state);
         
+        that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
+    }
+
+    function render() {
         // fps counter
         if (fpsElem) {
             fpsTime += Date.now() - lastTime;
@@ -378,23 +422,14 @@ system.Client.prototype.initUpdates_ = function () {
 	        fpsCounter = 0;
 	    }
         }
-
-        // input
-        that.sendInputMessage_(inputMessage_);
-        if (!flags.GAME_WORKER || base.IBroker.DISABLE_WORKERS) {
-            // inputState can't be passed by reference
-            inputUpdateData.inputState = goog.object.unsafeClone(that.input_.getState());
-        } else {
-            inputUpdateData.inputState = that.input_.getState();
-        }
-        // that.broker_.fireEvent(base.EventType.INPUT_UPDATE, inputUpdateData);
-
-        // render
-	that.rendererScene_.render();
         
-	raf(update);
-    };
+        // render
+	that.rendererScene_.render();        
+	raf(render);
+    }
 
-    raf(update);
+    var INPUT_UPDATE_INTERVAL = 1000/60;
+    setInterval(updateInput, INPUT_UPDATE_INTERVAL);
+    raf(render);
 };
 

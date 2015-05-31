@@ -45,12 +45,13 @@ system.InputHandler.prototype.initPointerLock_ = function (canvas) {
     var that = this;
     var elem = canvas;
     
-    elem.requestMouseLock = elem.requestMouseLock ||
+    elem.requestPointerLock = elem.requestPointerLock ||
         elem.mozRequestPointerLock ||
         elem.webkitRequestPointerLock;
 
     function pointerLockChange() {
-        if (document.mozPointerLockElement === elem ||
+        if (document.pointerLockElement === elem ||
+            document.mozPointerLockElement === elem ||
             document.webkitPointerLockElement === elem) {
             that.locked_ = true;
         } else {
@@ -88,7 +89,7 @@ system.InputHandler.prototype.initInputListeners_ = function (canvas) {
     elem.addEventListener('mousedown', function (ev) {
         if (!that.locked_) {
             if (that.tryLock_) {
-                elem.requestMouseLock();
+                elem.requestPointerLock();
                 that.tryLock_ = false;
             } else {
                 that.capturing_ = true;
@@ -169,8 +170,10 @@ system.InputHandler.prototype.onMouseMove_ = function (dx, dy) {
 /**
  * @public
  * @return {base.InputState}
+ * Returns state increasing its timestamp firts.
  */
 system.InputHandler.prototype.getState = function () {
+    ++this.state_.timestamp;
     return this.state_;
 };
 

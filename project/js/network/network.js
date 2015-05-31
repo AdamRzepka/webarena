@@ -47,6 +47,16 @@ network.ISynchronizer.Mode = {
     WRITE: 0,
     READ: 1
 };
+/**
+ * @public
+ * @return {number}
+ */
+network.ISynchronizer.prototype.getSnapshotTimestamp = function () {};
+/**
+ * @public
+ * @return {number}
+ */
+network.ISynchronizer.prototype.getInputTimestamp = function () {};
 
 /**
  * @interface

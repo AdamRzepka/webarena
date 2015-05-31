@@ -22,6 +22,7 @@ goog.require('base.Mat4');
 goog.require('base.Vec3');
 goog.require('game.ModelManager');
 goog.require('network');
+goog.require('base.math');
 //goog.require('files.ResourceManager');
 
 goog.provide('game.Player');
@@ -36,7 +37,8 @@ goog.provide('game.Player');
 game.Player = function (mm, configs, name, skin) {
     var path = game.Player.PLAYERS_PATH + name + '/';
     var that = this;
-    var visible = game.globals.tppMode;
+//    var visible = game.globals.tppMode;
+    var visible = true;
     
     skin = skin || 'default';
     /**
@@ -56,12 +58,6 @@ game.Player = function (mm, configs, name, skin) {
     this.legs = new game.Player.Entity(mm.makeInstance(path + 'lower.md3', null, skin));
     /**
      * @private
-     * @type {base.ModelInstance}
-     */
-    this.weapon = mm.makeInstance('models/weapons2/machinegun/machinegun.md3');
-    this.flash = mm.makeInstance('models/weapons2/machinegun/machinegun_flash.md3');
-    /**
-     * @private
      * @const
      * @type {number}
      */
@@ -78,6 +74,11 @@ game.Player = function (mm, configs, name, skin) {
      * @type {number}
      */
     this.weaponTag = this.torso.model.baseModel.tags.indexOf(game.Player.Tags.WEAPON);
+    /**
+     * @private
+     * @type {base.Mat4}
+     */
+    this.weaponMtx = base.Mat4.identity();
     /**
      * @private
      * @const
@@ -109,6 +110,13 @@ game.Player = function (mm, configs, name, skin) {
      * @type {number}
      */
     this.legsAngle = 0;
+    /**
+     * @private
+     * @type {boolean}
+     */
+    this.tppMode = true;
+
+    this.debugLines = [];
 
     this.legs.startAnimation(this.animations[game.Player.Animations.LEGS_IDLE], 0);
     this.torso.startAnimation(this.animations[game.Player.Animations.TORSO_STAND], 0);
@@ -117,11 +125,25 @@ game.Player = function (mm, configs, name, skin) {
     that.torso.model.setVisibility(visible);
     that.legs.model.setVisibility(visible);
 
-    game.globals.onTppModeChange = function (tppOn) {
-        that.head.model.setVisibility(tppOn);
-        that.torso.model.setVisibility(tppOn);
-        that.legs.model.setVisibility(tppOn);
-    };
+    // game.globals.onTppModeChange = function (tppOn) {
+    //     that.head.model.setVisibility(tppOn);
+    //     that.torso.model.setVisibility(tppOn);
+    //     that.legs.model.setVisibility(tppOn);
+    // };
+    this.initDebugLines(mm.renderer);
+    this.renderer = mm.renderer;
+};
+
+game.Player.prototype.initDebugLines = function (renderer) {
+    var i = 0;
+    var that = this;
+    for (i = 0; i < 12; ++i) {
+        renderer.registerLine(base.Vec3.create(),base.Vec3.create(),
+                              base.Vec3.create([1,0,0]),base.Vec3.create([1,0,0]),
+                              function (id) {
+                                  that.debugLines.push(id);
+                              });
+    }
 };
 
 /**
@@ -130,16 +152,17 @@ game.Player = function (mm, configs, name, skin) {
  * @suppress {checkTypes}
  */
 game.Player.prototype.synchronize = function (sync) {
+    
     // this.head = sync.synchronize(this.head, network.Type.OBJECT, 0);
     // this.torso = sync.synchronize(this.torso, network.Type.OBJECT, 0);
     // this.legs = sync.synchronize(this.legs, network.Type.OBJECT, 0);
 
-    this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
-    this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
+    // this.legsState = sync.synchronize(this.legsState, network.Type.INT8, 0);
+    // this.torsoState = sync.synchronize(this.torsoState, network.Type.INT8, 0);
 
-    this.lastYaw = sync.synchronize(this.lastYaw, network.Type.FLOAT32, 0);
-    this.targetLegsAngle = sync.synchronize(this.targetLegsAngle, network.Type.FLOAT32, 0);
-    this.legsAngle = sync.synchronize(this.legsAngle, network.Type.FLOAT32, 0);
+    // this.lastYaw = sync.synchronize(this.lastYaw, network.Type.FLOAT32, 0);
+    // this.targetLegsAngle = sync.synchronize(this.targetLegsAngle, network.Type.FLOAT32, 0);
+    // this.legsAngle = sync.synchronize(this.legsAngle, network.Type.FLOAT32, 0);
 };
 
 /**
@@ -153,7 +176,7 @@ game.Player.PLAYERS_PATH = 'models/players/';
  * @private
  * @type {base.Vec3}
  */
-game.Player.WEAPON_OFF = base.Vec3.create([10, -10, -4]);
+game.Player.WEAPON_OFF = base.Vec3.create([8, -10, -4]);
 /**
  * @const
  * @private
@@ -201,6 +224,18 @@ game.Player.LegsStates = {
 
 /**
  * @public
+ * @return {base.Mat4}
+ */
+game.Player.prototype.getWeaponMtx = function () {
+    return this.weaponMtx;
+};
+
+game.Player.prototype.getPosition = function () {
+    return base.Mat4.getRow(this.legs.model.getMatrix(), 3, base.Vec3.create());
+};
+
+/**
+ * @public
  * @return {boolean}
  */
 game.Player.prototype.isDead = function () {
@@ -232,10 +267,19 @@ game.Player.prototype.respawn = function () {
 
 /**
  * @public
+ */
+game.Player.prototype.setFppMode = function () {
+    this.head.model.setVisibility(false);
+    this.torso.model.setVisibility(false);
+    this.legs.model.setVisibility(false);
+    this.tppMode = false;
+};
+
+/**
+ * @public
  * @param {game.Player.TorsoStates} torsoState
  * @param {game.Player.LegsStates} legsState
  * @param {base.Vec3} position
- * @param {base.Vec3} velocity
  * @param {base.Vec3} direction
  * @param {number} yaw
  * @param {number} pitch
@@ -244,7 +288,6 @@ game.Player.prototype.respawn = function () {
 game.Player.prototype.update = function (torsoState,
                                          legsState,
                                          position,
-                                         velocity,
                                          direction,
                                          yaw,
                                          pitch,
@@ -364,7 +407,7 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
     base.Mat4.multiply(legsMtx, this.legs.tags[this.torsoTag],
                        torsoMtx);
     // make torso move with pitch
-    base.Mat4.rotateY(torsoMtx, -base.clamp(pitch, 0.5, 2.8) + Math.PI * 0.5);
+    base.Mat4.rotateY(torsoMtx, -base.math.clamp(pitch, 0.5, 2.8) + Math.PI * 0.5);
     this.torso.model.setMatrix(torsoMtx);
 
     headMtx = this.head.model.getMatrix();
@@ -372,19 +415,16 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
                        headMtx);
     this.head.model.setMatrix(headMtx);
 
-    weaponMtx = this.weapon.getMatrix();
-    if (game.globals.tppMode) {
+    weaponMtx = this.weaponMtx;
+    if (this.tppMode) {
         base.Mat4.multiply(torsoMtx, this.torso.tags[this.weaponTag],
                            weaponMtx);
     } else {
         base.Mat4.translate(camMtx, game.Player.WEAPON_OFF, weaponMtx);
         base.Mat4.multiply(weaponMtx, game.Player.WEAPON_ROT, weaponMtx);
     }
-    this.weapon.setMatrix(weaponMtx);
+//    this.weapon.setMatrix(weaponMtx);
 
-    var flashMtx = this.flash.getMatrix();
-    base.Mat4.multiply(weaponMtx, this.weapon.baseModel.framesData[0].tags[0], flashMtx);
-    this.flash.setMatrix(flashMtx);
 
     // correct legs angle movement
     if (this.legsState === game.Player.LegsStates.IDLE) {
@@ -427,7 +467,6 @@ game.Player.prototype.updateMatrices = function (position, dir, yaw, pitch, camM
         base.Mat4.rotateZ(legsMtx, this.legsAngle);
     }
     this.legs.model.setMatrix(legsMtx);
-
 };
 
 /**
@@ -471,6 +510,73 @@ game.Player.prototype.loadAnimations = function (playerPath, configs) {
     // animations[game.Player.Animation.LEGS_BACKWALK].reversed = true;
     
     return animations;
+};
+
+/**
+ * @param {base.Vec3} from
+ * @param {base.Vec3} to
+ * @return {number} fraction
+ */
+game.Player.prototype.rayCastMe = function (from, to) {
+    var i, j, k;
+    var models = [this.torso, this.legs, this.head];
+    var model, frameData, mesh;
+    var fraction, minFraction = 1, frame, trFraction;
+    var rayTrans;
+    var minTrans = base.Vec3.create(), maxTrans = base.Vec3.create();
+    for (i = 0; i < models.length; ++i) {
+        model = models[i].model;
+        frame = model.getFrameA();        
+        frameData = model.baseModel.framesData[frame];
+        
+
+        rayTrans = base.math.transformRay(from, to, model.getMatrix());
+
+        // fraction = base.math.raySphere(frameData.origin, frameData.radius,
+        //                                rayTrans.from, rayTrans.to);
+        fraction = base.math.rayAABB(frameData.aabbMin, frameData.aabbMax,
+                                     rayTrans.from, rayTrans.to);
+
+        // Per triangle test:
+        // Currently it is disabled because there were some bugs in this.
+        // Besides, Q3 uses only AABB test.
+        // if (fraction < 1) {
+        //     fraction = 1;
+        //     for (j = 0; j < model.baseModel.meshes.length; ++j) {
+        //         mesh = model.baseModel.meshes[j];
+        //         for (k = mesh.indicesOffset;
+        //              k < mesh.indicesOffset + mesh.indicesCount;
+        //              k += 3) {
+        //             var stride = 32;
+        //             var b1 = mesh.geometry.indices[k] * stride;
+        //             var b2 = mesh.geometry.indices[k + 1] * stride;
+        //             var b3 = mesh.geometry.indices[k + 2] * stride;
+        //             var v1 = mesh.geometry.vertices[frame].subarray(
+        //                 b1, b1 + 3);
+        //             var v2 = mesh.geometry.vertices[frame].subarray(
+        //                 b2, b2 + 3);
+        //             var v3 = mesh.geometry.vertices[frame].subarray(
+        //                 b3, b3 + 3);
+
+        //             trFraction = base.math.rayTriangle(v1, v2, v3, rayTrans.from, rayTrans.to);
+        //             if (trFraction < fraction) {
+        //                 fraction = trFraction;
+        //             }
+        //         }
+        //     } 
+        // }
+        if (fraction < minFraction) {
+            
+            minFraction = fraction;
+        }
+    }
+    return minFraction;
+};
+
+game.Player.prototype.remove = function(mm) {
+    mm.removeInstance(this.head.model);
+    mm.removeInstance(this.torso.model);
+    mm.removeInstance(this.legs.model);
 };
 
 /**

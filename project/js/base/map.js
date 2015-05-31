@@ -29,8 +29,9 @@ goog.provide('base.Map');
  * @param {base.Map.Lightmap} lightmapData
  * @param {base.Bsp} bsp
  * @param {Array.<Object>} entities
+ * @param {Array.<Object>} entitiesModels
  */
-base.Map = function(models, lightmapData, bsp, entities) {
+base.Map = function(models, lightmapData, bsp, entities, entitiesModels) {
     /**
      * @const
      * @type {Array.<base.Model>}
@@ -51,6 +52,10 @@ base.Map = function(models, lightmapData, bsp, entities) {
      * @type {Object.<string, Array.<Object>>}
      */
     this.entities = entities;
+    /**
+     * @const
+     */
+    this.entitiesModels = entitiesModels;
 };
 
 /**
@@ -112,4 +117,42 @@ base.Map.getSpawnPoints = function (map) {
     // return this.entities.filter(function (ent) {
     //    return ent['classname'] == 'info_player_deathmatch'; 
     // });
+};
+
+base.Map.getTeleports = function (map) {
+    var i = 0, j = 0;
+    var teleports = map.entities['trigger_teleport'];
+    var trgs = map.entities['misc_teleporter_dest'];
+    if (!teleports) {
+        return [];
+    }
+    var result = [];
+
+    for (i = 0; i < teleports.length; ++i) {
+        var modelNum = parseInt(teleports[i]['model'].substr(1), 10);
+        var model = map.entitiesModels[modelNum];
+        if (!model) {
+            continue;
+        }
+
+        var trg = null;
+        for (j = 0; j < trgs.length; ++j) {
+            if (trgs[j]['targetname'] == teleports[i]['target']) {
+                trg = trgs[j];
+            }
+        }
+        if (!trg) {
+            continue;
+        }
+        
+        result.push({
+            // center: pos,
+            // radius: model.aabbMax[0] - model.aabbMin[0]
+            min: model.aabbMin,
+            max: model.aabbMax,
+            destOrigin: trg['origin'],
+            destAngle: trg['angle'] || 0
+        });
+    }
+    return result;
 };

@@ -206,9 +206,9 @@ function main() {
     }
     
     var mylocation = window.location.origin.replace(/^http:\/\//, '').replace(/:800[0-9]$/, '');
-    var config = {
+    var config = /**@type{system.Game.Config}*/{
         gl: gl,
-        inputElement: canvas,
+        inputElement: document.getElementById('hud'),
         lobbyUrl: 'ws://' + mylocation + ':8003',
         playerData: {
             'name': 'player',
@@ -220,7 +220,7 @@ function main() {
             'level': 'aggressor'
         },
         onMatchCreated: function (matchId) {
-            var port = goog.COMPILED ? 8002 : 8001;
+            var port = COMPILED ? 8002 : 8001;
             var link = 'http://' + mylocation + ':' + port + '?id=' + matchId;
             document.getElementById('link').innerHTML =
                 'Link to this match: <a href="' + link + '">' + link + '</a>';

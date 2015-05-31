@@ -9,9 +9,20 @@ if (port <= 0 || port > 0xFFFF) {
 
 var FileServer = require('node-static').Server;
 var fileServer = new FileServer('.');
+var fs = require('fs');
+var log = fs.createWriteStream('../server/log.txt');
 
 var httpServer = require('http').createServer(function (req, res) {
-    console.log('Got http request');
+    if (req.method === 'HEAD') {
+        log.write('Got http request ' + req.url + '\n');
+        fs.stat('../project' + req.url, function (err, stat) {
+            if (err) {
+                console.log(err);
+            } else {
+                log.write(req.url + ' size: ' + stat.size + '\n\n');
+            }
+        });
+    }
     fileServer.serve(req, res);
 }).listen(port);
 console.log('http is listening on ' + port);

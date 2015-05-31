@@ -113,6 +113,22 @@ network.ObjectWriter.prototype.getMode = function () {
 };
 
 /**
+ * @public
+ * @return {number}
+ */
+network.ObjectWriter.prototype.getSnapshotTimestamp = function () {
+    return this.snapshot_.timestamp;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+network.ObjectWriter.prototype.getInputTimestamp = function () {
+    return this.snapshot_.inputTimestamp;
+};
+
+/**
  * @private
  * @param {number} classId
  * @param {number} id

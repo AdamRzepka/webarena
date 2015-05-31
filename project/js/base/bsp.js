@@ -89,7 +89,7 @@ base.Bsp.trace = function(bsp, start, end, radius) {
     
     if(!radius) { radius = 0; }
     
-    base.Bsp.traceNode(bsp, 0, 0, 1, start, end, radius, output);
+    base.Bsp.traceNode(bsp, 0, start, end, 0, 1, start, end, radius, output);
     
     if(output.fraction != 1.0) { // collided with something
         for (i = 0; i < 3; i++) {
@@ -110,14 +110,18 @@ base.Bsp.TRACE_OFFSET = 0.03125;
  * @private
  * @param {base.Bsp} bsp
  * @param {number} nodeIdx
+ * @param {base.Vec3} rayStart start of the whole ray
+ * @param {base.Vec3} rayEnd 
  * @param {number} startFraction
  * @param {number} endFraction
- * @param {base.Vec3} start
+ * @param {base.Vec3} start start of the part of the ray inside this node
  * @param {base.Vec3} end
  * @param {number} radius
  * @param {base.Bsp.TraceOutput} output
  */
-base.Bsp.traceNode = function(bsp, nodeIdx, startFraction, endFraction,
+base.Bsp.traceNode = function(bsp, nodeIdx,
+                              rayStart, rayEnd,
+                              startFraction, endFraction,
                               start, end, radius, output) {
     var i,
         leaf, brush, surface,
@@ -129,7 +133,7 @@ base.Bsp.traceNode = function(bsp, nodeIdx, startFraction, endFraction,
         for (i = 0; i < leaf.leafBrushesCount; i++) {
             brush = bsp.brushes[bsp.leafBrushes[leaf.firstLeafBrush + i]];
             if (brush.brushSidesCount > 0 && brush.flags & base.Bsp.BrushFlags.SOLID) {
-                base.Bsp.traceBrush(bsp, brush, start, end, radius, output);
+                base.Bsp.traceBrush(bsp, brush, rayStart, rayEnd, radius, output);
             }
         }
         return;
@@ -143,11 +147,13 @@ base.Bsp.traceNode = function(bsp, nodeIdx, startFraction, endFraction,
     endDist = base.Vec3.dot(plane.normal, end) - plane.distance;
     
     if (startDist >= radius && endDist >= radius) {
-        base.Bsp.traceNode(bsp, node.children[0], startFraction,
-                           endFraction, start, end, radius, output );
+        base.Bsp.traceNode(bsp, node.children[0], rayStart, rayEnd,
+                           startFraction, endFraction,
+                           start, end, radius, output );
     } else if (startDist < -radius && endDist < -radius) {
-        base.Bsp.traceNode(bsp, node.children[1], startFraction,
-                           endFraction, start, end, radius, output );
+        base.Bsp.traceNode(bsp, node.children[1], rayStart, rayEnd,
+                           startFraction, endFraction,
+                           start, end, radius, output );
     } else {
         middle = base.Vec3.create([0, 0, 0]);
 
@@ -178,7 +184,8 @@ base.Bsp.traceNode = function(bsp, nodeIdx, startFraction, endFraction,
             middle[i] = start[i] + fraction1 * (end[i] - start[i]);
         }
         
-        base.Bsp.traceNode(bsp, node.children[side], startFraction,
+        base.Bsp.traceNode(bsp, node.children[side], rayStart,
+                           rayEnd, startFraction,
                            middleFraction, start, middle, radius, output );
         
         middleFraction = startFraction + (endFraction - startFraction) * fraction2;
@@ -188,6 +195,7 @@ base.Bsp.traceNode = function(bsp, nodeIdx, startFraction, endFraction,
         }
         
         base.Bsp.traceNode(bsp, node.children[side===0?1:0],
+                           rayStart, rayEnd,
                            middleFraction, endFraction, middle, end, radius, output );
     }
 };

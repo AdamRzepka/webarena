@@ -108,7 +108,7 @@ base.IBroker.createWorker = function (debugDeps, compiledDeps, name) {
  * @public
  * @type {boolean}
  */
-base.IBroker.DISABLE_WORKERS = true;
+base.IBroker.DISABLE_WORKERS = false;
 /**
  * @enum {number}
  */
@@ -247,12 +247,13 @@ base.Broker.prototype.registerEventListener = function (eventType, callback) {
  */
 base.Broker.prototype.fireEvent = function (eventType, data, scope, transferables) {
     scope = scope || base.IBroker.EventScope.LOCAL_AND_REMOTE;
+    transferables = transferables || base.Broker.EMPTY_TRANSFERABLES;
     if (scope != base.IBroker.EventScope.LOCAL) {
         this.worker_.postMessage({
             type: base.Broker.MessageTypes.EVENT,
             eventType: eventType,
             data: data
-        });
+        }, transferables);
     }
     if (scope != base.IBroker.EventScope.REMOTE) {
         this.onEvent_(eventType, data);
@@ -288,6 +289,7 @@ base.Broker.prototype.executeFunction = function (fun, args, transferables, call
     goog.asserts.assert(res.length === 3);
     var params = res[1].split(/\*s,\s*/);
     var body = res[2];
+    transferables = transferables || base.Broker.EMPTY_TRANSFERABLES;
 
     this.worker_.postMessage({
         type: base.Broker.MessageTypes.EXECUTE_FUNCTION_STRING,
@@ -360,6 +362,7 @@ base.Broker.prototype.onMessage_ = function (event) {
  */
 base.Broker.prototype.sendProxyCall_ = function (proxyName, funName, args,
                                                  callback, transferables) {
+    transferables = transferables || base.Broker.EMPTY_TRANSFERABLES;
     this.worker_.postMessage({
         type: base.Broker.MessageTypes.FUNCTION_CALL,
         proxyName: proxyName,
@@ -461,6 +464,11 @@ base.Broker.prototype.onExecuteFunction_ = function (body, params, args, callbac
         });
     }
 };
+/**
+ * @private
+ * @type {Array.<Object>}
+ */
+base.Broker.EMPTY_TRANSFERABLES = [];
 
 /**
  * @constructor

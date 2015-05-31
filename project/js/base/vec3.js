@@ -214,6 +214,14 @@ base.Vec3.negate = function (vec, dest) {
     return dest;
 };
 
+base.Vec3.abs = function(vec, dest) {
+    var i;
+    if (!dest) { dest = vec; }
+    for (i = 0; i < 3; ++i) {
+        dest[i] = Math.abs(vec[i]);
+    }
+};
+
 /**
  * Multiplies the components of a base.Vec3 by a scalar value
  *

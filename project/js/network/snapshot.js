@@ -58,6 +58,11 @@ network.Snapshot = function () {
     this.timestamp = 0;
     /**
      * @public
+     * @type {number}
+     */
+    this.inputTimestamp = 0;
+    /**
+     * @public
      * @type {Array.<network.ObjectBuffer>}
      */
     this.objects = [];
@@ -112,6 +117,11 @@ network.SnapshotDelta = function () {
      * @type {number}
      */
     this.timestampB = 0;
+    /**
+     * @public
+     * @type {number}
+     */
+    this.inputTimestamp = 0;
     /**
      * @public
      * @type {Array.<network.ObjectBufferDelta>}
@@ -204,7 +214,7 @@ network.Snapshot.diff = function (snapshot1, snapshot2, delta) {
             }
             delta.arrays[objBuf.id] = (objBuf.data.length > 0 ? objBuf : null);
         } else if (!goog.isDefAndNotNull(a) && goog.isDefAndNotNull(b)) {
-            delta.objects[b.id] = network.ObjectBufferDelta.fromObjectBuffer_(b);
+            delta.arrays[b.id] = network.ObjectBufferDelta.fromObjectBuffer_(b);
         } else if (goog.isDefAndNotNull(a) && !goog.isDefAndNotNull(b) ) {
             delta.removedArrays.push(a.id);
         }
@@ -224,6 +234,7 @@ network.Snapshot.sum = function (snapshot1, delta, snapshot2) {
     var count = Math.max(snapshot1.objects.length, delta.objects.length);
     goog.asserts.assert(snapshot1.timestamp === delta.timestampA);
     snapshot2.timestamp = delta.timestampB;
+    snapshot2.inputTimestamp = delta.inputTimestamp;
 
     // objects
     for (i = 0; i < count; ++i) {

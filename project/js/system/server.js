@@ -266,7 +266,7 @@ system.Server.prototype.initGame_ = function (level, archives) {
     });
 
     this.broker_.executeFunction(function (broker) {
-        game.init((/**@type{base.IBroker}*/broker), true);
+        game.init((/**@type{base.IBroker}*/broker), true, -1);
     }, []);
 
     this.loadResources_(archives).addCallback(function() {
@@ -306,7 +306,8 @@ system.Server.prototype.loadResources_ = function (archives) {
                 models: archive.map.models,
                 lightmapData: null,  // game worker doesn't need lightmap
                 bsp: archive.map.bsp,
-                entities: archive.map.entities
+                entities: archive.map.entities,
+                entitiesModels: archive.map.entitiesModels
             });
         }
     };

@@ -102,3 +102,12 @@ game.InputBuffer.prototype.getDeltaX = function () {
 game.InputBuffer.prototype.getDeltaY = function () {
     return this.state_.cursorY - this.prevState_.cursorY;
 };
+
+/**
+ * @public
+ * @return {base.InputState}
+ */
+game.InputBuffer.prototype.getState = function () {
+    return this.state_;
+};
+

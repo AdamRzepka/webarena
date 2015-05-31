@@ -95,6 +95,23 @@ network.ClassInfoBuilder.prototype.synchronize = function (data, type, flags) {
 network.ClassInfoBuilder.prototype.getMode = function () {
     return network.ISynchronizer.Mode.READ;
 };
+
+/**
+ * @public
+ * @return {number}
+ */
+network.ClassInfoBuilder.prototype.getSnapshotTimestamp = function () {
+    return 0;
+};
+
+/**
+ * @public
+ * @return {number}
+ */
+network.ClassInfoBuilder.prototype.getInputTimestamp = function () {
+    return 0;
+};
+
 /**
  * @public
  * @param {function(): network.ISynchronizable} factoryFunction
@@ -168,6 +185,8 @@ network.ClassInfoManager.prototype.registerClass = function (constructor,
 
     // adding metadata to prototype
     constructor.prototype.__networkClassId__ = classId;
+    
+    destroyCallback(sampleObj);
 };
 
 network.ClassInfoManager.prototype.getClassInfo = function (id) {

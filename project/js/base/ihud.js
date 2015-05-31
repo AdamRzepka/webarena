@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013 Adam Rzepka
+ * Copyright (C) 2014 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,24 +17,14 @@
 
 'use strict';
 
-goog.provide('system.ISocket');
+goog.require('base.Broker');
+
+goog.provide('base.IHud');
 
 /**
  * @interface
  */
-system.ISocket = function () {};
-/**
- * @param {ArrayBuffer|string} data
- */
-system.ISocket.prototype.send = function (data) {};
-system.ISocket.prototype.close = function () {};
-system.ISocket.prototype.onopen = function () {};
-system.ISocket.prototype.onmessage = function (event) {};
-system.ISocket.prototype.onclose = function () {};
+base.IHud = function (broker) {};
 
-/**
- * For consistence and flexibility.
- * @implements {system.ISocket}
- * @typedef {WebSocket}
- */
-system.WebSocket = window['WebSocket'];
+base.IHud.prototype.setHp = function (hp) {};
+base.IHud.prototype.setHp._CROSS_WORKER_ = true;

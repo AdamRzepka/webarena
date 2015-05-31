@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013 Adam Rzepka
+ * Copyright (C) 2014 Adam Rzepka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,24 +17,20 @@
 
 'use strict';
 
-goog.provide('system.ISocket');
+goog.require('base.IHud');
+goog.require('base.Broker');
+
+goog.provide('system.Hud');
 
 /**
- * @interface
+ * @constructor
+ * @implements {base.IHud}
  */
-system.ISocket = function () {};
-/**
- * @param {ArrayBuffer|string} data
- */
-system.ISocket.prototype.send = function (data) {};
-system.ISocket.prototype.close = function () {};
-system.ISocket.prototype.onopen = function () {};
-system.ISocket.prototype.onmessage = function (event) {};
-system.ISocket.prototype.onclose = function () {};
+system.Hud = function (broker) {
+    this.hpElement = document.getElementById('hp');
+    broker.registerReceiver('base.IHud', this);
+};
 
-/**
- * For consistence and flexibility.
- * @implements {system.ISocket}
- * @typedef {WebSocket}
- */
-system.WebSocket = window['WebSocket'];
+system.Hud.prototype.setHp = function (hp) {
+    this.hpElement.innerText = 'HP: ' + hp;
+};

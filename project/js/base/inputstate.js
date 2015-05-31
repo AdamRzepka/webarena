@@ -25,6 +25,7 @@ goog.provide('base.InputState');
  * @constructor
  */
 base.InputState = function () {
+    this.timestamp = 0;
     this.cursorX = 0;
     this.cursorY = 0;
     this.actions = goog.array.repeat(false, base.InputState.Action.SIZE);
@@ -57,24 +58,26 @@ base.InputState.serialize = function (state, dataView, offset) {
         actions |= (state.actions[i] << i); // branchless :P
     }
 
-    dataView.setInt32(offset, state.cursorX, true);
-    dataView.setInt32(offset + 4, state.cursorY, true);
-    dataView.setUint16(offset + 8, actions, true);
-    return offset + 10;
+    dataView.setUint32(offset, state.timestamp, true);
+    dataView.setInt32(offset + 4, state.cursorX, true);
+    dataView.setInt32(offset + 8, state.cursorY, true);
+    dataView.setUint16(offset + 12, actions, true);
+    return offset + 14;
 };
 
 base.InputState.deserialize = function (state, dataView, offset) {
     var dv = dataView;
     var i = 0;
     var actions = 0;
-    state.cursorX = dataView.getInt32(offset, true);
-    state.cursorY = dataView.getInt32(offset + 4, true);
-    actions = dataView.getUint16(offset + 8, true);
+    state.timestamp = dataView.getUint32(offset, true);
+    state.cursorX = dataView.getInt32(offset + 4, true);
+    state.cursorY = dataView.getInt32(offset + 8, true);
+    actions = dataView.getUint16(offset + 12, true);
 
     for (i = 0; i < base.InputState.Action.SIZE; ++i) {
         state.actions[i] = !!(actions & (1 << i));
     }
 
-    return offset + 10;
+    return offset + 14;
 };
 
